@@ -40,7 +40,13 @@ def create_app(static_url_path=None):
 
     return app
 
+app = create_app()
+
+@app.route("/")
+def index():
+    from eru import __VERSION__
+    return 'Eru %s' % __VERSION__
+
 def main():
-    app = create_app()
     app.run()
 
