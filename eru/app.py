@@ -6,6 +6,7 @@ import settings
 from flask import Flask
 
 from eru.models import init_db
+from eru.views import init_views
 
 def init_logging():
     args = {'level': logging.INFO}
@@ -34,9 +35,11 @@ def init_mysql(app):
 
 def create_app(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
+    app.debug = settings.DEBUG
 
     init_logging()
     init_mysql(app)
+    init_views(app)
 
     return app
 

@@ -11,10 +11,11 @@ class Groups(db.Model):
     __tablename__ = 'groups'
 
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.CHAR(30), nullable=False)
+    name = db.Column(db.CHAR(30), nullable=False, unique=True)
     description = db.Column(db.Text)
 
     pods = db.relationship('Pods', secondary=GroupPod.__table__)
+    hosts = db.relationship('Hosts', backref='Group', lazy='dynamic')
 
     def __init__(self, name, description):
         self.name = name
