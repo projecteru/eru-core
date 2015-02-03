@@ -5,6 +5,8 @@ import logging
 import settings
 from flask import Flask
 
+from eru.models import init_db
+
 def init_logging():
     args = {'level': logging.INFO}
     if settings.DEBUG:
@@ -26,6 +28,7 @@ def init_mysql(app):
         SQLALCHEMY_POOL_TIMEOUT=settings.SQLALCHEMY_POOL_TIMEOUT,
         SQLALCHEMY_POOL_RECYCLE=settings.SQLALCHEMY_POOL_RECYCLE,
     )
+    init_db(app)
 
 #TODO init influxdb etcd
 
