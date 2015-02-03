@@ -1,0 +1,46 @@
+#!/usr/bin/python
+#coding:utf-8
+
+# SETTINGS FILE
+
+from eru.common.settings import *
+
+DEBUG = True
+
+DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
+DOCKER_NETWORK = 'bridge'
+
+GIT_ENDPOINT = 'http://git.hunantv.com'
+GIT_WORK_DIR = '/tmp'
+GIT_EXTEND_DIR = '/mnt/sda1/tmp/extend'
+
+LOGSTASH = [
+    'udp://10.100.1.154:50433',
+]
+
+ETCD_SYNC = True
+ETCD_MACHINES = [
+    'http://10.1.201.110:4001',
+    'http://10.1.201.110:4002',
+]
+
+INFLUXDB_HOST = '10.1.201.42'
+INFLUXDB_PORT = 8086
+INFLUXDB_USERNAME = 'root'
+INFLUXDB_PASSWORD = 'root'
+INFLUXDB_DATABASE = 'test'
+
+MYSQL_HOST = '127.0.0.1'
+MYSQL_PORT = 3306
+MYSQL_USER = 'root'
+MYSQL_PASSWORD = ''
+MYSQL_DATABASE = 'eru'
+
+SQLALCHEMY_POOL_SIZE = 100
+SQLALCHEMY_POOL_TIMEOUT = 10
+SQLALCHEMY_POOL_RECYCLE = 2000
+
+REPORT_INTERVAL = 10
+CLEAN_NITERVAL = 86400
+CLEAN_DIR = '/var/lib/docker/containers'
+
