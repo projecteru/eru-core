@@ -3,6 +3,26 @@
 
 from eru.models import db
 
+class Ports(db.Model):
+    __tablename__ = 'ports'
+
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
+    hid = db.Column(db.Integer, db.ForeignKey('hosts.id'))
+    used = db.Column(db.Integer, default=0)
+    port = db.Column(db.Integer, nullable=False)
+
+    containers = db.relationship('Containers', backref='port', lazy='dynamic')
+
+    def __init__(self, port):
+        self.port = port
+
+    def use(self):
+        self.used = 1
+
+    def release(self):
+        self.uesd = 0
+
+
 class Cpus(db.Model):
     __tablename__ = 'cpus'
 
@@ -10,7 +30,10 @@ class Cpus(db.Model):
     hid = db.Column(db.Integer, db.ForeignKey('hosts.id'))
     used = db.Column(db.Integer, default=0)
 
+    containers = db.relationship('Containers', backref='cpus', lazy='dynamic')
+
     def use(self):
+        #TODO allow multi
         self.used = 1
 
     def release(self):
@@ -27,11 +50,12 @@ class Hosts(db.Model):
     ncpu = db.Column(db.Integer, nullable=False, default=0)
     mem = db.Column(db.BigInteger, nullable=False, default=0)
 
-    containers = db.Column(db.Integer, default=0)
-
     gid = db.Column(db.Integer, db.ForeignKey('groups.id'))
     pid = db.Column(db.Integer, db.ForeignKey('pods.id'))
+
     cpus = db.relationship('Cpus', backref='host', lazy='dynamic')
+    ports = db.relationship('Ports', backref='host', lazy='dynamic')
+    containers = db.relationship('Containers', backref='host', lazy='dynamic')
 
     def __init__(self, addr, name, uid, ncpu, mem):
         self.addr = addr

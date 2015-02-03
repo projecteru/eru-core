@@ -3,7 +3,9 @@
 
 import logging
 import sqlalchemy.exc
-from eru.models import db, Pods, Hosts, Cpus, Groups
+
+import settings
+from eru.models import db, Pods, Hosts, Cpus, Groups, Ports
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,8 @@ def create_host(pod_name, addr, name, uid, ncpu, mem):
     try:
         pod.hosts.append(host)
         [host.cpus.append(Cpus()) for i in xrange(ncpu)]
+        for i in xrange(settings.PORT_START, settings.PORT_START+settings.PORT_NUM):
+            host.ports.append(Ports(i))
         db.session.add(host)
         db.session.add(pod)
         db.session.commit()
