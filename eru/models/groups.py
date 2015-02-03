@@ -15,7 +15,8 @@ class Groups(db.Model):
     description = db.Column(db.Text)
 
     pods = db.relationship('Pods', secondary=GroupPod.__table__)
-    hosts = db.relationship('Hosts', backref='Group', lazy='dynamic')
+    hosts = db.relationship('Hosts', backref='group', lazy='dynamic')
+    apps = db.relationship('Apps', backref='group', lazy='dynamic')
 
     def __init__(self, name, description):
         self.name = name

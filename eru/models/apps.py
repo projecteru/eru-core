@@ -23,6 +23,7 @@ class Apps(db.Model):
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.CHAR(32), nullable=False, unique=True)
     git = db.Column(db.String(255), nullable=False)
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'))
     update = db.Column(db.DateTime, default=datetime.now)
 
     #TODO FK to resource
