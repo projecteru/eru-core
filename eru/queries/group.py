@@ -3,7 +3,7 @@
 
 import logging
 import sqlalchemy.exc
-from eru.models import db, Group, Pod
+from eru.models import db, Group, Pod, Cpu, Host
 
 logger = logging.getLogger(__name__)
 
@@ -27,4 +27,14 @@ def assign_pod(group_name, pod_name):
     db.session.add(group)
     db.session.commit()
     return True
+
+def get_group_max_containers(name, need):
+    hosts = Host.query.filter(Host.group.has(name=name)).all()
+    if not hosts:
+        return 0
+    m = 0
+    for host in hosts:
+        cpus= Cpu.query.filter(Cpu.host.has(id=host.id)).filter_by(used=0).count()
+        m = m + cpus/need
+    return m
 

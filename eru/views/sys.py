@@ -64,3 +64,10 @@ def assign_group(addr):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
+@sys.route('/cpu/<name>/<int:need>', methods=['GET', ])
+def get_group_max_containers(name, need):
+    ret = group.get_group_max_containers(name, need)
+    if ret < 0:
+        abort(code.HTTP_BAD_REQUEST)
+    return jsonify(msg=code.OK, data=ret)
+
