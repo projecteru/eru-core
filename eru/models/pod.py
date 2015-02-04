@@ -1,16 +1,15 @@
 #!/usr/bin/python
 #coding:utf-8
 
-from eru.models import db
+from eru.models import db, Base
 
-class Pods(db.Model):
-    __tablename__ = 'pods'
+class Pod(Base):
+    __tablename__ = 'pod'
 
-    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.CHAR(30), nullable=False, unique=True)
     description = db.Column(db.Text)
 
-    hosts = db.relationship('Hosts', backref='pod', lazy='dynamic')
+    hosts = db.relationship('Host', backref='pod', lazy='dynamic')
 
     def __init__(self, name, description):
         self.name = name

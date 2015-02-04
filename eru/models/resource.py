@@ -1,21 +1,17 @@
 #!/usr/bin/python
 #coding:utf-8
 
-from eru.models import db
+from eru.models import db, Base
 from datetime import datetime
 from sqlalchemy.ext.declarative import declared_attr
 
-class DBBase(db.Model):
+class DBBase(Base):
 
     __abstract__ = True
 
     @declared_attr
-    def id(cls):
-        return db.Column('id', db.Integer, primary_key=True)
-
-    @declared_attr
     def aid(cls):
-        return db.Column(db.Integer, db.ForeignKey('apps.id'))
+        return db.Column(db.Integer, db.ForeignKey('app.id'))
 
     @declared_attr
     def username(cls):

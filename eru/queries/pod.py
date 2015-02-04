@@ -3,12 +3,12 @@
 
 import logging
 import sqlalchemy.exc
-from eru.models import db, Pods
+from eru.models import db, Pod
 
 logger = logging.getLogger(__name__)
 
 def create_pod(name, description=""):
-    pod = Pods(name, description)
+    pod = Pod(name, description)
     try:
         db.session.add(pod)
         db.session.commit()

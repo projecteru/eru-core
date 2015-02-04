@@ -4,7 +4,7 @@
 import requests
 from flask import Blueprint, request, jsonify, abort
 
-from eru.queries import groups, pods, hosts
+from eru.queries import group, pod, host
 
 sys = Blueprint('sys', __name__, url_prefix='/sys')
 
@@ -17,7 +17,7 @@ def create_group():
     data = request.get_json()
     if not data or not data.get('name', None):
         abort(400)
-    if not groups.create_group(data['name'], data.get('description', '')):
+    if not group.create_group(data['name'], data.get('description', '')):
         abort(400)
     return jsonify(msg='ok'), 201
 
@@ -26,7 +26,7 @@ def create_pod():
     data = request.get_json()
     if not data or not data.get('name', None):
         abort(400)
-    if not pods.create_pod(data['name'], data.get('description', "")):
+    if not pod.create_pod(data['name'], data.get('description', "")):
         abort(400)
     return jsonify(msg='ok'), 201
 
@@ -35,7 +35,7 @@ def assign_pod(name):
     data = request.get_json()
     if not data or not data.get('name', None):
         abort(400)
-    if not groups.assign_pod(name, data.get('name', '')):
+    if not group.assign_pod(name, data.get('name', '')):
         abort(400)
     return jsonify(msg='ok'), 201
 
@@ -50,7 +50,7 @@ def create_host(name):
     if r.status_code != 200:
         abort(r.status_code)
     data = r.json()
-    if not hosts.create_host(name, addr, data['Name'], data['ID'], data['NCPU'], data['MemTotal']):
+    if not host.create_host(name, addr, data['Name'], data['ID'], data['NCPU'], data['MemTotal']):
         abort(400)
     return jsonify(msg='ok'), 201
 
@@ -59,7 +59,7 @@ def assign_group(addr):
     data = request.get_json()
     if not data or not data.get('name', None):
         abort(400)
-    if not hosts.assign_group(data['name'], addr):
+    if not host.assign_group(data['name'], addr):
         abort(400)
     return jsonify(msg='ok'), 201
 
