@@ -8,9 +8,8 @@ class Port(Base):
 
     hid = db.Column(db.Integer, db.ForeignKey('host.id'))
     used = db.Column(db.Integer, default=0)
+    cid = db.Column(db.Integer, db.ForeignKey('container.id'))
     port = db.Column(db.Integer, nullable=False)
-
-    containers = db.relationship('Container', backref='port', lazy='dynamic')
 
     def __init__(self, port):
         self.port = port
@@ -24,8 +23,7 @@ class Cpu(Base):
 
     hid = db.Column(db.Integer, db.ForeignKey('host.id'))
     used = db.Column(db.Integer, default=0)
-
-    container = db.relationship('Container', backref='cpus', lazy='dynamic')
+    cid = db.Column(db.Integer, db.ForeignKey('container.id'))
 
     def use(self):
         self.used = 1

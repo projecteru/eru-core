@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import uuid
 import logging
 
 from threading import RLock
@@ -28,6 +27,7 @@ def create_private(group_name, pod_name, appname):
        ncpu: int cpu num per container -1 means share
        ncontainer: int container nums
        version: string deploy version
+       expose: bool true or false, default true
     '''
     data = request.get_json()
     if not data or not data.get('ncpu', None) or \
@@ -44,6 +44,7 @@ def create_private(group_name, pod_name, appname):
 
     ncpu = int(data['ncpu'])
     ncontainer = int(data['ncontainer'])
+    expose = bool(data['expose'])
 
     tasks_info = []
     with RESLOCK['%s:%s' % (group_name, pod_name)]:
@@ -56,7 +57,7 @@ def create_private(group_name, pod_name, appname):
             if not host_cpus:
                 abort(code.HTTP_BAD_REQUEST)
             for k, cpus in host_cpus.iteritems():
-                ports = host.get_host_ports(*k)
+                ports = host.get_host_ports(expose, *k)
                 tasks_info.append((application, version, k[0], k[1], cpus, ports))
                 host.use_cpus(cpus)
                 host.use_ports(ports)
@@ -70,9 +71,10 @@ def create_private(group_name, pod_name, appname):
         t = _create_task(*task_info)
         if not t:
             #TODO need response
+            logger.error(application.name, version.sha, task_info[2].addr)
             _release_cpus_ports(task_info[4], task_info[5])
             continue
-        ts.append(t.token)
+        ts.append(t.id)
         #TODO threading spawn
         _create_container(t, task_info[4], task_info[5])
 
@@ -81,12 +83,12 @@ def create_private(group_name, pod_name, appname):
 def _release_cpus_ports(cpus, ports):
     if cpus:
         host.release_cpus(cpus)
-    host.release_ports(ports)
+    if ports:
+        host.release_ports(ports)
 
 def _create_task(application, version, host, num, cpus, ports):
     try:
-        token = uuid.uuid4().hex
-        return task.create_task(token, code.TASK_CREATE, application, version, host)
+        return task.create_task(code.TASK_CREATE, application, version, host)
     except Exception, e:
         logger.exception(e)
     return None

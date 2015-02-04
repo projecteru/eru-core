@@ -60,7 +60,9 @@ def get_host_cpus(group_name, pod_name, ncpu, ncontainer):
         ncontainer = ncontainer - can
     return result
 
-def get_host_ports(host, num):
+def get_host_ports(expose, host, num):
+    if not expose:
+        return []
     ports = Port.query.filter(Port.host.has(id=host.id)).filter_by(used=0).limit(num).all()
     if len(ports) < num:
         raise PortNotEnough()

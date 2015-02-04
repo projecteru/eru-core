@@ -6,9 +6,9 @@ import sqlalchemy.exc
 
 from eru.models import db, Task
 
-def create_task(token, typ, application, version, host):
+def create_task(typ, application, version, host):
     try:
-        task = Task(token, typ)
+        task = Task(typ)
         application.tasks.append(task)
         version.tasks.append(task)
         host.tasks.append(task)

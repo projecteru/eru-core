@@ -7,7 +7,6 @@ from eru.models import db, Base
 class Task(Base):
     __tablename__ = 'task'
 
-    token = db.Column(db.CHAR(32), nullable=False, unique=True)
     hid = db.Column(db.Integer, db.ForeignKey('host.id'))
     aid = db.Column(db.Integer, db.ForeignKey('app.id'))
     vid = db.Column(db.Integer, db.ForeignKey('version.id'))
@@ -16,8 +15,7 @@ class Task(Base):
     finished = db.Column(db.DateTime, nullable=True)
     created = db.Column(db.DateTime, default=datetime.now)
 
-    def __init__(self, token, typ):
-        self.token = token
+    def __init__(self, typ):
         self.typ = typ
 
     def finish(self):
