@@ -13,8 +13,8 @@ class Task(Base):
     vid = db.Column(db.Integer, db.ForeignKey('version.id'))
     typ = db.Column(db.Integer, nullable=False)
     result = db.Column(db.Integer, nullable=True)
-    created = db.Column(db.DateTime, default=datetime.now)
     finished = db.Column(db.DateTime, nullable=True)
+    created = db.Column(db.DateTime, default=datetime.now)
 
     def __init__(self, token, typ):
         self.token = token

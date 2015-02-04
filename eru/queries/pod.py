@@ -12,7 +12,7 @@ def create_pod(name, description=""):
     try:
         db.session.add(pod)
         db.session.commit()
-        return True
+        return pod
     except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logger.exception(e)

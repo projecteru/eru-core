@@ -12,7 +12,7 @@ def create_group(name, description=""):
     try:
         db.session.add(group)
         db.session.commit()
-        return True
+        return group
     except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logger.exception(e)

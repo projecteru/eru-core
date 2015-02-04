@@ -18,9 +18,6 @@ class Port(Base):
     def use(self):
         self.used = 1
 
-    def release(self):
-        self.uesd = 0
-
 
 class Cpu(Base):
     __tablename__ = 'cpu'
@@ -31,11 +28,7 @@ class Cpu(Base):
     container = db.relationship('Container', backref='cpus', lazy='dynamic')
 
     def use(self):
-        #TODO allow multi
         self.used = 1
-
-    def release(self):
-        self.uesd = 0
 
 
 class Host(Base):
