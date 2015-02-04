@@ -22,6 +22,7 @@ class App(Base):
     name = db.Column(db.CHAR(32), nullable=False, unique=True)
     git = db.Column(db.String(255), nullable=False)
     gid = db.Column(db.Integer, db.ForeignKey('group.id'))
+    token = db.Column(db.CHAR(32), nullable=False, unique=True)
     update = db.Column(db.DateTime, default=datetime.now)
 
     #TODO FK to more resource
