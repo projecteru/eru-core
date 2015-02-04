@@ -18,13 +18,13 @@ def create_host(pod_name, addr, name, uid, ncpu, mem):
     try:
         pod.hosts.append(host)
         [host.cpus.append(Cpu()) for i in xrange(ncpu)]
-        for i in xrange(settings.PORT_START, settings.PORT_START+settings.PORT_NUM):
+        for i in xrange(settings.PORT_START, settings.PORT_START+host.ncpu*settings.PORT_RANGE):
             host.ports.append(Port(i))
         db.session.add(host)
         db.session.add(pod)
         db.session.commit()
         return host
-    except sqlalchemy.exc, e:
+    except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logging.exception(e)
         return False

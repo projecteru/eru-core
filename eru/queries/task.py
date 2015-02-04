@@ -18,7 +18,7 @@ def create_task(token, typ, application, version, host):
         db.session.add(host)
         db.session.commit()
         return task
-    except sqlalchemy.exc, e:
+    except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logging.exception(e)
         return False
