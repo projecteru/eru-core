@@ -12,6 +12,7 @@ class Version(Base):
     created = db.Column(db.DateTime, default=datetime.now)
 
     containers = db.relationship('Container', backref='version', lazy='dynamic')
+    tasks = db.relationship('Task', backref='version', lazy='dynamic')
 
     def __init__(self, sha):
         self.sha = sha
@@ -29,10 +30,12 @@ class App(Base):
 
     versions = db.relationship('Version', backref='app', lazy='dynamic')
     containers = db.relationship('Container', backref='app', lazy='dynamic')
+    tasks = db.relationship('Task', backref='app', lazy='dynamic')
     mysql = db.relationship('MySQL', backref='app', lazy='dynamic')
     influxdb = db.relationship('InfluxDB', backref='app', lazy='dynamic')
 
-    def __init__(self, name, git):
+    def __init__(self, name, git, token):
         self.name = name
         self.git = git
+        self.token = token
 

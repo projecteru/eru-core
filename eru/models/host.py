@@ -52,6 +52,7 @@ class Host(Base):
 
     cpus = db.relationship('Cpu', backref='host', lazy='dynamic')
     ports = db.relationship('Port', backref='host', lazy='dynamic')
+    tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
 
     def __init__(self, addr, name, uid, ncpu, mem):
