@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def create_host(pod_name, addr, name, uid, ncpu, mem):
     pod = Pod.query.filter_by(name=pod_name).first()
     if not pod:
-        return False
+        return None
     host = Host(addr, name, uid, ncpu, mem)
     try:
         pod.hosts.append(host)
@@ -27,7 +27,7 @@ def create_host(pod_name, addr, name, uid, ncpu, mem):
     except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logging.exception(e)
-        return False
+        return None
 
 def assign_group(name, addr):
     host = Host.query.filter_by(addr=addr).first()

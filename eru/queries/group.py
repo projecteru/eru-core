@@ -16,7 +16,7 @@ def create_group(name, description=""):
     except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logger.exception(e)
-        return False
+        return None
 
 def assign_pod(group_name, pod_name):
     group = Group.query.filter_by(name=group_name).first()

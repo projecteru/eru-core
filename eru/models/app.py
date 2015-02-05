@@ -14,7 +14,8 @@ class Version(Base):
     containers = db.relationship('Container', backref='version', lazy='dynamic')
     tasks = db.relationship('Task', backref='version', lazy='dynamic')
 
-    def __init__(self, sha):
+    def __init__(self, app_id, sha):
+        self.aid = app_id
         self.sha = sha
 
 class App(Base):
