@@ -25,6 +25,7 @@ INSTALL_REQUIRES = [
     'PyYAML',
     'requests',
     'paramiko',
+    'Flask-Testing',
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))

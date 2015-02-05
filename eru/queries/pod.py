@@ -16,5 +16,5 @@ def create_pod(name, description=""):
     except sqlalchemy.exc.IntegrityError, e:
         db.session.rollback()
         logger.exception(e)
-        return False
+        return None
 
