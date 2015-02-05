@@ -46,6 +46,7 @@ def create_celery(app):
         EMAIL_PORT = settings.EMAIL_PORT,
         EMAIL_HOST_USER = settings.EMAIL_HOST_USER,
         EMAIL_HOST_PASSWORD = settings.EMAIL_HOST_PASSWORD,
+        EMAIL_USE_SSL = settings.EMAIL_USE_SSL,
     )
 
     return make_celery(app)

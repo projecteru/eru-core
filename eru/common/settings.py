@@ -64,6 +64,7 @@ SERVER_EMAIL = 'gitlab@gitup.me'
 
 # Mailserver configuration
 EMAIL_HOST = 'smtp.exmail.qq.com'
-EMAIL_PORT = 25
+EMAIL_PORT = 465
 EMAIL_HOST_USER = 'gitlab@gitup.me'
 EMAIL_HOST_PASSWORD = '^123$456a'
+EMAIL_USE_SSL = True

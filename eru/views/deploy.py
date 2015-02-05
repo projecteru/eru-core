@@ -77,7 +77,10 @@ def create_private(group_name, pod_name, appname):
             continue
         ts.append(t.id)
         #TODO threading spawn
-        create_container.delay(t, task_info[4], task_info[5])
+        create_container.apply_async(
+                args=(t, task_info[4], task_info[5]),
+                task_id='task:%d' % t.id
+        )
 
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
 
