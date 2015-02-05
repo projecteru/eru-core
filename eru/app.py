@@ -33,6 +33,8 @@ def create_db(app):
 
 def create_celery(app):
     app.config.update(
+        CELERY_ENABLE_UTC = settings.CELERY_ENABLE_UTC,
+        CELERY_TIMEZONE = settings.CELERY_TIMEZONE,
         CELERY_BROKER_URL = settings.CELERY_BROKER_URL,
         CELERY_RESULT_BACKEND = settings.CELERY_RESULT_BACKEND,
         CELERY_ACCEPT_CONTENT = settings.CELERY_ACCEPT_CONTENT,
