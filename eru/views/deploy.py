@@ -6,8 +6,8 @@ import logging
 from threading import RLock
 from collections import defaultdict
 from flask import Blueprint, request, jsonify, abort
-from celery import current_app
 
+from eru.async.task import create_container
 from eru.common import code
 from eru.queries import group, host, app, task
 
@@ -73,19 +73,13 @@ def create_private(group_name, pod_name, appname):
         if not t:
             #TODO need response
             logger.error(application.name, version.sha, task_info[2].addr)
-            _release_cpus_ports(task_info[4], task_info[5])
+            task.release_cpus_ports(task_info[4], task_info[5])
             continue
         ts.append(t.id)
         #TODO threading spawn
-        _create_container.delay(t, task_info[4], task_info[5])
+        create_container.delay(t, task_info[4], task_info[5])
 
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
-
-def _release_cpus_ports(cpus, ports):
-    if cpus:
-        host.release_cpus(cpus)
-    if ports:
-        host.release_ports(ports)
 
 def _create_task(application, version, host, num, cpus, ports):
     try:
@@ -93,20 +87,4 @@ def _create_task(application, version, host, num, cpus, ports):
     except Exception, e:
         logger.exception(e)
     return None
-
-@current_app.task(bind=True)
-def _create_container(self, t, cpus, ports):
-    #TODO get docker deploy status
-    print self
-    try:
-        # if suceess
-        import time
-        time.sleep(60)
-    except Exception, e:
-        logger.exception(e)
-        _release_cpus_ports(cpus, ports)
-        task.done(t, code.TASK_FAILED)
-    else:
-        task.done(t, code.TASK_SUCCESS)
-    # container.create()
 

@@ -4,6 +4,7 @@
 import logging
 import sqlalchemy.exc
 
+from eru.queries import host
 from eru.models import db, Task
 
 def create_task(typ, application, version, host):
@@ -28,4 +29,10 @@ def done(task, result):
     task.finish()
     db.session.add(task)
     db.session.commit()
+
+def release_cpus_ports(cpus, ports):
+    if cpus:
+        host.release_cpus(cpus)
+    if ports:
+        host.release_ports(ports)
 
