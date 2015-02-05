@@ -6,6 +6,7 @@ import logging
 from threading import RLock
 from collections import defaultdict
 from flask import Blueprint, request, jsonify, abort
+from celery import current_app
 
 from eru.common import code
 from eru.queries import group, host, app, task
@@ -76,7 +77,7 @@ def create_private(group_name, pod_name, appname):
             continue
         ts.append(t.id)
         #TODO threading spawn
-        _create_container(t, task_info[4], task_info[5])
+        _create_container.delay(t, task_info[4], task_info[5])
 
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
 
@@ -93,12 +94,14 @@ def _create_task(application, version, host, num, cpus, ports):
         logger.exception(e)
     return None
 
-def _create_container(t, cpus, ports):
+@current_app.task(bind=True)
+def _create_container(self, t, cpus, ports):
     #TODO get docker deploy status
+    print self
     try:
         # if suceess
         import time
-        time.sleep(1)
+        time.sleep(60)
     except Exception, e:
         logger.exception(e)
         _release_cpus_ports(cpus, ports)

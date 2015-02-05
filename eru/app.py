@@ -5,8 +5,7 @@ import logging
 import settings
 from flask import Flask
 
-from eru.models import init_db
-from eru.views import init_views
+from eru.async import make_celery
 
 def init_logging():
     args = {'level': logging.INFO}
@@ -15,7 +14,8 @@ def init_logging():
     args['format'] = '%(levelname)s:%(asctime)s:%(message)s'
     logging.basicConfig(**args)
 
-def init_mysql(app):
+def create_mysql(app):
+    from eru.models import init_db
     dsn = 'mysql://{username}:{password}@{host}:{port}/{db}'.format(
         username = settings.MYSQL_USER,
         password = settings.MYSQL_PASSWORD,
@@ -31,19 +31,33 @@ def init_mysql(app):
     )
     init_db(app)
 
+def create_celery(app):
+    app.config.update(
+        CELERY_BROKER_URL = settings.CELERY_BROKER_URL,
+        CELERY_RESULT_BACKEND = settings.CELERY_RESULT_BACKEND,
+    )
+
+    return make_celery(app)
+
+def create_views(app):
+    from eru.views import init_views
+    init_views(app)
+
+
 #TODO init influxdb etcd
 
 def create_app(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
     app.debug = settings.DEBUG
+    celery = create_celery(app)
 
     init_logging()
-    init_mysql(app)
-    init_views(app)
+    create_mysql(app)
+    create_views(app)
 
-    return app
+    return app, celery
 
-app = create_app()
+app, celery = create_app()
 
 @app.route("/")
 def index():
