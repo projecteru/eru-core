@@ -2,6 +2,7 @@
 #coding:utf-8
 
 import logging
+import json
 
 from threading import RLock
 from collections import defaultdict
@@ -30,7 +31,7 @@ def create_private(group_name, pod_name, appname):
        version: string deploy version
        expose: bool true or false, default true
     '''
-    data = request.get_json()
+    data = json.loads(request.data)
     if not data or not data.get('ncpu', None) or \
         not data.get('ncontainer', None) or \
         not data.get('version', None):
@@ -45,7 +46,7 @@ def create_private(group_name, pod_name, appname):
 
     ncpu = int(data['ncpu'])
     ncontainer = int(data['ncontainer'])
-    expose = bool(data['expose'])
+    expose = bool(data.get('expose', 'true'))
 
     tasks_info = []
     with RESLOCK['%s:%s' % (group_name, pod_name)]:
