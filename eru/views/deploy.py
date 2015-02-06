@@ -70,25 +70,23 @@ def create_private(group_name, pod_name, appname):
     for task_info in tasks_info:
         #task_info contain (application, version, host, num, cpus, ports)
         #create_task will always correct
-        t = _create_task(*task_info)
+        t = _create_task(code.TASK_CREATE, *task_info)
         if not t:
-            #TODO need response
-            logger.error(application.name, version.sha, task_info[2].addr)
-            task.release_cpus_ports(task_info[4], task_info[5])
             continue
         ts.append(t.id)
-        #TODO threading spawn
-        create_container.apply_async(
-                args=(t, task_info[4], task_info[5]),
-                task_id='task:%d' % t.id
-        )
 
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
 
-def _create_task(application, version, host, num, cpus, ports):
+def _create_task(typ, application, version, host, num, cpus, ports):
     try:
-        return task.create_task(code.TASK_CREATE, application, version, host)
+        t = task.create_task(typ, application, version, host)
+        create_container.apply_async(
+                args=(t, cpus, ports),
+                task_id='task:%d' % t.id
+        )
+        return t
     except Exception, e:
         logger.exception(e)
+        task.release_cpus_ports(cpus, ports)
     return None
 

@@ -9,10 +9,9 @@ from eru.queries import task
 
 logger = logging.getLogger(__name__)
 
-@current_app.task(bind=True)
-def create_container(self, t, cpus, ports):
+@current_app.task()
+def create_container(t, cpus, ports):
     #TODO get docker deploy status
-    print self
     try:
         # if suceess
         import time
