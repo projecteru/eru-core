@@ -19,6 +19,7 @@ def create_app_with_celery(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
     app.config.from_object('settings')
 
+    # should be initialized before other imports
     celery = make_celery(app)
 
     from eru.models import init_db

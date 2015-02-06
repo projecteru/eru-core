@@ -15,3 +15,6 @@ class Pod(Base):
         self.name = name
         self.description = description
 
+    @classmethod
+    def get(cls, id):
+        return cls.query.filter(cls.id==id).one()

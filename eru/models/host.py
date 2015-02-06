@@ -54,3 +54,7 @@ class Host(Base):
         self.ncpu = ncpu
         self.mem = mem
 
+    @property
+    def pod(self):
+        from .pod import Pod
+        return Pod.get(self.pid)
