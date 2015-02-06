@@ -41,6 +41,10 @@ def assign_group(name, addr):
     return True
 
 def get_host_cpus(group_name, pod_name, ncpu, ncontainer):
+    '''
+    get available cpus for `group_name` @ `pod_name` 
+    if you need `ncontainer` containers which each needs `ncpu` cpus
+    '''
     hosts = Host.query \
             .filter(Host.group.has(name=group_name)) \
             .filter(Host.pod.has(name=pod_name)) \
