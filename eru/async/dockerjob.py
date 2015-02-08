@@ -1,10 +1,11 @@
 # coding: utf
 
-import string
 from cStringIO import StringIO
-from random import sample
+from itertools import chain
 from docker import Client
 from docker.utils import create_host_config
+
+from eru.aysnc.utils import random_string
 
 
 DOCKER_FILE_TEMPLATE = '''
@@ -24,14 +25,10 @@ def _client(host):
     return Client(base_url=base_url)
 
 
-def _random_string(length):
-    return ''.join(sample(string.digits+string.letters), length)
-
-
 def build_image(host, version, base):
     c = _client(host)
     appname = version.name
-    build_cmd = ' '.join(c.app_yaml.get('build', []))
+    build_cmd = ' '.join(version.appconfig.build)
     repo = '%s/%s' % (REGISTRY_ENDPOINT, appname)
     tag = '%s:%s' % (repo, version.sha[:7])
 
@@ -39,23 +36,25 @@ def build_image(host, version, base):
         base=base, git_url=version.application.git,
         appname=appname, sha1=version.sha, build_cmd=build_cmd))
 
-    r = c.build(fileobj=dockerfile, rm=True, tag=tag)
-    for line in r:
-        yield line
+    build_gen = c.build(fileobj=dockerfile, rm=True, tag=tag)
+    # r = c.build(fileobj=dockerfile, rm=True, tag=tag)
+    # for line in r:
+    #     yield line
 
-    r = c.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
-    for line in r:
-        yield line
+    push_gen = c.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
+    # r = c.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
+    # for line in r:
+    #     yield line
 
-    yield 'Build and push done'
+    return chain(build_gen, push_gen)
 
 
 def create_container(host, version, is_test=False):
     c = _client(host)
     appname = version.name
     image = '%s/%s:%s' % (REGISTRY_ENDPOINT, appname, version.sha[:7])
-    cmd = c.app_yaml.get('test', []) if is_test else c.app_yaml.get('cmd', [])
-    ident_id = _random_string(6) if is_test else ''
+    cmd = version.appconfig.test if is_test else version.appconfig.cmd
+    ident_id = random_string(6) if is_test else ''
     container_name = '%s_%s' % (appname, ident_id) if is_test else appname
     env = {
         'NBE_RUNENV': 'TEST' if is_test else 'PROD',

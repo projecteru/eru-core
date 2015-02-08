@@ -1,10 +1,10 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import etcd
-import yaml
+from werkzeug.utils import cached_property
 
 from eru.models import db, Base
+from eru.models.appconfig import AppConfig
 from datetime import datetime
 
 class Version(Base):
@@ -21,18 +21,17 @@ class Version(Base):
         self.aid = app_id
         self.sha = sha
 
-    @property
+    @cached_property
     def name(self):
         return self.application.name
 
-    @property
+    @cached_property
     def application(self):
         return App.get(self.aid)
 
-    @property
-    def app_yaml(self):
-        client = etcd.Client(host='10.1.201.110', port=4001)
-        return yaml.load(client.get('/NBE/%s/%s/app.yaml' % (self.name, self.sha[:7])).value)
+    @cached_property
+    def appconfig(self):
+        return AppConfig.get_by_name_and_version(self.name, self.sha[:7])
 
 
 class App(Base):
