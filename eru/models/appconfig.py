@@ -65,6 +65,16 @@ class AppConfig(BaseConfig):
         return cls._get_by_path(path)
 
 
+class SubAppConfig(BaseConfig):
+
+    list_names = ['test', 'build', 'cmd', ]
+
+    @classmethod
+    def get_by_subname(cls, name, subname, version):
+        path = '/NBE/{0}/{1}/sub/{0}-{2}.yaml'.format(name, version, subname)
+        return cls._get_by_path(path)
+
+
 class ResourceConfig(BaseConfig):
 
     @classmethod

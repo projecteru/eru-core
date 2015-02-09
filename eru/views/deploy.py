@@ -18,6 +18,13 @@ RESLOCK = defaultdict(RLock)
 
 logger = logging.getLogger(__name__)
 
+
+def _check_json(data, keys):
+    if not isinstance(keys, list):
+        keys = [keys, ]
+    return all((k in data) for k in keys)
+
+
 @deploy.route('/')
 def index():
     return 'deploy control'
@@ -31,9 +38,7 @@ def create_private(group_name, pod_name, appname):
        expose: bool true or false, default true
     '''
     data = request.get_json()
-    if not data or not data.get('ncpu', None) or \
-        not data.get('ncontainer', None) or \
-        not data.get('version', None):
+    if not _check_json(data, ['ncpu', 'ncontainer', 'version']):
         abort(code.HTTP_BAD_REQUEST)
 
     application = app.get_app(appname)

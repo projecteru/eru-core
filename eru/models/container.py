@@ -12,6 +12,7 @@ class Container(Base):
     vid = db.Column(db.Integer, db.ForeignKey('version.id'))
     container_id = db.Column(db.CHAR(64), nullable=False, unique=True)
     name = db.Column(db.CHAR(255), nullable=False)
+    subname = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)
 
     cpus = db.relationship('Cpu', backref='container', lazy='dynamic')

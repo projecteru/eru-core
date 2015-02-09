@@ -16,46 +16,47 @@ WORKDIR /{appname}
 RUN git reset --hard {sha1}
 RUN {build_cmd}
 '''
-
 REGISTRY_ENDPOINT = 'docker-registry.intra.hunantv.com'
 
 
-def _client(host):
+def _docker_client(host):
     base_url = 'tcp://{host.addr}:1111'.format(host=host)
     return Client(base_url=base_url)
 
 
 def build_image(host, version, base):
-    c = _client(host)
+    """
+    用 host 机器, 以 base 为基础镜像, 为 version 构建
+    一个稍后可以运行的镜像.
+    """
+    client = _docker_client(host)
     appname = version.name
     build_cmd = ' '.join(version.appconfig.build)
-    repo = '%s/%s' % (REGISTRY_ENDPOINT, appname)
-    tag = '%s:%s' % (repo, version.sha[:7])
+    repo = '{0}/{1}'.format(REGISTRY_ENDPOINT, appname)
+    tag = '{0}:{1}'.format(repo, version.short_sha)
 
     dockerfile = StringIO(DOCKER_FILE_TEMPLATE.format(
         base=base, git_url=version.application.git,
         appname=appname, sha1=version.sha, build_cmd=build_cmd))
 
-    build_gen = c.build(fileobj=dockerfile, rm=True, tag=tag)
-    # r = c.build(fileobj=dockerfile, rm=True, tag=tag)
-    # for line in r:
-    #     yield line
-
-    push_gen = c.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
-    # r = c.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
-    # for line in r:
-    #     yield line
-
+    build_gen = client.build(fileobj=dockerfile, rm=True, tag=tag)
+    push_gen = client.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
     return chain(build_gen, push_gen)
 
 
-def create_container(host, version, is_test=False):
-    c = _client(host)
-    appname = version.name
-    image = '%s/%s:%s' % (REGISTRY_ENDPOINT, appname, version.sha[:7])
+def create_container(host, version, subname='', is_test=False):
+    """
+    在 host 机器上, 用 subname 创建一个 version 的实例.
+    如果没有 subname, 那么默认用 appname.
+    """
+    client = _docker_client(host)
+    appconfig = version.get_subapp_config(subname)
+
+    appname = appconfig.name
+    image = '{0}/{1}:{2}'.format(REGISTRY_ENDPOINT, appname, version.short_sha)
     cmd = version.appconfig.test if is_test else version.appconfig.cmd
     ident_id = random_string(6) if is_test else ''
-    container_name = '%s_%s' % (appname, ident_id) if is_test else appname
+    container_name = '{0}_{1}'.format(appname, ident_id) if is_test else appname
     env = {
         'NBE_RUNENV': 'TEST' if is_test else 'PROD',
         'NBE_POD': host.pod.name,
