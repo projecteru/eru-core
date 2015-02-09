@@ -2,7 +2,6 @@
 #coding:utf-8
 
 import logging
-import json
 
 from threading import RLock
 from collections import defaultdict
@@ -31,7 +30,7 @@ def create_private(group_name, pod_name, appname):
        version: string deploy version
        expose: bool true or false, default true
     '''
-    data = request.json
+    data = request.get_json()
     if not data or not data.get('ncpu', None) or \
         not data.get('ncontainer', None) or \
         not data.get('version', None):
