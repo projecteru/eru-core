@@ -2,6 +2,7 @@
 #coding:utf-8
 
 import logging
+import settings
 import sqlalchemy.exc
 
 import settings
@@ -43,7 +44,7 @@ def get_host_cpus(group_name, pod_name, ncpu, ncontainer):
     hosts = Host.query \
             .filter(Host.group.has(name=group_name)) \
             .filter(Host.pod.has(name=pod_name)) \
-            .all() \
+            .all()
 
     if not hosts:
         raise NoHost()
@@ -60,13 +61,27 @@ def get_host_cpus(group_name, pod_name, ncpu, ncontainer):
         ncontainer = ncontainer - can
     return result
 
-def get_host_ports(expose, host, num):
-    if not expose:
-        return []
+def get_host_ports(host, num):
     ports = Port.query.filter(Port.host.has(id=host.id)).filter_by(used=0).limit(num).all()
     if len(ports) < num:
         raise PortNotEnough()
     return ports
+
+def get_free_host(pod_name, num):
+    pod = Pod.query.filter_by(name=pod_name).first()
+    if not pod:
+        return []
+
+    hosts = Host.query \
+            .filter(Host.gid==None) \
+            .filter(Host.pid==pod.id) \
+            .order_by(Host.count) \
+            .limit(settings.PUBLIC_HOST_LIMIT) \
+            .all()
+
+    if not hosts:
+        raise NoHost()
+    return hosts
 
 def use_cpus(cpus):
     for cpu in cpus:

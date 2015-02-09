@@ -37,6 +37,7 @@ class Host(Base):
     uid = db.Column(db.CHAR(60), nullable=False)
     ncpu = db.Column(db.Integer, nullable=False, default=0)
     mem = db.Column(db.BigInteger, nullable=False, default=0)
+    count = db.Column(db.Integer, nullable=False, default=0)
 
     gid = db.Column(db.Integer, db.ForeignKey('group.id'))
     pid = db.Column(db.Integer, db.ForeignKey('pod.id'))
