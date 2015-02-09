@@ -1,9 +1,8 @@
 # coding: utf
 
+from docker import Client
 from cStringIO import StringIO
 from itertools import chain
-from docker import Client
-from docker.utils import create_host_config
 
 from eru.aysnc.utils import random_string
 
@@ -31,7 +30,7 @@ def build_image(host, version, base):
     """
     client = _docker_client(host)
     appname = version.name
-    build_cmd = ' '.join(version.appconfig.build)
+    build_cmd = version.appconfig.build
     repo = '{0}/{1}'.format(REGISTRY_ENDPOINT, appname)
     tag = '{0}:{1}'.format(repo, version.short_sha)
 
@@ -44,29 +43,47 @@ def build_image(host, version, base):
     return chain(build_gen, push_gen)
 
 
-def create_container(host, version, subname='', is_test=False):
+def create_container(host, version, sub, port=0, is_test=False):
     """
-    在 host 机器上, 用 subname 创建一个 version 的实例.
-    如果没有 subname, 那么默认用 appname.
+    在 host 机器上, 用 sub, port 作为外部端口, 创建一个 version 的实例.
+    sub 定义在 app.yaml 的 commands 里, 具体可以参考 eru/models/appconfig.py.
     """
     client = _docker_client(host)
-    appconfig = version.get_subapp_config(subname)
+    appconfig = version.appconfig
+    resconfig = version.get_resource_config('test' if is_test else 'prod')
 
-    appname = appconfig.name
+    appname = appconfig.appname
     image = '{0}/{1}:{2}'.format(REGISTRY_ENDPOINT, appname, version.short_sha)
-    cmd = version.appconfig.test if is_test else version.appconfig.cmd
-    ident_id = random_string(6) if is_test else ''
-    container_name = '{0}_{1}'.format(appname, ident_id) if is_test else appname
+    cmd = version.appconfig.test if is_test else appconfig.commands[sub]
+
+    # build name
+    # 有端口暴露的: {appname}_{port}, {appname}_{subname}_{port}
+    # 没有端口暴露的(daemon): {appname}_{ident_id}, {appname}_{subname}_{ident_id}
+    name_parts = [appname, ]
+    if sub:
+        name_parts.append(sub)
+    name_parts.append(str(port) if port else random_string(6))
+    container_name = '_'.join(name_parts)
+
     env = {
         'NBE_RUNENV': 'TEST' if is_test else 'PROD',
         'NBE_POD': host.pod.name,
         'NBE_PERMDIR': '/%s/permdir' % appname,
     }
-    volumes = ['/mnt/mfs/permdir/%s' % appname, '/tmp/%s_config.yaml' % appname]
+    env.update(resconfig.to_env_dict(appname))
+
+    volumes = ['/%s/permdir' % appname, ]
     user = version.aid # 可以控制从多少开始
     cpuset = '' # 有才设置
     working_dir = '/%s' % appname
+    ports = [appconfig.port, ] if appconfig.port else None
 
-    container = c.create_container(image=image, command=cmd, user=user, environment=env,
-            volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir)
-    return c.start(container=container['Id'], binds=None)
+    container = client.create_container(image=image, command=cmd, user=user, environment=env,
+            volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=ports)
+
+    # start options
+    # port binding and volume binding
+    port_bindings = {appconfig.port: port}
+    binds = {'/mnt/mfs/permdir/%s' % appname: {'bind': '/%s/permdir' % appname, 'ro': False}}
+    return client.start(container=container['Id'], port_bindings=port_bindings, binds=binds)
+

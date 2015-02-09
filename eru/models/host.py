@@ -54,7 +54,12 @@ class Host(Base):
         self.ncpu = ncpu
         self.mem = mem
 
+    @classmethod
+    def get(cls, id):
+        return cls.query.filter(cls.id == id).one()
+
     @property
     def pod(self):
         from .pod import Pod
         return Pod.get(self.pid)
+

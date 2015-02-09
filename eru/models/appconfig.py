@@ -8,6 +8,19 @@ __all__ = ['AppConfig', 'ResourceConfig', ]
 # TODO: from config.py
 _etcd_client = etcd.Client(host='10.1.201.110', port=4001)
 
+'''
+Example of app.yaml:
+
+appname: "app"
+port: 5000
+commands:
+    - web: "python app.py --port 5000"
+    - daemon: "python daemon.py --interval 5"
+    - service: "python service.py"
+build: "pip install -r ./req.txt"
+test: "./runtest.sh"
+'''
+
 
 class BaseConfig(object):
 
@@ -57,21 +70,11 @@ class BaseConfig(object):
 
 class AppConfig(BaseConfig):
 
-    list_names = ['test', 'build', 'cmd', ]
+    list_names = ['commands', ]
 
     @classmethod
     def get_by_name_and_version(cls, name, version):
         path = '/NBE/{0}/{1}/app.yaml'.format(name, version)
-        return cls._get_by_path(path)
-
-
-class SubAppConfig(BaseConfig):
-
-    list_names = ['test', 'build', 'cmd', ]
-
-    @classmethod
-    def get_by_subname(cls, name, subname, version):
-        path = '/NBE/{0}/{1}/sub/{0}-{2}.yaml'.format(name, version, subname)
         return cls._get_by_path(path)
 
 
@@ -81,4 +84,10 @@ class ResourceConfig(BaseConfig):
     def get_by_name_and_env(cls, name, env='prod'):
         path = '/NBE/{0}/resource-{1}'.format(name, env)
         return cls._get_by_path(path)
+
+    def to_env_dict(self, name):
+        def _upper_key(key):
+            k = '{0}_{1}'.format(name, key)
+            return k.upper()
+        return {_upper_key(key): str(value) for key, value in self._data.iteritems()}
 

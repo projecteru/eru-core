@@ -24,3 +24,12 @@ class Task(Base):
     def set_result(self, result):
         self.result = result
 
+    @property
+    def host(self):
+        from .host import Host
+        return Host.get(self.hid)
+
+    @property
+    def version(self):
+        from .app import Version
+        return Version.get(self.vid)
