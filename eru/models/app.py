@@ -11,23 +11,24 @@ class Version(Base):
     __tablename__ = 'version'
 
     sha = db.Column(db.CHAR(40), index=True, nullable=False)
-    aid = db.Column(db.Integer, db.ForeignKey('app.id'))
+    app_id = db.Column(db.Integer, db.ForeignKey('app.id'))
     created = db.Column(db.DateTime, default=datetime.now)
 
     containers = db.relationship('Container', backref='version', lazy='dynamic')
     tasks = db.relationship('Task', backref='version', lazy='dynamic')
+    application = db.relationship('App', foreign_keys=[app_id])
 
     def __init__(self, app_id, sha):
-        self.aid = app_id
+        self.app_id = app_id
         self.sha = sha
 
-    @cached_property
+    @classmethod
+    def get_by_app_and_version(cls, application, sha):
+        return cls.query.filter(cls.sha == sha, cls.app_id == application.id).one()
+
+    @property
     def name(self):
         return self.application.name
-
-    @cached_property
-    def application(self):
-        return App.get(self.aid)
 
     @cached_property
     def appconfig(self):
@@ -46,7 +47,7 @@ class App(Base):
 
     name = db.Column(db.CHAR(32), nullable=False, unique=True)
     git = db.Column(db.String(255), nullable=False)
-    gid = db.Column(db.Integer, db.ForeignKey('group.id'))
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     token = db.Column(db.CHAR(32), nullable=False, unique=True)
     update = db.Column(db.DateTime, default=datetime.now)
 

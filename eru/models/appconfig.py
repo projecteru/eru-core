@@ -13,12 +13,11 @@ Example of app.yaml:
 
 appname: "app"
 port: 5000
-commands:
-    - web: "python app.py --port 5000"
-    - daemon: "python daemon.py --interval 5"
-    - service: "python service.py"
+entrypoints:
+    web: "python app.py --port 5000"
+    daemon: "python daemon.py --interval 5"
+    service: "python service.py"
 build: "pip install -r ./req.txt"
-test: "./runtest.sh"
 '''
 
 
@@ -70,7 +69,7 @@ class BaseConfig(object):
 
 class AppConfig(BaseConfig):
 
-    list_names = ['commands', ]
+    dict_names = ['entrypoints', ]
 
     @classmethod
     def get_by_name_and_version(cls, name, version):

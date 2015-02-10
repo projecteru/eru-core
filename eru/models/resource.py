@@ -10,7 +10,7 @@ class DBBase(Base):
     __abstract__ = True
 
     @declared_attr
-    def aid(cls):
+    def app_id(cls):
         return db.Column(db.Integer, db.ForeignKey('app.id'))
 
     @declared_attr

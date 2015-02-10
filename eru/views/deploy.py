@@ -10,6 +10,7 @@ from flask import Blueprint, request, jsonify, abort
 from eru.async.task import create_container
 from eru.common import code
 from eru.queries import group, host, app, task
+from eru.view.utils import check_request_json
 
 deploy = Blueprint('deploy', __name__, url_prefix='/deploy')
 
@@ -19,17 +20,13 @@ RESLOCK = defaultdict(RLock)
 logger = logging.getLogger(__name__)
 
 
-def _check_json(data, keys):
-    if not isinstance(keys, list):
-        keys = [keys, ]
-    return all((k in data) for k in keys)
-
-
 @deploy.route('/')
 def index():
     return 'deploy control'
 
+
 @deploy.route('/private/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
+@check_request_json(['ncore', 'ncontainer', 'version'], code.HTTP_BAD_REQUEST)
 def create_private(group_name, pod_name, appname):
     '''
        ncpu: int cpu num per container -1 means share
@@ -38,8 +35,6 @@ def create_private(group_name, pod_name, appname):
        expose: bool true or false, default true
     '''
     data = request.get_json()
-    if not _check_json(data, ['ncpu', 'ncontainer', 'version']):
-        abort(code.HTTP_BAD_REQUEST)
 
     application = app.get_app(appname)
     if not application:
@@ -83,6 +78,7 @@ def create_private(group_name, pod_name, appname):
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
 
 @deploy.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
+@check_request_json(['type', 'ncontainer', 'version'], code.HTTP_BAD_REQUEST)
 def create_public(group_name, pod_name, appname):
     '''
        ncontainer: int container nums
@@ -91,10 +87,6 @@ def create_public(group_name, pod_name, appname):
        type: 1, 2, 3, default 1, create/test/build
     '''
     data = request.get_json()
-    if not data or not data.get('type', None) or \
-        not data.get('ncontainer', None) or \
-        not data.get('version', None):
-        abort(code.HTTP_BAD_REQUEST)
 
     application = app.get_app(appname)
     if not application:
