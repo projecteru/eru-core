@@ -24,7 +24,7 @@ class Version(Base):
 
     @classmethod
     def get_by_app_and_version(cls, application, sha):
-        return cls.query.filter(cls.sha == sha, cls.app_id == application.id).one()
+        return cls.query.filter(cls.sha.like('%{}%'.format(sha)), cls.app_id == application.id).one()
 
     @property
     def name(self):
@@ -67,3 +67,11 @@ class App(Base):
     @classmethod
     def get(cls, id):
         return cls.query.filter(cls.id == id).one()
+
+    @classmethod
+    def get_by_name(cls, name):
+        return cls.query.filter(cls.name == name).one()
+
+    def get_version(self, version):
+        return self.versions.filter(Version.sha.like('%{}%'.format(version))).first()
+

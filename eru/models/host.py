@@ -25,8 +25,12 @@ class Core(Base):
     __tablename__ = 'core'
 
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
+    label = db.Column(db.CHAR(10))
     used = db.Column(db.Integer, default=0)
     container_id = db.Column(db.Integer, db.ForeignKey('container.id'))
+
+    def __init__(self, label):
+        self.label = label
 
     def is_used(self):
         return self.used == 1
@@ -66,8 +70,8 @@ class Host(Base):
             return None
         try:
             host = cls(addr, name, uid, ncore, mem, pod.id)
-            for _ in xrange(ncore):
-                host.cores.append(Core())
+            for i in xrange(ncore):
+                host.cores.append(Core(str(i)))
             for i in xrange(settings.PORT_START, settings.PORT_START+ncore*settings.PORT_RANGE):
                 host.ports.append(Port(i))
             db.session.add(host)

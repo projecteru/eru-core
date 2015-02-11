@@ -9,7 +9,10 @@ from flask import Blueprint, request, jsonify, abort
 
 from eru.async.task import create_container
 from eru.common import code
-from eru.queries import group, host, app, task
+from eru.models.app import App
+from eru.models.group import Group
+from eru.models.pod import Pod
+from eru.models.task import Task
 from eru.view.utils import check_request_json
 
 deploy = Blueprint('deploy', __name__, url_prefix='/deploy')
@@ -29,39 +32,49 @@ def index():
 @check_request_json(['ncore', 'ncontainer', 'version'], code.HTTP_BAD_REQUEST)
 def create_private(group_name, pod_name, appname):
     '''
-       ncpu: int cpu num per container -1 means share
+       ncore: int cpu num per container -1 means share
        ncontainer: int container nums
        version: string deploy version
        expose: bool true or false, default true
     '''
     data = request.get_json()
 
-    application = app.get_app(appname)
+    application = App.get_by_name(appname)
     if not application:
         abort(code.HTTP_BAD_REQUEST)
-    version = app.get_version(data['version'], application)
+    version = application.get_version(data['version'])
     if not version:
         abort(code.HTTP_BAD_REQUEST)
+    group = Group.get_by_name(group_name)
+    if not group:
+        abort(code.HTTP_BAD_REQUEST)
+    pod = Pod.get_by_name(pod_name)
+    if not pod:
+        abort(code.HTTP_BAD_REQUEST)
 
-    ncpu = int(data['ncpu'])
+    # TODO check if group has this pod
+
+    ncore = int(data['ncore']) # 是说一个容器要几个核...
     ncontainer = int(data['ncontainer'])
     expose = bool(data.get('expose', 'true'))
 
     tasks_info = []
     with RESLOCK['%s:%s' % (group_name, pod_name)]:
         # check if task need cpus more than free cpus
-        if ncpu > 0 and group.get_group_max_containers(group_name, ncpu) < ncontainer:
+        if ncore > 0 and group.get_max_containers(pod, ncore) < ncontainer:
             abort(code.HTTP_BAD_REQUEST)
 
         try:
-            host_cpus = host.get_host_cpus(group_name, pod_name, ncpu, ncontainer)
-            if not host_cpus:
+            host_cores = group.get_free_cores(pod, ncontainer, ncore)
+            if not host_cores:
+                # ......
                 abort(code.HTTP_BAD_REQUEST)
-            for k, cpus in host_cpus.iteritems():
-                ports = host.get_host_ports(*k) if expose else []
-                tasks_info.append((application, version, k[0], k[1], cpus, ports))
-                host.use_cpus(cpus)
-                host.use_ports(ports)
+            # 无穷无尽的奇怪感
+            for (host, container_count), cores in host_cores.iteritems():
+                ports = host.get_free_ports(container_count) if expose else []
+                tasks_info.append((version, host, container_count, cores, ports))
+                host.occupy_cores(cores)
+                host.occupy_ports(ports)
         except Exception, e:
             logger.exception(e)
             abort(code.HTTP_BAD_REQUEST)
@@ -76,6 +89,7 @@ def create_private(group_name, pod_name, appname):
         ts.append(t.id)
 
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
+
 
 @deploy.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
 @check_request_json(['type', 'ncontainer', 'version'], code.HTTP_BAD_REQUEST)
@@ -88,13 +102,17 @@ def create_public(group_name, pod_name, appname):
     '''
     data = request.get_json()
 
-    application = app.get_app(appname)
+    application = App.get_by_name(appname)
     if not application:
         abort(code.HTTP_BAD_REQUEST)
-    version = app.get_version(data['version'], application)
+    version = application.get_version(data['version'])
     if not version:
         abort(code.HTTP_BAD_REQUEST)
-    if not group.get_group_pod(group_name, pod_name):
+    group = Group.get_by_name(group_name)
+    if not group:
+        abort(code.HTTP_BAD_REQUEST)
+    pod = Pod.get_by_name(pod_name)
+    if not pod:
         abort(code.HTTP_BAD_REQUEST)
 
     typ = int(data['type'])
@@ -107,17 +125,18 @@ def create_public(group_name, pod_name, appname):
     tasks_info = []
     with RESLOCK['%s:%s' % (group_name, pod_name)]:
         try:
-            for h in host.get_free_host(pod_name, ncontainer):
-                port = host.get_host_ports(h, 1) if expose else []
-                tasks_info.append((application, version, h, 1, [], port))
-                host.use_ports(port)
+            # TODO 这里是轮询? 尽可能均匀部署对吧?
+            for host in pod.get_free_public_hosts(ncontainer):
+                ports = host.get_free_ports(1) if expose else []
+                tasks_info.append((version, host, 1, [], ports))
+                host.occupy_ports(ports)
         except Exception, e:
             logger.exception(e)
             abort(code.HTTP_BAD_REQUEST)
 
     ts = []
     for task_info in tasks_info:
-        #task_info contain (application, version, host, num, cpus, ports)
+        #task_info contain (version, host, num, cpus, ports)
         #create_task will always correct
         t = _create_task(code.TASK_CREATE, *task_info)
         if not t:
@@ -126,16 +145,17 @@ def create_public(group_name, pod_name, appname):
 
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
 
-def _create_task(typ, application, version, host, num, cpus, ports):
+
+def _create_task(type_, version, host, ncontainer, cores, ports):
     try:
-        t = task.create_task(typ, application, version, host)
+        task = Task.create_task(type_, version, host)
         create_container.apply_async(
-                args=(t, cpus, ports),
-                task_id='task:%d' % t.id
+            args=(task, ncontainer, cores, ports), task_id='task:%d' % task.id
         )
-        return t
+        return task
     except Exception, e:
         logger.exception(e)
-        task.release_cpus_ports(cpus, ports)
+        host.release_ports(ports)
+        host.release_cores(cores)
     return None
 

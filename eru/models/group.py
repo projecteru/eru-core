@@ -37,30 +37,38 @@ class Group(Base):
             db.session.rollback()
             return None
 
-    def get_max_containers(self, per_core):
+    @classmethod
+    def get_by_name(cls, name):
+        return cls.query.filter(cls.name == name).first()
+
+    def get_max_containers(self, pod, cores_per_container):
         """
-        如果你一个容器需要 per_core 个核,
-        那么这个 group 能部署多少这样的容器呢?
+        如果你一个容器需要 cores_per_container 个核,
+        那么这个 group 在这个 pod 能部署多少这样的容器呢?
         """
-        hosts = self.private_hosts.all()
+        hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
         if not hosts:
             return 0
         total = 0
         for host in hosts:
             cores = len(host.get_free_cores())
-            total += cores / per_core
+            total += cores / cores_per_container
         return total
 
-    def get_free_cores(self, pod, ncontainer, per_core):
+    def get_free_cores(self, pod, ncontainer, cores_per_container):
+        """
+        从这个 group 拥有的 pod 中取核.
+        需要 ncontainer 个容器, 每个需要 cores_per_container 个核
+        """
         hosts = self.private_hosts.filter_by(name=pod.name).all()
         result = {}
         for host in hosts:
             cores = host.get_free_cores()
-            count = len(cores) / per_core
+            count = len(cores) / cores_per_container
             if count <= 0:
                 continue
             if ncontainer <= count:
-                return {(host, count): cores[:ncontainer*per_core]}
+                return {(host, count): cores[:ncontainer*cores_per_container]}
             result[(host, count)] = cores
             ncontainer = ncontainer - count
         return result

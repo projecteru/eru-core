@@ -5,24 +5,27 @@ import logging
 from celery import current_app
 
 from eru.common import code
-from eru.queries import task
-from eru.async.dockerjob import create_container
+from eru.async import dockerjob
 
 logger = logging.getLogger(__name__)
 
 @current_app.task()
-def create_container(t, cpus, port):
-    #TODO get docker deploy status
+def create_container(task, ncontainer, cores, ports):
+    """
+    这个任务是在 host 上部署 ncontainer 个容器.
+    可能占用 cores 这些核, 以及 ports 这些端口.
+    """
     try:
-        host = t.host().addr
-        version = t.version()
-        sub = 'web' # TODO 这里得拿出来
-        create_container(host, version, sub, port.port)
+        host = task.host
+        version = task.version
+        entrypoint = 'web' # TODO 这里得拿出来
+        dockerjob.create_containers(host, version, entrypoint, '', ncontainer, cores, ports)
     except Exception, e:
         logger.exception(e)
-        task.release_cpus_ports(cpus, port)
-        task.done(t, code.TASK_FAILED)
+        host.release_cores(cores)
+        host.release_ports(ports)
+        task.finish_with_result(code.TASK_FAILED)
     else:
-        task.done(t, code.TASK_SUCCESS)
+        task.finish_with_result(code.TASK_SUCCESS)
     # container.create()
 

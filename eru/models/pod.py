@@ -29,6 +29,10 @@ class Pod(Base):
             return None
 
     @classmethod
+    def get_by_name(cls, name):
+        return cls.query.filter(cls.name == name).one()
+
+    @classmethod
     def get(cls, id):
         return cls.query.filter(cls.id==id).one()
 
