@@ -5,65 +5,99 @@ import requests
 from flask import Blueprint, request, jsonify, abort
 
 from eru.common import code
-from eru.queries import group, pod, host
-from eru.views.utils import check_request_json
+from eru.models import Group, Pod, Host
+from eru.utils import check_request_json
+
 
 sys = Blueprint('sys', __name__, url_prefix='/sys')
+
 
 @sys.route('/')
 def index():
     return 'sys control'
 
-@sys.route('/create/group', methods=['PUT', ])
+
+@sys.route('/group/create', methods=['POST', ])
 @check_request_json('name', code.HTTP_BAD_REQUEST)
 def create_group():
     data = request.get_json()
-    if not group.create_group(data['name'], data.get('description', '')):
+    if not Group.create(data['name'], data.get('description', '')):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
-@sys.route('/create/pod', methods=['PUT', ])
+
+@sys.route('/pod/create', methods=['POST', ])
 @check_request_json('name', code.HTTP_BAD_REQUEST)
 def create_pod():
     data = request.get_json()
-    if not pod.create_pod(data['name'], data.get('description', "")):
+    if not Pod.create(data['name'], data.get('description', '')):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
-@sys.route('/assign/group/<name>', methods=['PUT', ])
-@check_request_json('name', code.HTTP_BAD_REQUEST)
-def assign_pod(name):
+
+@sys.route('/pod/<pod_name>/assign', methods=['POST', ])
+@check_request_json('group_name', code.HTTP_BAD_REQUEST)
+def assign_pod_to_group(pod_name):
     data = request.get_json()
-    if not group.assign_pod(name, data.get('name', '')):
+
+    group = Group.get_by_name(data['group_name'])
+    pod = Pod.get_by_name(pod_name)
+    if not (group and pod):
+        abort(code.HTTP_BAD_REQUEST)
+
+    if not pod.assigned_to_group(group):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
-@sys.route('/create/host/<name>', methods=['PUT', ])
-@check_request_json('addr', code.HTTP_BAD_REQUEST)
+
+@sys.route('/host/create', methods=['POST', ])
+@check_request_json(['addr', 'pod_name'], code.HTTP_BAD_REQUEST)
 def create_host(name):
     data = request.get_json()
     addr = data['addr']
-    url = 'http://%s/info' % addr
-    r = requests.get(url)
+
+    pod = Pod.get_by_name(data['pod_name'])
+    if not pod:
+        abort(code.HTTP_BAD_REQUEST)
+
+    r = requests.get('http://%s/info' % addr)
     if r.status_code != 200:
         abort(r.status_code)
-    data = r.json()
-    if not host.create_host(name, addr, data['Name'], data['ID'], data['NCPU'], data['MemTotal']):
+    rv = r.json()
+    if not Host.create(pod, addr, rv['Name'], rv['ID'], rv['NCPU'], rv['MemTotal']):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
-@sys.route('/assign/host/<addr>', methods=['PUT', ])
-@check_request_json('name', code.HTTP_BAD_REQUEST)
-def assign_group(addr):
+
+@sys.route('/host/<addr>/assign', methods=['POST', ])
+@check_request_json('group_name', code.HTTP_BAD_REQUEST)
+def assign_host_to_group(addr):
     data = request.get_json()
-    if not host.assign_group(data['name'], addr):
+
+    group = Group.get_by_name(data['group_name'])
+    if not group:
+        abort(code.HTTP_BAD_REQUEST)
+
+    host = Host.get_by_addr(addr)
+    if not host:
+        abort(code.HTTP_BAD_REQUEST)
+
+    if not host.assigned_to_group(group):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
-@sys.route('/cpu/<name>/<int:need>', methods=['GET', ])
-def get_group_max_containers(name, need):
-    ret = group.get_group_max_containers(name, need)
-    if ret < 0:
+
+@sys.route('/group/<group_name>/available_container_count', methods=['GET', ])
+def group_max_containers(group_name, count):
+    pod_name = request.args.get('pod_name', type=str, default='')
+    cores_per_container = request.args.get('ncore', type=int, default=1)
+
+    group = Group.get_by_name(group_name)
+    if not group:
         abort(code.HTTP_BAD_REQUEST)
-    return jsonify(msg=code.OK, data=ret)
+    pod = Pod.get_by_name(pod_name)
+    if not pod:
+        abort(code.HTTP_BAD_REQUEST)
+
+    return jsonify(msg=code.OK, data=group.get_max_containers(pod, cores_per_container))
 

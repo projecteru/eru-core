@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #coding:utf-8
 
+import sqlalchemy.exc
 from werkzeug.utils import cached_property
 
 from eru.models import db, Base
@@ -16,11 +17,21 @@ class Version(Base):
 
     containers = db.relationship('Container', backref='version', lazy='dynamic')
     tasks = db.relationship('Task', backref='version', lazy='dynamic')
-    application = db.relationship('App', foreign_keys=[app_id])
 
-    def __init__(self, app_id, sha):
-        self.app_id = app_id
+    def __init__(self, sha, app_id):
         self.sha = sha
+        self.app_id = app_id
+
+    @classmethod
+    def create(cls, sha, app_id):
+        try:
+            version = cls(sha, app_id)
+            db.session.add(version)
+            db.session.commit()
+            return version
+        except sqlalchemy.exc.IntegrityError:
+            db.session.rollback()
+            return None
 
     @classmethod
     def get_by_app_and_version(cls, application, sha):
@@ -28,7 +39,7 @@ class Version(Base):
 
     @property
     def name(self):
-        return self.application.name
+        return self.app.name
 
     @cached_property
     def appconfig(self):
@@ -65,6 +76,20 @@ class App(Base):
         self.token = token
 
     @classmethod
+    def get_or_create(cls, name, git, token):
+        app = cls.query.filter(cls.name == name).first()
+        if app:
+            return app
+        try:
+            app = cls(name, git, token)
+            db.session.add(app)
+            db.session.commit()
+            return app
+        except sqlalchemy.exc.IntegrityError:
+            db.session.rollback()
+            return None
+
+    @classmethod
     def get(cls, id):
         return cls.query.filter(cls.id == id).one()
 
@@ -75,3 +100,19 @@ class App(Base):
     def get_version(self, version):
         return self.versions.filter(Version.sha.like('%{}%'.format(version))).first()
 
+    def add_version(self, sha):
+        version = Version.create(sha, self.id)
+        if not version:
+            return False
+        self.versions.append(version)
+        db.session.add(self)
+        db.session.commit()
+        return True
+
+    def assigned_to_group(self, group):
+        if not group:
+            return False
+        group.apps.append(self)
+        db.session.add(group)
+        db.session.commit()
+        return True

@@ -16,9 +16,9 @@ class Task(Base):
     finished = db.Column(db.DateTime, nullable=True)
     created = db.Column(db.DateTime, default=datetime.now)
 
-    host = db.relationship('Host', foreign_keys=[host_id])
-    app = db.relationship('App', foreign_keys=[app_id])
-    version = db.relationship('Version', foreign_keys=[version_id])
+    #host = db.relationship('Host', foreign_keys=[host_id])
+    #app = db.relationship('App', foreign_keys=[app_id])
+    #version = db.relationship('Version', foreign_keys=[version_id])
 
     def __init__(self, host_id, app_id, version_id, type_):
         self.host_id = host_id
@@ -29,7 +29,7 @@ class Task(Base):
     @classmethod
     def create(cls, type_, version, host):
         try:
-            task = cls(host.id, version.application.id, version.id, type_)
+            task = cls(host.id, version.app_id, version.id, type_)
             db.session.add(task)
             db.session.commit()
             return task

@@ -2,9 +2,11 @@
 
 from io import BytesIO
 from docker import Client
-from itertools import chain, izip
+from itertools import chain
 
 from res.ext.common import random_string
+
+from eru.models import Container
 
 
 DOCKER_FILE_TEMPLATE = '''
@@ -38,7 +40,7 @@ def build_image(host, version, base):
 
     dockerfile = BytesIO(
         DOCKER_FILE_TEMPLATE.format(
-            base=base, git_url=version.application.git,
+            base=base, git_url=version.app.git,
             appname=appname, sha1=version.sha, build_cmd=build_cmd
         )
     )
@@ -55,9 +57,6 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     这些容器可能占用 cores 这些核, 以及 ports 这些端口.
     daemon 用来指定这些容器的监控方式, 暂时没有用.
     """
-    if len(cores) and len(ports) and not (len(cores) == len(ports) == ncontainer):
-        return []
-
     client = _docker_client(host)
     appconfig = version.appconfig
     resconfig = version.get_resource_config(env)
@@ -83,26 +82,25 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     ports = [appconfig.port, ] if appconfig.port else None
 
     containers = []
-    if cores and ports:
-        for core, port in izip(cores, ports):
-            cpuset = core.label
-            container = client.create_container(image=image, command=cmd, user=user, environment=env,
-                    volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=ports)
-            # start options
-            # port binding and volume binding
-            port_bindings = {appconfig.port: port.port}
-            binds = {'/mnt/mfs/permdir/%s' % appname: {'bind': '/%s/permdir' % appname, 'ro': False}}
-            client.start(container=container['Id'], port_bindings=port_bindings, binds=binds)
-            containers.append(container['Id'])
-    elif ncontainer:
-        for _, port in izip(ncontainer, ports):
-            container = client.create_container(image=image, command=cmd, user=user, environment=env,
-                    volumes=volumes, name=container_name, cpuset='', working_dir=working_dir, ports=ports)
-            # start options
-            # port binding and volume binding
-            port_bindings = {appconfig.port: port.port}
-            binds = {'/mnt/mfs/permdir/%s' % appname: {'bind': '/%s/permdir' % appname, 'ro': False}}
-            client.start(container=container['Id'], port_bindings=port_bindings, binds=binds)
-            containers.append(container['Id'])
+    cores_per_container = len(cores) / ncontainer
+    for index in xrange(ncontainer):
+        used_cores = cores[index*cores_per_container:(index+1)*cores_per_container].label if cores else ''
+        cpuset = ','.join([c.label for c in used_cores])
+        container = client.create_container(image=image, command=cmd, user=user, environment=env,
+                volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=ports)
+        container_id = container['Id']
+
+        # start options
+        # port binding and volume binding
+        port = ports[index]
+        port_bindings = {appconfig.port: port.port} if ports else None
+        binds = {'/mnt/mfs/permdir/%s' % appname: {'bind': '/%s/permdir' % appname, 'ro': False}}
+        client.start(container=container_id, port_bindings=port_bindings, binds=binds)
+        
+        c = Container.create(container_id, host, version, container_name, entrypoint, used_cores, port)
+        if not c:
+            # TODO 怎么样去 rollback 呢, 似乎 raise 一个就可以了?
+            pass
+        containers.append(container['Id'])
     return containers
 

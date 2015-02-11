@@ -19,7 +19,8 @@ def create_container(task, ncontainer, cores, ports):
         host = task.host
         version = task.version
         entrypoint = 'web' # TODO 这里得拿出来
-        dockerjob.create_containers(host, version, entrypoint, '', ncontainer, cores, ports)
+        container_ids = dockerjob.create_containers(host, version,
+                entrypoint, '', ncontainer, cores, ports)
     except Exception, e:
         logger.exception(e)
         host.release_cores(cores)

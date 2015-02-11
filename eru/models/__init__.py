@@ -19,7 +19,7 @@ class Base(db.Model):
     def id(cls):
         return db.Column('id', db.Integer, primary_key=True, autoincrement=True)
 
-from eru.models.host import Cpu, Port, Host
+from eru.models.host import Core, Port, Host
 from eru.models.pod import Pod
 from eru.models.group import Group, GroupPod
 from eru.models.app import App, Version
@@ -28,6 +28,6 @@ from eru.models.resource import MySQL, InfluxDB
 from eru.models.task import Task
 
 __all__ = [
-    'db', 'Base', 'Cpu', 'Port', 'Host', 'Pod', 'Group', 'GroupPod',
+    'db', 'Base', 'Core', 'Port', 'Host', 'Pod', 'Group', 'GroupPod',
     'App', 'Version', 'Container', 'MySQL', 'InfluxDB', 'Task',
 ]

@@ -43,3 +43,6 @@ app, celery = create_app_with_celery()
 def main():
     app.run()
 
+
+if __name__ == '__main__':
+    main()

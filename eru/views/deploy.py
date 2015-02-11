@@ -9,11 +9,8 @@ from flask import Blueprint, request, jsonify, abort
 
 from eru.async.task import create_container
 from eru.common import code
-from eru.models.app import App
-from eru.models.group import Group
-from eru.models.pod import Pod
-from eru.models.task import Task
-from eru.view.utils import check_request_json
+from eru.models import App, Group, Pod, Task
+from eru.utils import check_request_json
 
 deploy = Blueprint('deploy', __name__, url_prefix='/deploy')
 

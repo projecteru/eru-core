@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import sqlchemy.exc
+import sqlalchemy.exc
 
 from eru.models import db, Base
 
@@ -24,7 +24,7 @@ class Pod(Base):
             db.session.add(pod)
             db.session.commit()
             return pod
-        except sqlchemy.exc.IntegrityError:
+        except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
             return None
 

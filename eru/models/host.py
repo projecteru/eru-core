@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import sqlachemy.exc
+import sqlalchemy.exc
 
 import settings
 from eru.models import db, Base
@@ -52,8 +52,8 @@ class Host(Base):
     ports = db.relationship('Port', backref='host', lazy='dynamic')
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
-    pod = db.relationship('Pod', foreign_keys=[pod_id])
-    group = db.relationship('Group', foreign_keys=[group_id])
+    #pod = db.relationship('Pod', foreign_keys=[pod_id])
+    #group = db.relationship('Group', foreign_keys=[group_id])
 
     def __init__(self, addr, name, uid, ncore, mem, pod_id):
         self.addr = addr
@@ -64,7 +64,7 @@ class Host(Base):
         self.pod_id = pod_id
 
     @classmethod
-    def create(cls, pod, group, addr, name, uid, ncore, mem):
+    def create(cls, pod, addr, name, uid, ncore, mem):
         """创建必须挂在一个 pod 下面"""
         if not pod:
             return None
@@ -77,13 +77,17 @@ class Host(Base):
             db.session.add(host)
             db.session.commit()
             return host
-        except sqlachemy.exc.IntegrityError:
+        except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
             return None
 
     @classmethod
     def get(cls, id):
         return cls.query.filter(cls.id == id).one()
+
+    @classmethod
+    def get_by_addr(cls, addr):
+        return cls.query.filter(cls.addr == addr).one()
 
     def get_free_cores(self):
         return [c for c in self.cores.all() if not c.used]
@@ -95,7 +99,7 @@ class Host(Base):
         """分配给 group, 那么这个 host 被标记为这个 group 私有"""
         if not group:
             return False
-        group.hosts.append(self)
+        group.private_hosts.append(self)
         db.session.add(group)
         db.session.commit()
         return True

@@ -57,7 +57,6 @@ class BaseConfig(object):
         self._data[name] = value
 
     __getattr__ = __getitem__
-    __setattr__ = __setitem__
 
     def get(self, name, default=None):
         return self._data.get(name, default)
