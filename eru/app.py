@@ -6,7 +6,7 @@ from flask import Flask
 from gunicorn.app.wsgiapp import WSGIApplication
 
 from eru.common.settings import ERU_BIND, ERU_WORKERS,\
-        ERU_TIMEOUT, ERU_WORKER_CLASS, DEBUG
+        ERU_TIMEOUT, ERU_WORKER_CLASS
 from eru.async import make_celery
 
 
@@ -52,7 +52,6 @@ def main():
             return {
                 'bind': bind,
                 'workers': opts.workers or ERU_WORKERS,
-                'debug': opts.debug or DEBUG,
                 'timeout': opts.timeout or ERU_TIMEOUT,
                 'worker_class': opts.worker_class or ERU_WORKER_CLASS,
                 'pidfile': opts.pidfile,
