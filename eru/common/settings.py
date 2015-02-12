@@ -2,6 +2,9 @@
 #coding:utf-8
 
 DEBUG = False
+ERU_HOST = '0.0.0.0'
+ERU_PORT = 46656
+ERU_WORKERS = 4
 
 DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
 DOCKER_NETWORK = 'bridge'

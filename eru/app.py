@@ -3,7 +3,9 @@
 
 import logging
 from flask import Flask
+from gunicorn.app.wsgiapp import WSGIApplication
 
+from eru.common import settings
 from eru.async import make_celery
 
 
@@ -41,7 +43,19 @@ app, celery = create_app_with_celery()
 
 
 def main():
-    app.run()
+
+    class Eru(WSGIApplication):
+
+        def init(self, parser, opts, args):
+            return {
+                'bind': '{0}:{1}'.format(settings.ERU_HOST, settings.ERU_PORT),
+                'workers': settings.ERU_WORKERS,
+            }
+
+        def load(self):
+            return app
+
+    Eru().run()
 
 
 if __name__ == '__main__':
