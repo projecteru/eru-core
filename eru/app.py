@@ -5,7 +5,8 @@ import logging
 from flask import Flask
 from gunicorn.app.wsgiapp import WSGIApplication
 
-from eru.common.settings import ERU_BIND, ERU_WORKERS, ERU_TIMEOUT, DEBUG
+from eru.common.settings import ERU_BIND, ERU_WORKERS,\
+        ERU_TIMEOUT, ERU_WORKER_CLASS, DEBUG
 from eru.async import make_celery
 
 
@@ -19,7 +20,7 @@ def init_logging(app):
 
 def create_app_with_celery(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
-    app.config.from_object('settings')
+    app.config.from_object('eru.common.settings')
 
     # should be initialized before other imports
     celery = make_celery(app)
@@ -47,13 +48,13 @@ def main():
     class Eru(WSGIApplication):
 
         def init(self, parser, opts, args):
-            bind = opts.bind[0] or ERU_BIND
+            bind = opts.bind and opts.bind[0] or ERU_BIND
             return {
                 'bind': bind,
                 'workers': opts.workers or ERU_WORKERS,
                 'debug': opts.debug or DEBUG,
                 'timeout': opts.timeout or ERU_TIMEOUT,
-                'worker_class': opts.worker_class,
+                'worker_class': opts.worker_class or ERU_WORKER_CLASS,
                 'pidfile': opts.pidfile,
             }
 
