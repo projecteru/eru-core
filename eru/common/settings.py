@@ -5,6 +5,7 @@ DEBUG = False
 ERU_BIND = '0.0.0.0:46656'
 ERU_WORKERS = 4
 ERU_TIMEOUT = 300
+ERU_WORKER_CLASS = 'gevent'
 
 DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
 DOCKER_NETWORK = 'bridge'
