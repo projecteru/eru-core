@@ -1,10 +1,10 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import requests
 from flask import Blueprint, request, jsonify, abort
 
 from eru.common import code
+from eru.common.clients import get_docker_client
 from eru.models import Group, Pod, Host
 from eru.utils import check_request_json
 
@@ -42,7 +42,7 @@ def assign_pod_to_group(pod_name):
 
     group = Group.get_by_name(data['group_name'])
     pod = Pod.get_by_name(pod_name)
-    if not (group and pod):
+    if not group or not pod:
         abort(code.HTTP_BAD_REQUEST)
 
     if not pod.assigned_to_group(group):
@@ -60,11 +60,9 @@ def create_host(name):
     if not pod:
         abort(code.HTTP_BAD_REQUEST)
 
-    r = requests.get('http://%s/info' % addr)
-    if r.status_code != 200:
-        abort(r.status_code)
-    rv = r.json()
-    if not Host.create(pod, addr, rv['Name'], rv['ID'], rv['NCPU'], rv['MemTotal']):
+    client = get_docker_client(addr)
+    info = client.info()
+    if not Host.create(pod, addr, info['Name'], info['ID'], info['NCPU'], info['MemTotal']):
         abort(code.HTTP_BAD_REQUEST)
     return jsonify(msg=code.OK), code.HTTP_CREATED
 

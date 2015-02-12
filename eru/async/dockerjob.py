@@ -1,12 +1,12 @@
 # coding: utf
 
 from io import BytesIO
-from docker import Client
 from itertools import chain
 
 from res.ext.common import random_string
 
-from eru.models import Container
+from eru.common import settings
+from eru.common.clients import get_docker_client
 
 
 DOCKER_FILE_TEMPLATE = '''
@@ -17,13 +17,6 @@ WORKDIR /{appname}
 RUN git reset --hard {sha1}
 RUN {build_cmd}
 '''
-REGISTRY_ENDPOINT = 'docker-registry.intra.hunantv.com'
-
-
-def _docker_client(host):
-    # 据说这个 host.addr 就是类似 10.1.201.46:7777 的 string
-    base_url = 'tcp://%s' % host.addr
-    return Client(base_url=base_url)
 
 
 def build_image(host, version, base):
@@ -32,10 +25,10 @@ def build_image(host, version, base):
     用 host 机器, 以 base 为基础镜像, 为 version 构建
     一个稍后可以运行的镜像.
     """
-    client = _docker_client(host)
+    client = get_docker_client(host)
     appname = version.appconfig.appname
     build_cmd = version.appconfig.build
-    repo = '{0}/{1}'.format(REGISTRY_ENDPOINT, appname)
+    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
     tag = '{0}:{1}'.format(repo, version.short_sha)
 
     dockerfile = BytesIO(
@@ -57,12 +50,12 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     这些容器可能占用 cores 这些核, 以及 ports 这些端口.
     daemon 用来指定这些容器的监控方式, 暂时没有用.
     """
-    client = _docker_client(host)
+    client = get_docker_client(host)
     appconfig = version.appconfig
     resconfig = version.get_resource_config(env)
 
     appname = appconfig.appname
-    image = '{0}/{1}:{2}'.format(REGISTRY_ENDPOINT, appname, version.short_sha)
+    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
     cmd = appconfig.entrypoints[entrypoint]
 
     # build name
@@ -72,11 +65,11 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     env = {
         'NBE_RUNENV': env.upper(),
         'NBE_POD': host.pod.name,
-        'NBE_PERMDIR': '/%s/permdir' % appname,
+        'NBE_PERMDIR': settings.NBE_CONTAINER_PERMDIR % appname,
     }
     env.update(resconfig.to_env_dict(appname))
 
-    volumes = ['/%s/permdir' % appname, ]
+    volumes = [settings.NBE_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始
     working_dir = '/%s' % appname
     ports = [appconfig.port, ] if appconfig.port else None
@@ -94,13 +87,9 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         # port binding and volume binding
         port = ports[index]
         port_bindings = {appconfig.port: port.port} if ports else None
-        binds = {'/mnt/mfs/permdir/%s' % appname: {'bind': '/%s/permdir' % appname, 'ro': False}}
+        binds = {settings.NBE_HOST_PERMDIR % appname: {'bind': settings.NBE_CONTAINER_PERMDIR % appname, 'ro': False}}
         client.start(container=container_id, port_bindings=port_bindings, binds=binds)
         
-        c = Container.create(container_id, host, version, container_name, entrypoint, used_cores, port)
-        if not c:
-            # TODO 怎么样去 rollback 呢, 似乎 raise 一个就可以了?
-            pass
-        containers.append(container['Id'])
+        containers.append((container_id, container_name, entrypoint, used_cores, port))
     return containers
 

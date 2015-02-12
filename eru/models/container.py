@@ -17,6 +17,7 @@ class Container(Base):
     name = db.Column(db.CHAR(255), nullable=False)
     entrypoint = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)
+    is_alive = db.Column(db.Integer, default=0)
 
     cores = db.relationship('Core', backref='container', lazy='dynamic')
     port = db.relationship('Port', backref='container', lazy='dynamic')

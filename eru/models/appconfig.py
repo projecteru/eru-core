@@ -1,24 +1,23 @@
 # coding: utf-8
 
-import etcd
 import yaml
+
+from eru.common.clients import etcd_client
 
 __all__ = ['AppConfig', 'ResourceConfig', ]
 
-# TODO: from config.py
-_etcd_client = etcd.Client(host='10.1.201.110', port=4001)
-
-'''
+"""
 Example of app.yaml:
 
-appname: "app"
-port: 5000
-entrypoints:
-    web: "python app.py --port 5000"
-    daemon: "python daemon.py --interval 5"
-    service: "python service.py"
-build: "pip install -r ./req.txt"
-'''
+    appname: "app"
+    port: 5000
+    entrypoints:
+        web: "python app.py --port 5000"
+        daemon: "python daemon.py --interval 5"
+        service: "python service.py"
+    build: "pip install -r ./req.txt"
+
+"""
 
 
 class BaseConfig(object):
@@ -35,7 +34,7 @@ class BaseConfig(object):
     @classmethod
     def _get_by_path(cls, path):
         try:
-            r = _etcd_client.get(path)
+            r = etcd_client.get(path)
             config = r.value if (r and not r.dir) else '{}'
         except KeyError:
             config = '{}'
@@ -63,7 +62,7 @@ class BaseConfig(object):
 
     def save(self):
         value = yaml.safe_dump(self._data, default_flow_style=False, indent=4)
-        _etcd_client.write(self.path, value)
+        etcd_client.write(self.path, value)
 
 
 class AppConfig(BaseConfig):

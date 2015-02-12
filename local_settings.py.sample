@@ -3,8 +3,6 @@
 
 # SETTINGS FILE
 
-from eru.common.settings import *
-
 DEBUG = True
 
 DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'

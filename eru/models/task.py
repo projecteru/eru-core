@@ -1,8 +1,10 @@
 #!/usr/bin/python
 #coding:utf-8
 
+import json
 import sqlalchemy.exc
 from datetime import datetime
+
 from eru.models import db, Base
 
 class Task(Base):
@@ -15,21 +17,19 @@ class Task(Base):
     result = db.Column(db.Integer, nullable=True)
     finished = db.Column(db.DateTime, nullable=True)
     created = db.Column(db.DateTime, default=datetime.now)
+    properties = db.Column(db.String(512), default='{}')
 
-    #host = db.relationship('Host', foreign_keys=[host_id])
-    #app = db.relationship('App', foreign_keys=[app_id])
-    #version = db.relationship('Version', foreign_keys=[version_id])
-
-    def __init__(self, host_id, app_id, version_id, type_):
+    def __init__(self, host_id, app_id, version_id, type_, props):
         self.host_id = host_id
         self.app_id = app_id
         self.version_id = version_id
-        self.type_ = type_
+        self.type = type_
+        self.properties = json.dumps(props)
 
     @classmethod
-    def create(cls, type_, version, host):
+    def create(cls, type_, version, host, props={}):
         try:
-            task = cls(host.id, version.app_id, version.id, type_)
+            task = cls(host.id, version.app_id, version.id, type_, props)
             db.session.add(task)
             db.session.commit()
             return task
@@ -52,4 +52,15 @@ class Task(Base):
         self.result = result
         db.session.add(self)
         db.seesion.commit()
+
+    @property
+    def props(self):
+        return json.loads(self.properties)
+
+    def set_props(self, key, value):
+        p = self.props
+        p[key] = value
+        self.properties = json.dumps(p)
+        db.session.add(self)
+        db.session.commit()
 

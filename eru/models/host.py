@@ -52,8 +52,6 @@ class Host(Base):
     ports = db.relationship('Port', backref='host', lazy='dynamic')
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
-    #pod = db.relationship('Pod', foreign_keys=[pod_id])
-    #group = db.relationship('Group', foreign_keys=[group_id])
 
     def __init__(self, addr, name, uid, ncore, mem, pod_id):
         self.addr = addr

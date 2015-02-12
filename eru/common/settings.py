@@ -15,10 +15,10 @@ LOGSTASH = [
 ]
 
 ETCD_SYNC = True
-ETCD_MACHINES = [
-    'http://10.1.201.110:4001',
-    'http://10.1.201.110:4002',
-]
+ETCD_MACHINES = (
+    ('http://10.1.201.110', 4001),
+    ('http://10.1.201.110', 4002),
+)
 
 INFLUXDB_HOST = '10.1.201.42'
 INFLUXDB_PORT = 8086
@@ -32,8 +32,6 @@ MYSQL_USER = 'root'
 MYSQL_PASSWORD = ''
 MYSQL_DATABASE = 'eru'
 
-SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
-        MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE)
 SQLALCHEMY_POOL_SIZE = 100
 SQLALCHEMY_POOL_TIMEOUT = 10
 SQLALCHEMY_POOL_RECYCLE = 2000
@@ -74,3 +72,15 @@ EMAIL_PORT = 465
 EMAIL_HOST_USER = 'gitlab@gitup.me'
 EMAIL_HOST_PASSWORD = '^123$456a'
 EMAIL_USE_SSL = True
+
+NBE_HOST_PERMDIR = '/mnt/mfs/permdir/%s'
+NBE_CONTAINER_PERMDIR = '/%s/permdir'
+
+try:
+    from local_settings import *
+except ImportError:
+    pass
+
+# 需要计算的变量需要在 import 覆盖之后计算.
+SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
+        MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE)

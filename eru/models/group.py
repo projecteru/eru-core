@@ -60,7 +60,7 @@ class Group(Base):
         从这个 group 拥有的 pod 中取核.
         需要 ncontainer 个容器, 每个需要 cores_per_container 个核
         """
-        hosts = self.private_hosts.filter_by(name=pod.name).all()
+        hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
         result = {}
         for host in hosts:
             cores = host.get_free_cores()
