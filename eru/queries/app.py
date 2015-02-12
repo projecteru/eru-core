@@ -8,4 +8,4 @@ def get_app(name):
 
 def get_version(ver_sha, app):
     return Version.query.filter(Version.sha == ver_sha,
-                                Version.aid == app.id).first()
+                                Version.app_id == app.id).first()

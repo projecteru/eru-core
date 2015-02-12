@@ -38,3 +38,10 @@ def get_group_max_containers(name, need):
         m = m + cpus/need
     return m
 
+def get_group_pod(group_name, pod_name):
+    group = Group.query \
+            .filter(Group.name==group_name) \
+            .filter(Group.pods.any(name=pod_name)) \
+            .first()
+    return group
+

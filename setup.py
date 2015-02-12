@@ -47,7 +47,7 @@ setup(
     license=LICENSE,
     url=URL,
     keywords=KEYWORDS,
-    packages = find_packages(exclude=['tests.*', 'tests', 'examples.*', 'examples']),
+    packages = find_packages(exclude=['tests.*', 'tests', 'examples.*', 'examples', 'scripts']),
     install_package_data=True,
     zip_safe=False,
     entry_points=ENTRY_POINTS,

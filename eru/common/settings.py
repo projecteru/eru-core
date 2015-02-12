@@ -2,6 +2,9 @@
 #coding:utf-8
 
 DEBUG = False
+ERU_BIND = '0.0.0.0:46656'
+ERU_WORKERS = 4
+ERU_TIMEOUT = 300
 
 DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
 DOCKER_NETWORK = 'bridge'
@@ -15,10 +18,10 @@ LOGSTASH = [
 ]
 
 ETCD_SYNC = True
-ETCD_MACHINES = [
-    'http://10.1.201.110:4001',
-    'http://10.1.201.110:4002',
-]
+ETCD_MACHINES = (
+    ('http://10.1.201.110', 4001),
+    ('http://10.1.201.110', 4002),
+)
 
 INFLUXDB_HOST = '10.1.201.42'
 INFLUXDB_PORT = 8086
@@ -39,6 +42,8 @@ SQLALCHEMY_POOL_RECYCLE = 2000
 REPORT_INTERVAL = 10
 CLEAN_NITERVAL = 86400
 CLEAN_DIR = '/var/lib/docker/containers'
+
+PUBLIC_HOST_LIMIT = 20
 
 PORT_START = 49000
 PORT_RANGE = 2
@@ -70,3 +75,15 @@ EMAIL_PORT = 465
 EMAIL_HOST_USER = 'gitlab@gitup.me'
 EMAIL_HOST_PASSWORD = '^123$456a'
 EMAIL_USE_SSL = True
+
+NBE_HOST_PERMDIR = '/mnt/mfs/permdir/%s'
+NBE_CONTAINER_PERMDIR = '/%s/permdir'
+
+try:
+    from local_settings import *
+except ImportError:
+    pass
+
+# 需要计算的变量需要在 import 覆盖之后计算.
+SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
+        MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE)
