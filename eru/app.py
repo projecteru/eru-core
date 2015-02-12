@@ -5,7 +5,7 @@ import logging
 from flask import Flask
 from gunicorn.app.wsgiapp import WSGIApplication
 
-from eru.common import settings
+from eru.common.settings import ERU_BIND, ERU_WORKERS, ERU_TIMEOUT, DEBUG
 from eru.async import make_celery
 
 
@@ -47,9 +47,14 @@ def main():
     class Eru(WSGIApplication):
 
         def init(self, parser, opts, args):
+            bind = opts.bind[0] or ERU_BIND
             return {
-                'bind': '{0}:{1}'.format(settings.ERU_HOST, settings.ERU_PORT),
-                'workers': settings.ERU_WORKERS,
+                'bind': bind,
+                'workers': opts.workers or ERU_WORKERS,
+                'debug': opts.debug or DEBUG,
+                'timeout': opts.timeout or ERU_TIMEOUT,
+                'worker_class': opts.worker_class,
+                'pidfile': opts.pidfile,
             }
 
         def load(self):
@@ -60,3 +65,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
