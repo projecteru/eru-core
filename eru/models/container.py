@@ -17,7 +17,7 @@ class Container(Base):
     name = db.Column(db.CHAR(255), nullable=False)
     entrypoint = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)
-    is_alive = db.Column(db.Integer, default=0)
+    is_alive = db.Column(db.Integer, default=1)
 
     cores = db.relationship('Core', backref='container', lazy='dynamic')
     port = db.relationship('Port', backref='container', lazy='dynamic')
@@ -47,11 +47,20 @@ class Container(Base):
             db.session.rollback()
             return None
 
+    @classmethod
+    def get_containers_by_host(cls, host):
+        return cls.query.filter(cls.host_id == host.id).all()
+
     def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
         host = self.host
         host.release_cores(self.cores.all())
         host.release_ports(self.port.all())
         db.session.delete(self)
+        db.session.commit()
+
+    def not_alive(self):
+        self.is_alive = 0
+        db.session.add(self)
         db.session.commit()
 
