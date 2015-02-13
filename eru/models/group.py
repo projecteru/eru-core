@@ -58,7 +58,8 @@ class Group(Base):
     def get_free_cores(self, pod, ncontainer, cores_per_container):
         """
         从这个 group 拥有的 pod 中取核.
-        需要 ncontainer 个容器, 每个需要 cores_per_container 个核
+        需要 ncontainer 个容器, 每个需要 cores_per_container 个核.
+        尽可能先用完 host 上的核.
         """
         hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
         result = {}
@@ -68,8 +69,9 @@ class Group(Base):
             if count <= 0:
                 continue
             if ncontainer <= count:
-                return {(host, count): cores[:ncontainer*cores_per_container]}
-            result[(host, count)] = cores
+                result[(host, count)] = cores[:ncontainer*cores_per_container]
+                break
+            result[(host, count)] = cores[:count*cores_per_container]
             ncontainer = ncontainer - count
         return result
 

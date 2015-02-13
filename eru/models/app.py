@@ -103,11 +103,11 @@ class App(Base):
     def add_version(self, sha):
         version = Version.create(sha, self.id)
         if not version:
-            return False
+            return None
         self.versions.append(version)
         db.session.add(self)
         db.session.commit()
-        return True
+        return version
 
     def assigned_to_group(self, group):
         if not group:

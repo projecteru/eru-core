@@ -1,3 +1,4 @@
 *.py[co]
 eru.egg-info/*
 local_settings.py
+tests/__pycache__/*
