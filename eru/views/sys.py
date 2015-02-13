@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify, abort
 from eru.common import code
 from eru.common.clients import get_docker_client
 from eru.models import Group, Pod, Host
-from eru.utils import check_request_json
+from eru.utils.views import check_request_json
 
 
 sys = Blueprint('sys', __name__, url_prefix='/sys')

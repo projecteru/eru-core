@@ -1,46 +1,72 @@
 # coding: utf
 
-from io import BytesIO
+import os
+import tempfile
+import pygit2
+import contextlib
 from itertools import chain
 
 from res.ext.common import random_string
 
 from eru.common import settings
 from eru.common.clients import get_docker_client
+from eru.utils.ensure import ensure_dir_absent, ensure_file
 
 
 DOCKER_FILE_TEMPLATE = '''
 FROM {base}
 ENV NBE 1
-RUN git clone {git_url} /{appname}
+ADD {appname} /{appname}
 WORKDIR /{appname}
-RUN git reset --hard {sha1}
 RUN {build_cmd}
 '''
 
 
+@contextlib.contextmanager
+def build_image_environment(version, base, rev):
+    appname = version.appconfig.appname
+    build_cmd = version.appconfig.build
+
+    # checkout code of version @ rev
+    build_path = tempfile.mkdtemp()
+    clone_path = os.path.join(build_path, appname)
+    repo = pygit2.clone_repository(version.app.git, clone_path)
+    repo.checkout('HEAD')
+    o = repo.revparse_single(rev)
+    repo.checkout_tree(o.tree)
+
+    # remove git history
+    ensure_dir_absent(os.path.join(clone_path, '.git'))
+
+    # build dockerfile
+    dockerfile = DOCKER_FILE_TEMPLATE.format(
+        base=base, appname=appname, build_cmd=build_cmd
+    )
+    ensure_file(os.path.join(build_path, 'dockerfile'), owner=version.app_id,
+            group=version.app_id, content=dockerfile)
+
+    # TODO 这里可能需要加上静态文件的处理
+    yield build_path
+
+    # clean build dir
+    ensure_dir_absent(build_path)
+
+
 def build_image(host, version, base):
-    # TODO use context_dir
     """
     用 host 机器, 以 base 为基础镜像, 为 version 构建
     一个稍后可以运行的镜像.
     """
     client = get_docker_client(host)
-    appname = version.appconfig.appname
-    build_cmd = version.appconfig.build
+    appname = version.app.name
+    rev = version.short_sha
     repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
-    tag = '{0}:{1}'.format(repo, version.short_sha)
+    tag = '{0}:{1}'.format(repo, rev)
 
-    dockerfile = BytesIO(
-        DOCKER_FILE_TEMPLATE.format(
-            base=base, git_url=version.app.git,
-            appname=appname, sha1=version.sha, build_cmd=build_cmd
-        )
-    )
-
-    build_gen = client.build(fileobj=dockerfile, rm=True, tag=tag)
-    push_gen = client.push(repo, tag=version.sha[:7], stream=True, insecure_registry=True)
-    return chain(build_gen, push_gen)
+    with build_image_environment(version, base, rev) as build_path:
+        build_gen = client.build(path=build_path, rm=True, tag=tag)
+        push_gen = client.push(repo, tag=rev, stream=True, insecure_registry=True)
+        return chain(build_gen, push_gen)
 
 
 def create_containers(host, version, entrypoint, env, ncontainer, cores=[], ports=[], daemon=False):
