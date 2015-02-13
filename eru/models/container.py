@@ -31,7 +31,7 @@ class Container(Base):
         self.entrypoint = entrypoint
 
     @classmethod
-    def create(cls, container_id, host, version, name, entrypoint, cores, port):
+    def create(cls, container_id, host, version, name, entrypoint, cores, port=None):
         """
         创建一个容器. cores 是 [core, core, ...] port 则是 port.
         """
@@ -40,7 +40,8 @@ class Container(Base):
             db.session.add(container)
             for core in cores:
                 container.cores.append(core)
-            container.ports.append(port)
+            if port:
+                container.ports.append(port)
             db.session.commit()
             return container
         except sqlalchemy.exc.IntegrityError:
