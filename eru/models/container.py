@@ -49,7 +49,7 @@ class Container(Base):
             return None
 
     @classmethod
-    def get_containers_by_host(cls, host):
+    def get_multi_by_host(cls, host):
         return cls.query.filter(cls.host_id == host.id).all()
 
     def delete(self):
