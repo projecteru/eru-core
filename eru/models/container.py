@@ -60,7 +60,7 @@ class Container(Base):
         db.session.delete(self)
         db.session.commit()
 
-    def not_alive(self):
+    def kill(self):
         self.is_alive = 0
         db.session.add(self)
         db.session.commit()

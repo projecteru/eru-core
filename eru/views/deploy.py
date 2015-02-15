@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, abort
 from eru.async.task import create_container
 from eru.common import code
 from eru.models import App, Group, Pod, Task
-from eru.utils import check_request_json
+from eru.utils.views import check_request_json
 
 deploy = Blueprint('deploy', __name__, url_prefix='/deploy')
 
