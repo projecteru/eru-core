@@ -13,7 +13,7 @@ class Container(Base):
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
     app_id = db.Column(db.Integer, db.ForeignKey('app.id'))
     version_id = db.Column(db.Integer, db.ForeignKey('version.id'))
-    container_id = db.Column(db.CHAR(64), nullable=False, unique=True)
+    container_id = db.Column(db.CHAR(64), nullable=False, index=True)
     name = db.Column(db.CHAR(255), nullable=False)
     entrypoint = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)
@@ -51,6 +51,10 @@ class Container(Base):
     @classmethod
     def get_multi_by_host(cls, host):
         return cls.query.filter(cls.host_id == host.id).all()
+
+    @classmethod
+    def get_by_container_id(cls, cid):
+        return cls.query.filter(cls.container_id.like('{}%'.format(cid))).first()
 
     def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
