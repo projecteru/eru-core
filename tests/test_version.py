@@ -1,7 +1,5 @@
 # coding: utf-8
 
-from pytest import fixture
-
 
 def test_version(client):
     rv = client.get('/sys/')
