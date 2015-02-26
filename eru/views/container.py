@@ -7,10 +7,10 @@ from eru.models import Container
 from eru.utils.views import jsonify
 
 
-container = Blueprint('container', __name__, url_prefix='/api/container')
+bp = Blueprint('container', __name__, url_prefix='/api/container')
 
 
-@container.route('/<cid>/kill', methods=['PUT', ])
+@bp.route('/<cid>/kill', methods=['PUT', ])
 @jsonify
 def kill_container(cid):
     c = Container.get_by_container_id(cid)
@@ -20,7 +20,7 @@ def kill_container(cid):
     return {'r':0, 'msg': code.OK}
 
 
-@container.route('/<cid>/poll', methods=['GET', ])
+@bp.route('/<cid>/poll', methods=['GET', ])
 @jsonify
 def poll_container(cid):
     c = Container.get_by_container_id(cid)
@@ -29,7 +29,7 @@ def poll_container(cid):
     return {'r':0, 'container': c.container_id, 'status': c.is_alive}
 
 
-@container.errorhandler(404)
+@bp.errorhandler(404)
 @jsonify
 def not_found_handler(exception):
     return {'r': 1, 'msg': str(exception.code)}

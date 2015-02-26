@@ -3,8 +3,10 @@
 
 import sqlalchemy.exc
 
-from eru.models import db, Base
+from eru.models import db
+from eru.models.base import Base
 from eru.common import settings
+
 
 class Port(Base):
     __tablename__ = 'port'

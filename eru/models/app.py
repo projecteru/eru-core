@@ -2,11 +2,13 @@
 #coding:utf-8
 
 import sqlalchemy.exc
+from datetime import datetime
 from werkzeug.utils import cached_property
 
-from eru.models import db, Base
+from eru.models import db
+from eru.models.base import Base
 from eru.models.appconfig import AppConfig, ResourceConfig
-from datetime import datetime
+
 
 class Version(Base):
     __tablename__ = 'version'
@@ -52,6 +54,12 @@ class Version(Base):
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
 
+    def to_dict(self):
+        d = super(Version, self).to_dict()
+        d['name'] = self.name
+        d['appconfig'] = self.appconfig.to_dict()
+        return d
+
 
 class App(Base):
     __tablename__ = 'app'
@@ -91,14 +99,17 @@ class App(Base):
 
     @classmethod
     def get(cls, id):
-        return cls.query.filter(cls.id == id).one()
+        return cls.query.filter(cls.id == id).first()
 
     @classmethod
     def get_by_name(cls, name):
-        return cls.query.filter(cls.name == name).one()
+        return cls.query.filter(cls.name == name).first()
 
     def get_version(self, version):
         return self.versions.filter(Version.sha.like('{}%'.format(version))).first()
+
+    def get_resource_config(self, env='prod'):
+        return ResourceConfig.get_by_name_and_env(self.name, env)
 
     def add_version(self, sha):
         version = Version.create(sha, self.id)
@@ -116,3 +127,4 @@ class App(Base):
         db.session.add(group)
         db.session.commit()
         return True
+

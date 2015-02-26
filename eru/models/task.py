@@ -5,7 +5,9 @@ import json
 import sqlalchemy.exc
 from datetime import datetime
 
-from eru.models import db, Base
+from eru.models import db
+from eru.models.base import Base
+
 
 class Task(Base):
     __tablename__ = 'task'

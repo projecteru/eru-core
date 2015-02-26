@@ -10,11 +10,14 @@ __all__ = ['AppConfig', 'ResourceConfig', ]
 Example of app.yaml:
 
     appname: "app"
-    port: 5000
     entrypoints:
-        web: "python app.py --port 5000"
-        daemon: "python daemon.py --interval 5"
-        service: "python service.py"
+        web:
+            cmd: "python app.py --port 5000"
+            port: 5000
+        daemon:
+            cmd: "python daemon.py --interval 5"
+        service:
+            cmd: "python service.py"
     build: "pip install -r ./req.txt"
 
 """
@@ -26,7 +29,7 @@ class BaseConfig(object):
     dict_names = []
 
     def __init__(self, path, **kw):
-        self.path = ''
+        self.path = path
         self._data = {}
         if kw:
             self._data.update(kw)
@@ -57,12 +60,18 @@ class BaseConfig(object):
 
     __getattr__ = __getitem__
 
+    def update(self, **kw):
+        self._data.update(kw)
+
     def get(self, name, default=None):
         return self._data.get(name, default)
 
     def save(self):
         value = yaml.safe_dump(self._data, default_flow_style=False, indent=4)
         etcd_client.write(self.path, value)
+
+    def to_dict(self):
+        return self._data
 
 
 class AppConfig(BaseConfig):
@@ -82,9 +91,6 @@ class ResourceConfig(BaseConfig):
         path = '/NBE/{0}/resource-{1}'.format(name, env)
         return cls._get_by_path(path)
 
-    def to_env_dict(self, name):
-        def _upper_key(key):
-            k = '{0}_{1}'.format(name, key)
-            return k.upper()
-        return {_upper_key(key): str(value) for key, value in self._data.iteritems()}
+    def to_env_dict(self):
+        return {key.upper(): str(value) for key, value in self._data.iteritems()}
 

@@ -9,15 +9,15 @@ from eru.models import Group, Pod, Host
 from eru.utils.views import check_request_json
 
 
-sys = Blueprint('sys', __name__, url_prefix='/sys')
+bp = Blueprint('sys', __name__, url_prefix='/api/sys')
 
 
-@sys.route('/')
+@bp.route('/')
 def index():
     return 'sys control'
 
 
-@sys.route('/group/create', methods=['POST', ])
+@bp.route('/group/create', methods=['POST', ])
 @check_request_json('name', code.HTTP_BAD_REQUEST)
 def create_group():
     data = request.get_json()
@@ -26,7 +26,7 @@ def create_group():
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
 
-@sys.route('/pod/create', methods=['POST', ])
+@bp.route('/pod/create', methods=['POST', ])
 @check_request_json('name', code.HTTP_BAD_REQUEST)
 def create_pod():
     data = request.get_json()
@@ -35,7 +35,7 @@ def create_pod():
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
 
-@sys.route('/pod/<pod_name>/assign', methods=['POST', ])
+@bp.route('/pod/<pod_name>/assign', methods=['POST', ])
 @check_request_json('group_name', code.HTTP_BAD_REQUEST)
 def assign_pod_to_group(pod_name):
     data = request.get_json()
@@ -50,7 +50,7 @@ def assign_pod_to_group(pod_name):
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
 
-@sys.route('/host/create', methods=['POST', ])
+@bp.route('/host/create', methods=['POST', ])
 @check_request_json(['addr', 'pod_name'], code.HTTP_BAD_REQUEST)
 def create_host(name):
     data = request.get_json()
@@ -67,7 +67,7 @@ def create_host(name):
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
 
-@sys.route('/host/<addr>/assign', methods=['POST', ])
+@bp.route('/host/<addr>/assign', methods=['POST', ])
 @check_request_json('group_name', code.HTTP_BAD_REQUEST)
 def assign_host_to_group(addr):
     data = request.get_json()
@@ -85,7 +85,7 @@ def assign_host_to_group(addr):
     return jsonify(msg=code.OK), code.HTTP_CREATED
 
 
-@sys.route('/group/<group_name>/available_container_count', methods=['GET', ])
+@bp.route('/group/<group_name>/available_container_count', methods=['GET', ])
 def group_max_containers(group_name, count):
     pod_name = request.args.get('pod_name', type=str, default='')
     cores_per_container = request.args.get('ncore', type=int, default=1)
