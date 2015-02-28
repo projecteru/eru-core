@@ -137,7 +137,7 @@ def build_image(group_name, pod_name, appname):
         task_props = {'base': base}
         task = Task.create(code.TASK_BUILD, version, host, task_props)
         build_docker_image.apply_async(
-            args=(task, base),
+            args=(task.id, base),
             task_id='task:%d' % task.id
         )
         return {'r': 0, 'msg': 'ok', 'task': task.id}
@@ -177,7 +177,7 @@ def _create_task(type_, version, host, ncontainer, cores, ports, entrypoint, env
         }
         task = Task.create(type_, version, host, task_props)
         create_docker_container.apply_async(
-            args=(task, ncontainer, cores, ports),
+            args=(task.id, ncontainer, cores, ports),
             task_id='task:%d' % task.id
         )
         return task
