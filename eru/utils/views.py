@@ -24,7 +24,7 @@ def check_request_json(keys, abort_code=code.HTTP_BAD_REQUEST):
 
 
 class EruJSONEncoder(json.JSONEncoder):
-    
+
     def default(self, obj):
         if isinstance(obj, Base):
             return obj.to_dict()

@@ -116,7 +116,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         port_bindings = {entryport: port.port} if ports else None
         binds = {settings.NBE_HOST_PERMDIR % appname: {'bind': settings.NBE_CONTAINER_PERMDIR % appname, 'ro': False}}
         client.start(container=container_id, port_bindings=port_bindings, binds=binds)
-        
+
         containers.append((container_id, container_name, entrypoint, used_cores, port))
     return containers
 
