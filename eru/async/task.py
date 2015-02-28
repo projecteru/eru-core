@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 @current_app.task()
-def create_container(task, ncontainer, cores, ports):
+def create_docker_container(task, ncontainer, cores, ports):
     """
     这个任务是在 host 上部署 ncontainer 个容器.
     可能占用 cores 这些核, 以及 ports 这些端口.
@@ -34,5 +34,16 @@ def create_container(task, ncontainer, cores, ports):
         for cid, cname, entrypoint, used_cores, port in containers:
             Container.create(cid, host, version, cname, entrypoint, used_cores, port)
 
+        task.finish_with_result(code.TASK_SUCCESS)
+
+
+@current_app.task()
+def build_docker_image(task, base):
+    try:
+        dockerjob.build_image(task.host, task.version, base)
+    except Exception, e:
+        logger.exception(e)
+        task.finish_with_result(code.TASK_FAILED)
+    else:
         task.finish_with_result(code.TASK_SUCCESS)
 

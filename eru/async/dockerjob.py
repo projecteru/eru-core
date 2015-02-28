@@ -78,12 +78,14 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     """
     client = get_docker_client(host)
     appconfig = version.appconfig
-    resconfig = version.get_resource_config(env)
+    envconfig = version.get_resource_config(env)
 
     appname = appconfig.appname
     image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
-    cmd = appconfig.entrypoints[entrypoint]['cmd']
-    entryport = appconfig.entrypoints[entrypoint].get('port', None)
+    entry = appconfig.entrypoints[entrypoint]
+
+    cmd = entry['cmd']
+    entryport = entry.get('port', None)
 
     # build name
     # {appname}_{entrypoint}_{ident_id}
@@ -94,7 +96,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         'NBE_POD': host.pod.name,
         'NBE_PERMDIR': settings.NBE_CONTAINER_PERMDIR % appname,
     }
-    env.update(resconfig.to_env_dict(appname))
+    env.update(envconfig.to_env_dict())
 
     volumes = [settings.NBE_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始
