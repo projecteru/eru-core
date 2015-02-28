@@ -11,7 +11,7 @@ Core of Project Eru, for those reasons:
 
 ## Architecture
 
-![Image of Architecture](http://img3.douban.com/view/status/raw/public/2dc6eda24caf8e4.jpg)
+![Image of Architecture](http://ww3.sinaimg.cn/large/74cb2da7gw1epp7df19a8j21kw16o10v.jpg)
 
 ## Start Web
 
