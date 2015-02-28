@@ -5,7 +5,7 @@ import json
 from tests.prepare import create_test_suite
 
 
-def test_container_kill(client):
+def test_container_kill(client, test_db):
     rv = client.put('/api/container/12345/kill')
     assert rv.status_code == 200
     d = json.loads(rv.data)
@@ -13,7 +13,7 @@ def test_container_kill(client):
     assert d['r'] == 1
 
 
-def test_container_poll(client):
+def test_container_poll(client, test_db):
     rv = client.get('/api/container/12345/poll')
     assert rv.status_code == 200
     d = json.loads(rv.data)

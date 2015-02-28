@@ -3,7 +3,8 @@
 
 import sqlalchemy.exc
 
-from eru.models import db, Base
+from eru.models import db
+from eru.models.base import Base
 
 
 class GroupPod(db.Model):

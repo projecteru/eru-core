@@ -3,7 +3,9 @@
 
 import sqlalchemy.exc
 
-from eru.models import db, Base
+from eru.models import db
+from eru.models.base import Base
+
 
 class Pod(Base):
     __tablename__ = 'pod'

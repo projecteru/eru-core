@@ -4,17 +4,23 @@
 import logging
 from flask import Flask
 from gunicorn.app.wsgiapp import WSGIApplication
+from werkzeug.utils import import_string
 
 from eru.common.settings import ERU_BIND, ERU_WORKERS,\
         ERU_TIMEOUT, ERU_WORKER_CLASS
 from eru.async import make_celery
+from eru.models import db
+
+
+blueprints = ('version', 'sys', 'deploy', 'container', 'app', )
+exts = (db, )
 
 
 def init_logging(app):
-    args = {'level': logging.INFO}
-    if app.debug:
-        args = {'level': logging.DEBUG}
-    args['format'] = '%(levelname)s:%(asctime)s:%(message)s'
+    args = {
+        'level': logging.DEBUG if app.debug else logging.INFO,
+        'format': '%(levelname)s:%(asctime)s:%(message)s',
+    }
     logging.basicConfig(**args)
 
 
@@ -25,17 +31,14 @@ def create_app_with_celery(static_url_path=None):
     # should be initialized before other imports
     celery = make_celery(app)
 
-    from eru.models import init_db
-    from eru.views import init_views
-
     init_logging(app)
-    init_db(app)
-    init_views(app)
 
-    @app.route("/")
-    def index():
-        from eru import __VERSION__
-        return 'Eru %s' % __VERSION__
+    for ext in exts:
+        ext.init_app(app)
+
+    for bp in blueprints:
+        import_name = '%s.views.%s:bp' % (__package__, bp)
+        app.register_blueprint(import_string(import_name))
 
     return app, celery
 

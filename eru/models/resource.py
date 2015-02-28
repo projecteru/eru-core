@@ -1,9 +1,12 @@
 #!/usr/bin/python
 #coding:utf-8
 
-from eru.models import db, Base
 from datetime import datetime
 from sqlalchemy.ext.declarative import declared_attr
+
+from eru.models import db
+from eru.models.base import Base
+
 
 class DBBase(Base):
 
@@ -39,8 +42,10 @@ class DBBase(Base):
         self.database = database
         self.address = address
 
+
 class MySQL(DBBase):
     __tablename__ = 'mysql'
+
 
 class InfluxDB(DBBase):
     __tablename__ = 'influxdb'

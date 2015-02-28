@@ -82,7 +82,8 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
 
     appname = appconfig.appname
     image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
-    cmd = appconfig.entrypoints[entrypoint]
+    cmd = appconfig.entrypoints[entrypoint]['cmd']
+    entryport = appconfig.entrypoints[entrypoint].get('port', None)
 
     # build name
     # {appname}_{entrypoint}_{ident_id}
@@ -98,7 +99,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     volumes = [settings.NBE_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始
     working_dir = '/%s' % appname
-    ports = [appconfig.port, ] if appconfig.port else None
+    cports = [entryport, ] if entryport else None
 
     containers = []
     cores_per_container = len(cores) / ncontainer
@@ -106,13 +107,13 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         used_cores = cores[index*cores_per_container:(index+1)*cores_per_container].label if cores else ''
         cpuset = ','.join([c.label for c in used_cores])
         container = client.create_container(image=image, command=cmd, user=user, environment=env,
-                volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=ports)
+                volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=cports)
         container_id = container['Id']
 
         # start options
         # port binding and volume binding
         port = ports[index]
-        port_bindings = {appconfig.port: port.port} if ports else None
+        port_bindings = {entryport: port.port} if ports else None
         binds = {settings.NBE_HOST_PERMDIR % appname: {'bind': settings.NBE_CONTAINER_PERMDIR % appname, 'ro': False}}
         client.start(container=container_id, port_bindings=port_bindings, binds=binds)
         

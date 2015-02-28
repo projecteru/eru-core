@@ -12,7 +12,7 @@ from eru.common import code
 from eru.models import App, Group, Pod, Task
 from eru.utils.views import check_request_json
 
-deploy = Blueprint('deploy', __name__, url_prefix='/deploy')
+bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
 
 #TODO only work in single process env
 RESLOCK = defaultdict(RLock)
@@ -20,12 +20,12 @@ RESLOCK = defaultdict(RLock)
 logger = logging.getLogger(__name__)
 
 
-@deploy.route('/')
+@bp.route('/')
 def index():
     return 'deploy control'
 
 
-@deploy.route('/private/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
+@bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
 @check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'], code.HTTP_BAD_REQUEST)
 def create_private(group_name, pod_name, appname):
     '''
@@ -90,7 +90,7 @@ def create_private(group_name, pod_name, appname):
     return jsonify(msg=code.OK, tasks=ts), code.HTTP_CREATED
 
 
-@deploy.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
+@bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', ])
 @check_request_json(['type', 'ncontainer', 'version'], code.HTTP_BAD_REQUEST)
 def create_public(group_name, pod_name, appname):
     '''
