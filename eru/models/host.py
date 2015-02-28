@@ -82,12 +82,8 @@ class Host(Base):
             return None
 
     @classmethod
-    def get(cls, id):
-        return cls.query.filter(cls.id == id).one()
-
-    @classmethod
     def get_by_addr(cls, addr):
-        return cls.query.filter(cls.addr == addr).one()
+        return cls.query.filter(cls.addr == addr).first()
 
     def get_free_cores(self):
         return [c for c in self.cores.all() if not c.used]
