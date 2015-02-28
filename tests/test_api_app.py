@@ -4,9 +4,12 @@ import json
 import yaml
 
 from tests.utils import random_string, random_sha1
+from tests.mock import FakeEtcd
 
 
-def test_create_app(client, test_db):
+def test_create_app(client, test_db, monkeypatch):
+    monkeypatch.setattr('eru.models.appconfig.etcd_client', FakeEtcd())
+
     appyaml = '''
 appname: "test_app"
 entrypoints:
@@ -67,7 +70,9 @@ build: "pip install -r ./req.txt"
     assert r[u'sha'] == data['version']
 
 
-def test_app_env(client, test_db):
+def test_app_env(client, test_db, monkeypatch):
+    monkeypatch.setattr('eru.models.appconfig.etcd_client', FakeEtcd())
+
     appyaml = '''
 appname: "test_app"
 entrypoints:
