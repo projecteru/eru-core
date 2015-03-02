@@ -14,9 +14,8 @@ bp = Blueprint('container', __name__, url_prefix='/api/container')
 @jsonify
 def kill_container(cid):
     c = Container.get_by_container_id(cid)
-    if not c:
-        abort(404)
-    c.kill()
+    if c:
+        c.kill()
     return {'r':0, 'msg': code.OK}
 
 

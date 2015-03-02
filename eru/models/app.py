@@ -98,10 +98,6 @@ class App(Base):
             return None
 
     @classmethod
-    def get(cls, id):
-        return cls.query.filter(cls.id == id).first()
-
-    @classmethod
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 

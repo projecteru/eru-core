@@ -53,7 +53,7 @@ class Task(Base):
         self.finished = datetime.now()
         self.result = result
         db.session.add(self)
-        db.seesion.commit()
+        db.session.commit()
 
     @property
     def props(self):

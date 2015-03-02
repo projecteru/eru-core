@@ -32,11 +32,7 @@ class Pod(Base):
 
     @classmethod
     def get_by_name(cls, name):
-        return cls.query.filter(cls.name == name).one()
-
-    @classmethod
-    def get(cls, id):
-        return cls.query.filter(cls.id==id).one()
+        return cls.query.filter(cls.name == name).first()
 
     def assigned_to_group(self, group):
         """这个 pod 就归这个 group 啦."""

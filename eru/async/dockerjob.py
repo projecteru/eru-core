@@ -42,7 +42,7 @@ def build_image_environment(version, base, rev):
     dockerfile = DOCKER_FILE_TEMPLATE.format(
         base=base, appname=appname, build_cmd=build_cmd
     )
-    ensure_file(os.path.join(build_path, 'dockerfile'), owner=version.app_id,
+    ensure_file(os.path.join(build_path, 'Dockerfile'), owner=version.app_id,
             group=version.app_id, content=dockerfile)
 
     # TODO 这里可能需要加上静态文件的处理
@@ -57,7 +57,7 @@ def build_image(host, version, base):
     用 host 机器, 以 base 为基础镜像, 为 version 构建
     一个稍后可以运行的镜像.
     """
-    client = get_docker_client(host)
+    client = get_docker_client(host.addr)
     appname = version.app.name
     rev = version.short_sha
     repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
@@ -76,14 +76,16 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     这些容器可能占用 cores 这些核, 以及 ports 这些端口.
     daemon 用来指定这些容器的监控方式, 暂时没有用.
     """
-    client = get_docker_client(host)
+    client = get_docker_client(host.addr)
     appconfig = version.appconfig
-    resconfig = version.get_resource_config(env)
+    envconfig = version.get_resource_config(env)
 
     appname = appconfig.appname
     image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
-    cmd = appconfig.entrypoints[entrypoint]['cmd']
-    entryport = appconfig.entrypoints[entrypoint].get('port', None)
+    entry = appconfig.entrypoints[entrypoint]
+
+    cmd = entry['cmd']
+    entryport = entry.get('port', None)
 
     # build name
     # {appname}_{entrypoint}_{ident_id}
@@ -94,7 +96,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         'NBE_POD': host.pod.name,
         'NBE_PERMDIR': settings.NBE_CONTAINER_PERMDIR % appname,
     }
-    env.update(resconfig.to_env_dict(appname))
+    env.update(envconfig.to_env_dict())
 
     volumes = [settings.NBE_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始

@@ -6,11 +6,12 @@ from tests.prepare import create_test_suite
 
 
 def test_container_kill(client, test_db):
+    # kill 永远对外成功.
     rv = client.put('/api/container/12345/kill')
     assert rv.status_code == 200
     d = json.loads(rv.data)
-    assert d['msg'] == u'404'
-    assert d['r'] == 1
+    assert d['msg'] == u'ok'
+    assert d['r'] == 0
 
 
 def test_container_poll(client, test_db):

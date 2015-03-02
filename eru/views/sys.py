@@ -57,7 +57,7 @@ def assign_pod_to_group(pod_name):
 
 @bp.route('/host/create', methods=['POST', ])
 @check_request_json(['addr', 'pod_name'], code.HTTP_BAD_REQUEST)
-def create_host(name):
+def create_host():
     data = request.get_json()
     addr = data['addr']
 
