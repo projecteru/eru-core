@@ -83,6 +83,8 @@ EMAIL_USE_SSL = True
 NBE_HOST_PERMDIR = '/mnt/mfs/permdir/%s'
 NBE_CONTAINER_PERMDIR = '/%s/permdir'
 
+ERU_CONFIG_BACKEND = 'redis' # must be etcd/redis
+
 try:
     from local_settings import *
 except ImportError:
