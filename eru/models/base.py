@@ -17,6 +17,10 @@ class Base(db.Model):
     def get(cls, id):
         return cls.query.filter(cls.id==id).first()
 
+    @classmethod
+    def get_multi(cls, ids):
+        return cls.query.filter(cls.id._in(tuple(ids))).all()
+
     def to_dict(self):
         keys = [c.key for c in self.__table__.columns]
         return {k: getattr(self, k) for k in keys}

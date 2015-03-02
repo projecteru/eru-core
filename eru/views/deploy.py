@@ -168,16 +168,18 @@ def validate_instance(group_name, pod_name, appname, version):
 
 def _create_task(type_, version, host, ncontainer, cores, ports, entrypoint, env):
     try:
+        core_ids = [c.id for c in cores]
+        port_ids = [p.id for p in ports]
         task_props = {
             'ncontainer': ncontainer,
             'entrypoint': entrypoint,
             'env': env,
-            'cores': [c.id for c in cores],
-            'ports': [p.id for p in ports],
+            'cores': core_ids,
+            'ports': port_ids,
         }
         task = Task.create(type_, version, host, task_props)
         create_docker_container.apply_async(
-            args=(task.id, ncontainer, cores, ports),
+            args=(task.id, ncontainer, core_ids, port_ids),
             task_id='task:%d' % task.id
         )
         return task
