@@ -28,7 +28,6 @@ INFLUXDB_HOST = '10.1.201.42'
 INFLUXDB_PORT = 8086
 INFLUXDB_USERNAME = 'root'
 INFLUXDB_PASSWORD = 'root'
-INFLUXDB_DATABASE = 'test'
 
 MYSQL_HOST = '127.0.0.1'
 MYSQL_PORT = 3306
@@ -92,3 +91,9 @@ except ImportError:
 # 需要计算的变量需要在 import 覆盖之后计算.
 SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
         MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE)
+
+RESOURCES = {
+    'influxdb': 'eru.res.influxdb:InfluxDB',
+    #'redis': 'eru.res.redis.Redis',
+}
+
