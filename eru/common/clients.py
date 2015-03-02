@@ -29,5 +29,5 @@ def get_redis_client():
     return redis.Redis(connection_pool=pool)
 
 etcd_client = get_etcd_client(settings.ETCD_MACHINES)
-rdb = get_redis_client()
+rds = get_redis_client()
 
