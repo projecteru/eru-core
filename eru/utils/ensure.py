@@ -14,17 +14,18 @@ def get_gid(name):
     return pwd.getpwnam(name).pw_gid if isinstance(name, basestring) else name
 
 
-def ensure_dir(path, owner='root', group='root', mode=0755):
+def ensure_dir(path, owner=None, group=None, mode=0755):
     try:
         os.mkdir(path, mode)
     except OSError, e:
         if e.errno != errno.EEXIST:
             raise
 
-    os.chown(path, get_uid(owner), get_gid(group))
+    if owner and group:
+        os.chown(path, get_uid(owner), get_gid(group))
 
 
-def ensure_dir_recursive(topdir, path, owner='root', group='root', mode=0755):
+def ensure_dir_recursive(topdir, path, owner=None, group=None, mode=0755):
     # Create dirs recursively, but not above topdir, which must exist before
     if topdir == path:
         # Stop here, not above
@@ -48,12 +49,12 @@ def ensure_dir_absent(path):
             shutil.rmtree(path, ignore_errors=True)
 
 
-def ensure_dirs(paths, owner='root', group='root', mode=0755):
+def ensure_dirs(paths, owner=None, group=None, mode=0755):
     for path in paths:
         ensure_dir(path, owner=owner, group=group, mode=mode)
 
 
-def ensure_file(path, owner='root', group='root', mode=0644, content=''):
+def ensure_file(path, owner=None, group=None, mode=0644, content=''):
     try:
         current_content = open(path).read()
     except IOError, e:
@@ -67,7 +68,8 @@ def ensure_file(path, owner='root', group='root', mode=0644, content=''):
             f.write(content)
 
     os.chmod(path, mode)
-    os.chown(path, get_uid(owner), get_gid(group))
+    if owner and group:
+        os.chown(path, get_uid(owner), get_gid(group))
 
 
 def ensure_file_absent(path):
@@ -75,7 +77,7 @@ def ensure_file_absent(path):
         os.unlink(path)
 
 
-def ensure_link(path, target, owner='root', group='root'):
+def ensure_link(path, target, owner=None, group=None):
     if os.path.lexists(path) and \
             not (os.path.islink(path) and os.readlink(path) == target):
         os.unlink(path)

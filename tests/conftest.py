@@ -29,7 +29,7 @@ def client(app):
 
 @pytest.fixture
 def test_db(request, app):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost:3306/erutest'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:@localhost:3306/eru'
     db.create_all()
 
     def tear_down():

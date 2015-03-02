@@ -11,7 +11,14 @@ from eru.storage.etcd import EtcdStorage
 
 def get_docker_client(addr):
     base_url = 'tcp://%s' % addr
-    return docker.Client(base_url=base_url)
+    c = docker.Client(base_url=base_url)
+    if settings.DOCKER_REGISTRY_USERNAME:
+        # 我眼睛要看瞎了...
+        c.login(settings.DOCKER_REGISTRY_USERNAME,
+                password=settings.DOCKER_REGISTRY_PASSWORD,
+                email=settings.DOCKER_REGISTRY_EMAIL,
+                registry=settings.DOCKER_REGISTRY_URL)
+    return c
 
 
 def get_etcd_client(addr):

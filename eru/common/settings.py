@@ -7,8 +7,13 @@ ERU_WORKERS = 4
 ERU_TIMEOUT = 300
 ERU_WORKER_CLASS = 'gevent'
 
+DOCKER_REGISTRY_URL = 'http://docker-registry.intra.hunantv.com'
+DOCKER_REGISTRY_INSECURE = True
 DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
 DOCKER_NETWORK = 'bridge'
+DOCKER_REGISTRY_USERNAME = ''
+DOCKER_REGISTRY_PASSWORD = ''
+DOCKER_REGISTRY_EMAIL = ''
 
 GIT_ENDPOINT = 'http://git.hunantv.com'
 GIT_WORK_DIR = '/tmp'

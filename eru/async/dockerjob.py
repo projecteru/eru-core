@@ -42,8 +42,7 @@ def build_image_environment(version, base, rev):
     dockerfile = DOCKER_FILE_TEMPLATE.format(
         base=base, appname=appname, build_cmd=build_cmd
     )
-    ensure_file(os.path.join(build_path, 'Dockerfile'), owner=version.app_id,
-            group=version.app_id, content=dockerfile)
+    ensure_file(os.path.join(build_path, 'Dockerfile'), content=dockerfile)
 
     # TODO 这里可能需要加上静态文件的处理
     yield build_path
@@ -65,7 +64,7 @@ def build_image(host, version, base):
 
     with build_image_environment(version, base, rev) as build_path:
         build_gen = client.build(path=build_path, rm=True, tag=tag)
-        push_gen = client.push(repo, tag=rev, stream=True, insecure_registry=True)
+        push_gen = client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
         return chain(build_gen, push_gen)
 
 

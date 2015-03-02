@@ -19,7 +19,8 @@ class Base(db.Model):
 
     @classmethod
     def get_multi(cls, ids):
-        return cls.query.filter(cls.id._in(tuple(ids))).all()
+        #return cls.query.filter(cls.id._in(tuple(ids))).all()
+        return [cls.get(i) for i in ids]
 
     def to_dict(self):
         keys = [c.key for c in self.__table__.columns]
