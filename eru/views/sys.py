@@ -1,15 +1,20 @@
 #!/usr/bin/python
 #coding:utf-8
 
+import logging
+
 from flask import Blueprint, request, jsonify, abort
+from werkzeug.utils import import_string
 
 from eru.common import code
 from eru.common.clients import get_docker_client
+from eru.common.settings import RESOURCES
 from eru.models import Group, Pod, Host
 from eru.utils.views import check_request_json
 
 
 bp = Blueprint('sys', __name__, url_prefix='/api/sys')
+logger = logging.getLogger(__name__)
 
 
 @bp.route('/')
@@ -98,4 +103,19 @@ def group_max_containers(group_name, count):
         abort(code.HTTP_BAD_REQUEST)
 
     return jsonify(msg=code.OK, data=group.get_max_containers(pod, cores_per_container))
+
+@bp.route('/alloc/<res_name>', methods=['POST', ])
+def alloc_resource(res_name):
+    r = RESOURCES.get(res_name)
+    if not r:
+        abort(code.HTTP_BAD_REQUEST)
+
+    try:
+        mod = import_string(r)
+        data = request.get_json()
+        return jsonify(msg=code.OK, data=mod.alloc(**data))
+    except Exception, e:
+        logger.exception(e)
+        abort(code.HTTP_BAD_REQUEST)
+
 
