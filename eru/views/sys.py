@@ -95,7 +95,7 @@ def assign_host_to_group(addr):
 
 @bp.route('/group/<group_name>/available_container_count', methods=['GET', ])
 @jsonify()
-def group_max_containers(group_name, count):
+def group_max_containers(group_name):
     pod_name = request.args.get('pod_name', type=str, default='')
     cores_per_container = request.args.get('ncore', type=int, default=1)
 
@@ -107,4 +107,20 @@ def group_max_containers(group_name, count):
         abort(code.HTTP_BAD_REQUEST)
 
     return {'r':0, 'msg': code.OK, 'data': group.get_max_containers(pod, cores_per_container)}
+
+
+@bp.route('/alloc/<res_name>', methods=['POST', ])
+@jsonify(code.HTTP_CREATED)
+def alloc_resource(res_name):
+    r = RESOURCES.get(res_name)
+    if not r:
+        abort(code.HTTP_BAD_REQUEST)
+
+    try:
+        mod = import_string(r)
+        data = request.get_json()
+        return {'r':0, 'msg': code.OK, 'data': mod.alloc(**data)}
+    except Exception, e:
+        logger.exception(e)
+        abort(code.HTTP_BAD_REQUEST)
 
