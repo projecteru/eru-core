@@ -14,10 +14,12 @@ def get_docker_client(addr):
     c = docker.Client(base_url=base_url)
     if settings.DOCKER_REGISTRY_USERNAME:
         # 我眼睛要看瞎了...
-        c.login(settings.DOCKER_REGISTRY_USERNAME,
-                password=settings.DOCKER_REGISTRY_PASSWORD,
-                email=settings.DOCKER_REGISTRY_EMAIL,
-                registry=settings.DOCKER_REGISTRY_URL)
+        c.login(
+            settings.DOCKER_REGISTRY_USERNAME,
+            password=settings.DOCKER_REGISTRY_PASSWORD,
+            email=settings.DOCKER_REGISTRY_EMAIL,
+            registry=settings.DOCKER_REGISTRY_URL,
+        )
     return c
 
 
