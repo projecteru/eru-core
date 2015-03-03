@@ -11,7 +11,7 @@ bp = Blueprint('container', __name__, url_prefix='/api/container')
 
 
 @bp.route('/<cid>/kill', methods=['PUT', ])
-@jsonify
+@jsonify()
 def kill_container(cid):
     c = Container.get_by_container_id(cid)
     if c:
@@ -20,7 +20,7 @@ def kill_container(cid):
 
 
 @bp.route('/<cid>/poll', methods=['GET', ])
-@jsonify
+@jsonify()
 def poll_container(cid):
     c = Container.get_by_container_id(cid)
     if not c:
@@ -29,7 +29,7 @@ def poll_container(cid):
 
 
 @bp.errorhandler(404)
-@jsonify
+@jsonify()
 def not_found_handler(exception):
     return {'r': 1, 'msg': str(exception.code)}
 

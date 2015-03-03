@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @bp.route('/<name>', methods=['GET', ])
-@jsonify
+@jsonify()
 def get_app(name):
     app = App.get_by_name(name)
     if not app:
@@ -21,7 +21,7 @@ def get_app(name):
 
 
 @bp.route('/<name>/<version>', methods=['GET', ])
-@jsonify
+@jsonify()
 def get_version(name, version):
     app = App.get_by_name(name)
     if not app:
@@ -35,7 +35,7 @@ def get_version(name, version):
 
 @bp.route('/register/', methods=['POST', ])
 @check_request_json(['name', 'version', 'git', 'token', 'appyaml'])
-@jsonify
+@jsonify()
 def register_app_version():
     data = request.get_json()
     name = data['name']
@@ -60,7 +60,7 @@ def register_app_version():
 
 @bp.route('/<name>/env/', methods=['PUT', ])
 @check_request_json('env')
-@jsonify
+@jsonify()
 def set_app_env(name):
     app = App.get_by_name(name)
     if not app:
@@ -76,7 +76,7 @@ def set_app_env(name):
 
 
 @bp.route('/<name>/env/', methods=['GET', ])
-@jsonify
+@jsonify()
 def list_app_env(name):
     app = App.get_by_name(name)
     if not app:
@@ -89,7 +89,7 @@ def list_app_env(name):
 
 @bp.errorhandler(404)
 @bp.errorhandler(400)
-@jsonify
+@jsonify()
 def not_found_handler(exception):
     return {'r':1, 'msg': str(exception.code)}
 
