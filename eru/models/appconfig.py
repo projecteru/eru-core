@@ -2,7 +2,7 @@
 
 import yaml
 
-from eru.common.clients import etcd_client
+from eru.common.clients import config_backend
 
 __all__ = ['AppConfig', 'ResourceConfig', ]
 
@@ -36,13 +36,7 @@ class BaseConfig(object):
 
     @classmethod
     def _get_by_path(cls, path):
-        try:
-            r = etcd_client.get(path)
-            config = r.value if (r and not r.dir) else '{}'
-        except KeyError:
-            config = '{}'
-        if not config:
-            config = '{}'
+        config = config_backend.get(path) or '{}'
         config = yaml.load(config)
         return cls(path, **config)
 
@@ -68,7 +62,7 @@ class BaseConfig(object):
 
     def save(self):
         value = yaml.safe_dump(self._data, default_flow_style=False, indent=4)
-        etcd_client.write(self.path, value)
+        config_backend.write(self.path, value)
 
     def to_dict(self):
         return self._data

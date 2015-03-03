@@ -8,7 +8,7 @@ from tests.mock import FakeEtcd
 
 
 def test_create_app(client, test_db, monkeypatch):
-    monkeypatch.setattr('eru.models.appconfig.etcd_client', FakeEtcd())
+    monkeypatch.setattr('eru.models.appconfig.config_backend', FakeEtcd())
 
     appyaml = '''
 appname: "test_app"
@@ -71,7 +71,7 @@ build: "pip install -r ./req.txt"
 
 
 def test_app_env(client, test_db, monkeypatch):
-    monkeypatch.setattr('eru.models.appconfig.etcd_client', FakeEtcd())
+    monkeypatch.setattr('eru.models.appconfig.config_backend', FakeEtcd())
 
     appyaml = '''
 appname: "test_app"
