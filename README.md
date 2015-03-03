@@ -15,9 +15,9 @@ Core of Project Eru, for those reasons:
 
 ## Start Web
 
-    `eru`
+    eru
 
 ## Start async worker
 
-    `celery -A eru.app.celery worker -n 'c1' -E -P gevent`
+    celery -A eru.app.celery worker -n 'c1' -E -P gevent
 

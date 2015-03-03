@@ -74,7 +74,7 @@ class AppConfig(BaseConfig):
 
     @classmethod
     def get_by_name_and_version(cls, name, version):
-        path = '/NBE/{0}/{1}/app.yaml'.format(name, version)
+        path = '/ERU/{0}/{1}/app.yaml'.format(name, version)
         return cls._get_by_path(path)
 
 
@@ -82,7 +82,7 @@ class ResourceConfig(BaseConfig):
 
     @classmethod
     def get_by_name_and_env(cls, name, env='prod'):
-        path = '/NBE/{0}/resource-{1}'.format(name, env)
+        path = '/ERU/{0}/resource-{1}'.format(name, env)
         return cls._get_by_path(path)
 
     def to_env_dict(self):

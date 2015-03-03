@@ -79,14 +79,14 @@ ADMINS = (
 SERVER_EMAIL = 'gitlab@gitup.me'
 
 # Mailserver configuration
-EMAIL_HOST = 'smtp.exmail.qq.com'
+EMAIL_HOST = ''
 EMAIL_PORT = 465
-EMAIL_HOST_USER = 'gitlab@gitup.me'
-EMAIL_HOST_PASSWORD = '^123$456a'
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
 EMAIL_USE_SSL = True
 
-NBE_HOST_PERMDIR = '/mnt/mfs/permdir/%s'
-NBE_CONTAINER_PERMDIR = '/%s/permdir'
+ERU_HOST_PERMDIR = '/mnt/mfs/permdir/%s'
+ERU_CONTAINER_PERMDIR = '/%s/permdir'
 
 ERU_CONFIG_BACKEND = 'redis' # must be etcd/redis
 
@@ -101,6 +101,6 @@ SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
 
 RESOURCES = {
     'influxdb': 'eru.res.influxdb:InfluxDB',
-    #'redis': 'eru.res.redis.Redis',
+    #'redis': 'eru.res.redis:Redis',
 }
 
