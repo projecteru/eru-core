@@ -7,3 +7,4 @@ TODO
 4. ~~use redis replace etcd.~~
 5. static files.
 6. communicate with agent when a container dies.
+7. daemon container

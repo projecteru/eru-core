@@ -1,4 +1,5 @@
-# coding: utf
+#!/usr/bin/python
+#coding:utf-8
 
 import os
 import tempfile
@@ -15,7 +16,7 @@ from eru.utils.ensure import ensure_dir_absent, ensure_file
 
 DOCKER_FILE_TEMPLATE = '''
 FROM {base}
-ENV NBE 1
+ENV ERU 1
 ADD {appname} /{appname}
 WORKDIR /{appname}
 RUN {build_cmd}
@@ -91,13 +92,13 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     container_name = '_'.join([appname, entrypoint, random_string(6)])
 
     env = {
-        'NBE_RUNENV': env.upper(),
-        'NBE_POD': host.pod.name,
-        'NBE_PERMDIR': settings.NBE_CONTAINER_PERMDIR % appname,
+        'ERU_RUNENV': env.upper(),
+        'ERU_POD': host.pod.name,
+        'ERU_PERMDIR': settings.ERU_CONTAINER_PERMDIR % appname,
     }
     env.update(envconfig.to_env_dict())
 
-    volumes = [settings.NBE_CONTAINER_PERMDIR % appname, ]
+    volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始
     working_dir = '/%s' % appname
     cports = [entryport, ] if entryport else None
@@ -115,7 +116,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         # port binding and volume binding
         port = ports[index]
         port_bindings = {entryport: port.port} if ports else None
-        binds = {settings.NBE_HOST_PERMDIR % appname: {'bind': settings.NBE_CONTAINER_PERMDIR % appname, 'ro': False}}
+        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
         client.start(container=container_id, port_bindings=port_bindings, binds=binds)
 
         containers.append((container_id, container_name, entrypoint, used_cores, port))
