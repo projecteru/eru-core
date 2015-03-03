@@ -33,10 +33,12 @@ class EruJSONEncoder(json.JSONEncoder):
         return super(EruJSONEncoder, self).default(obj)
 
 
-def jsonify(f):
-    @wraps(f)
-    def _(*args, **kwargs):
-        r = f(*args, **kwargs)
-        return r and Response(json.dumps(r, cls=EruJSONEncoder), mimetype='application/json')
-    return _
+def jsonify(code=code.HTTP_OK):
+    def _jsonify(f):
+        @wraps(f)
+        def _(*args, **kwargs):
+            r = f(*args, **kwargs)
+            return r and Response(json.dumps(r, cls=EruJSONEncoder), status=code, mimetype='application/json')
+        return _
+    return _jsonify
 

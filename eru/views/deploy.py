@@ -23,7 +23,7 @@ def index():
 
 @bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
-@jsonify
+@jsonify()
 def create_private(group_name, pod_name, appname):
     """
     ncore: int cpu num per container -1 means share
@@ -79,7 +79,7 @@ def create_private(group_name, pod_name, appname):
 
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
-@jsonify
+@jsonify()
 def create_public(group_name, pod_name, appname):
     """
     ncontainer: int container nums
@@ -123,7 +123,7 @@ def create_public(group_name, pod_name, appname):
 
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['base', 'version'])
-@jsonify
+@jsonify()
 def build_image(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
