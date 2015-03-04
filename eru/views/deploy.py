@@ -2,14 +2,15 @@
 #coding:utf-8
 
 import logging
+import itertools
 
-from flask import Blueprint, request, abort
+from flask import Blueprint, request
 
-from eru.async.task import create_docker_container, build_docker_image
+from eru.async.task import create_docker_container, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
 from eru.models import App, Group, Pod, Task
-from eru.utils.views import check_request_json, jsonify
+from eru.utils.views import check_request_json, jsonify, EruAbortException
 
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
@@ -46,13 +47,13 @@ def create_private(group_name, pod_name, appname):
     with rds.lock('%s:%s' % (group_name, pod_name)):
         # 不够了
         if ncore > 0 and group.get_max_containers(pod, ncore) < ncontainer:
-            abort(code.HTTP_BAD_REQUEST)
+            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
 
         try:
             host_cores = group.get_free_cores(pod, ncontainer, ncore)
             # 这个pod都不够host了
             if not host_cores:
-                abort(code.HTTP_BAD_REQUEST)
+                raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
 
             for (host, container_count), cores in host_cores.iteritems():
                 ports = host.get_free_ports(container_count) if entry.get('port') else []
@@ -63,7 +64,7 @@ def create_private(group_name, pod_name, appname):
                 host.occupy_ports(ports)
         except Exception, e:
             logger.exception(e)
-            abort(code.HTTP_BAD_REQUEST)
+            raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
 
     ts = []
     for task_info in tasks_info:
@@ -98,8 +99,9 @@ def create_public(group_name, pod_name, appname):
     tasks_info = []
     with rds.lock('%s:%s' % (group_name, pod_name)):
         try:
-            # TODO 这里是轮询? 尽可能均匀部署对吧?
-            for host in pod.get_free_public_hosts(ncontainer):
+            # 轮询, 尽可能均匀部署
+            hosts = pod.get_free_public_hosts(ncontainer)
+            for host in itertools.islice(itertools.cycle(hosts), ncontainer):
                 ports = host.get_free_ports(1) if entry.get('port') else []
                 tasks_info.append(
                     (version, host, 1, [], ports, data['entrypoint'], data['env'])
@@ -107,7 +109,7 @@ def create_public(group_name, pod_name, appname):
                 host.occupy_ports(ports)
         except Exception, e:
             logger.exception(e)
-            abort(code.HTTP_BAD_REQUEST)
+            raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
 
     ts = []
     for task_info in tasks_info:
@@ -146,22 +148,51 @@ def build_image(group_name, pod_name, appname):
         return {'r': 1, 'msg': str(e), 'task': None}
 
 
+@bp.route('/remove/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
+@check_request_json(['version'])
+@jsonify()
+def offline_app(group_name, pod_name, appname):
+    data = request.get_json()
+    group, pod, application, version = validate_instance(group_name,
+            pod_name, appname, data['version'])
+    try:
+        d = {}
+        ts = []
+        for container in version.containers.all():
+            d.setdefault(container.host, []).append(container)
+        for host, containers in d.iteritems():
+            cids = [c.id for c in containers]
+            task_props = {
+                'container_ids': cids,
+            }
+            task = Task.create(code.TASK_REMOVE, version, host, task_props)
+            remove_containers.apply_async(
+                args=(task.id, cids, True),
+                task_id='task:%d' % task.id
+            )
+            ts.append(task.id)
+        return {'r': 0, 'msg': 'ok', 'tasks': ts}
+    except Exception, e:
+        logger.exception(e)
+        return {'r': 1, 'msg': str(e), 'tasks': []}
+
+
 def validate_instance(group_name, pod_name, appname, version):
     group = Group.get_by_name(group_name)
     if not group:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Group `%s` not found' % group_name)
 
     pod = Pod.get_by_name(pod_name)
     if not pod:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Pod `%s` not found' % pod_name)
 
     application = App.get_by_name(appname)
     if not application:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App `%s` not found' % appname)
 
     version = application.get_version(version)
     if not version:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Version `%s` not found' % version)
 
     return group, pod, application, version
 
@@ -188,4 +219,10 @@ def _create_task(type_, version, host, ncontainer, cores, ports, entrypoint, env
         host.release_ports(ports)
         host.release_cores(cores)
     return None
+
+
+@bp.errorhandler(EruAbortException)
+@jsonify()
+def eru_abort_handler(exception):
+    return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}
 

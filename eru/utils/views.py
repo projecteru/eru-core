@@ -42,3 +42,10 @@ def jsonify(code=code.HTTP_OK):
         return _
     return _jsonify
 
+
+class EruAbortException(Exception):
+
+    def __init__(self, code, msg=''):
+        self.code = code
+        self.msg = msg
+

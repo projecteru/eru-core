@@ -1,10 +1,10 @@
 # coding: utf-8
 
-from flask import Blueprint, abort
+from flask import Blueprint
 
 from eru.common import code
 from eru.models import Container
-from eru.utils.views import jsonify
+from eru.utils.views import jsonify, EruAbortException
 
 
 bp = Blueprint('container', __name__, url_prefix='/api/container')
@@ -24,12 +24,12 @@ def kill_container(cid):
 def poll_container(cid):
     c = Container.get_by_container_id(cid)
     if not c:
-        abort(404)
+        raise EruAbortException(404, 'Container %s not found' % cid)
     return {'r':0, 'container': c.container_id, 'status': c.is_alive}
 
 
-@bp.errorhandler(404)
+@bp.errorhandler(EruAbortException)
 @jsonify()
-def not_found_handler(exception):
-    return {'r': 1, 'msg': str(exception.code)}
+def eru_abort_handler(exception):
+    return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}
 

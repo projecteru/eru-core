@@ -3,12 +3,13 @@
 
 import logging
 
-from flask import Blueprint, request, abort
+from flask import Blueprint, request
+from werkzeug.utils import import_string
 
 from eru.common import code
 from eru.common.clients import get_docker_client
 from eru.models import Group, Pod, Host
-from eru.utils.views import jsonify, check_request_json
+from eru.utils.views import jsonify, check_request_json, EruAbortException
 
 
 bp = Blueprint('sys', __name__, url_prefix='/api/sys')
@@ -26,7 +27,7 @@ def index():
 def create_group():
     data = request.get_json()
     if not Group.create(data['name'], data.get('description', '')):
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
 
@@ -36,7 +37,7 @@ def create_group():
 def create_pod():
     data = request.get_json()
     if not Pod.create(data['name'], data.get('description', '')):
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
 
@@ -49,10 +50,10 @@ def assign_pod_to_group(pod_name):
     group = Group.get_by_name(data['group_name'])
     pod = Pod.get_by_name(pod_name)
     if not group or not pod:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     if not pod.assigned_to_group(group):
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
 
@@ -65,12 +66,12 @@ def create_host():
 
     pod = Pod.get_by_name(data['pod_name'])
     if not pod:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     client = get_docker_client(addr)
     info = client.info()
     if not Host.create(pod, addr, info['Name'], info['ID'], info['NCPU'], info['MemTotal']):
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
 
@@ -82,14 +83,14 @@ def assign_host_to_group(addr):
 
     group = Group.get_by_name(data['group_name'])
     if not group:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     host = Host.get_by_addr(addr)
     if not host:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     if not host.assigned_to_group(group):
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
 
@@ -101,10 +102,10 @@ def group_max_containers(group_name):
 
     group = Group.get_by_name(group_name)
     if not group:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     pod = Pod.get_by_name(pod_name)
     if not pod:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     return {'r':0, 'msg': code.OK, 'data': group.get_max_containers(pod, cores_per_container)}
 
@@ -114,7 +115,7 @@ def group_max_containers(group_name):
 def alloc_resource(res_name):
     r = RESOURCES.get(res_name)
     if not r:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     try:
         mod = import_string(r)
@@ -122,5 +123,9 @@ def alloc_resource(res_name):
         return {'r':0, 'msg': code.OK, 'data': mod.alloc(**data)}
     except Exception, e:
         logger.exception(e)
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
+@bp.errorhandler(EruAbortException)
+@jsonify()
+def eru_abort_handler(exception):
+    return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}

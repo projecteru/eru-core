@@ -1,13 +1,13 @@
 # coding: utf-8
 
 import logging
-from flask import Blueprint, request, abort
+from flask import Blueprint, request
 from werkzeug.utils import import_string
 
 from eru.models import App
 from eru.common import code
 from eru.common.settings import RESOURCES
-from eru.utils.views import jsonify, check_request_json
+from eru.utils.views import jsonify, check_request_json, EruAbortException
 
 
 bp = Blueprint('app', __name__, url_prefix='/api/app')
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def get_app(name):
     app = App.get_by_name(name)
     if not app:
-        abort(404)
+        raise EruAbortException(404, 'App %s not found' % name)
     return app
 
 
@@ -28,11 +28,11 @@ def get_app(name):
 def get_version(name, version):
     app = App.get_by_name(name)
     if not app:
-        abort(404)
+        raise EruAbortException(404, 'App %s not found' % name)
 
     v = app.get_version(version)
     if not v:
-        abort(404)
+        raise EruAbortException(404, 'Version %s not found' % version)
     return v
 
 
@@ -48,12 +48,12 @@ def register_app_version():
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
         logger.error('app create failed')
-        abort(400)
+        raise EruAbortException(400, 'App %s create failed' % name)
 
     v = app.add_version(version)
     if not v:
         logger.error('version create failed')
-        abort(400)
+        raise EruAbortException(400, 'Version %s create failed' % version[:7])
 
     appconfig = v.appconfig
     appconfig.update(**data['appyaml'])
@@ -69,7 +69,7 @@ def set_app_env(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        abort(400)
+        raise EruAbortException(400, 'App %s not found, env set ignored' % name)
 
     data = request.get_json()
     env = data.pop('env')
@@ -84,20 +84,20 @@ def set_app_env(name):
 def get_app_env(name):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env set ignored')
-        abort(400)
+        logger.error('app not found, env list ignored')
+        raise EruAbortException(400, 'App %s not found, env list ignored' % name)
 
     envconfig = app.get_resource_config(request.args['env'])
     return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
 
 
-@bp.route('/list/<name>/', methods=['GET', ])
+@bp.route('/<name>/listenv', methods=['GET', ])
 @jsonify()
 def list_app_env(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        abort(400)
+        raise EruAbortException(400)
 
     return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
 
@@ -109,15 +109,15 @@ def alloc_resource(name, env, res_name, res_alias=''):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        abort(400)
+        raise EruAbortException(400)
 
     r = RESOURCES.get(res_name)
     if not r:
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     envconfig = app.get_resource_config(env)
     if envconfig.get(res_alias):
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     res_alias = res_alias or res_name
 
@@ -128,14 +128,13 @@ def alloc_resource(name, env, res_name, res_alias=''):
         envconfig.save()
     except Exception, e:
         logger.exception(e)
-        abort(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
     else:
         return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
 
 
-@bp.errorhandler(404)
-@bp.errorhandler(400)
+@bp.errorhandler(EruAbortException)
 @jsonify()
-def not_found_handler(exception):
-    return {'r':1, 'msg': str(exception.code)}
+def eru_abort_handler(exception):
+    return {'r':1, 'msg': exception.msg, 'status_code': exception.code}
 

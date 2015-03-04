@@ -122,3 +122,28 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         containers.append((container_id, container_name, entrypoint, used_cores, port))
     return containers
 
+
+def stop_containers(containers, host):
+    """停止这个host上的这些容器"""
+    client = get_docker_client(host.addr)
+    for c in containers:
+        client.stop(c.container_id)
+
+
+def remove_host_containers(containers, host):
+    """删除这个host上的这些容器"""
+    client = get_docker_client(host.addr)
+    for c in containers:
+        if c.is_alive:
+            continue
+        client.remove_container(c.container_id)
+
+
+def remove_image(version, host):
+    """在host上删除掉version的镜像"""
+    client = get_docker_client(host.addr)
+    appconfig = version.appconfig
+    appname = appconfig.appname
+    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+    client.remove_image(image)
+

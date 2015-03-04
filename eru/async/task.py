@@ -52,3 +52,20 @@ def build_docker_image(task_id, base):
     else:
         task.finish_with_result(code.TASK_SUCCESS)
 
+
+@current_app.task()
+def remove_containers(task_id, cids, rmi):
+    task = Task.get(task_id)
+    containers = Container.get_multi(cids)
+    try:
+        dockerjob.remove_host_containers(containers, task.host)
+        if rmi:
+            dockerjob.remove_image(task.version, task.host)
+    except Exception, e:
+        logger.exception(e)
+        task.finish_with_result(code.TASK_FAILED)
+    else:
+        for c in containers:
+            c.delete()
+        task.finish_with_result(code.TASK_SUCCESS)
+
