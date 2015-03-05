@@ -2,8 +2,11 @@
 
 import logging
 from flask import Blueprint, request, abort
+from werkzeug.utils import import_string
 
 from eru.models import App
+from eru.common import code
+from eru.common.settings import RESOURCES
 from eru.utils.views import jsonify, check_request_json
 
 
@@ -41,6 +44,7 @@ def register_app_version():
     name = data['name']
     version = data['version']
 
+    #TODO dirty data
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
         logger.error('app create failed')
@@ -77,7 +81,7 @@ def set_app_env(name):
 
 @bp.route('/<name>/env/', methods=['GET', ])
 @jsonify()
-def list_app_env(name):
+def get_app_env(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
@@ -85,6 +89,48 @@ def list_app_env(name):
 
     envconfig = app.get_resource_config(request.args['env'])
     return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
+
+
+@bp.route('/list/<name>/', methods=['GET', ])
+@jsonify()
+def list_app_env(name):
+    app = App.get_by_name(name)
+    if not app:
+        logger.error('app not found, env set ignored')
+        abort(400)
+
+    return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
+
+
+@bp.route('/alloc/<name>/<env>/<res_name>/', methods=['POST', ])
+@bp.route('/alloc/<name>/<env>/<res_name>/<res_alias>/', methods=['POST', ])
+@jsonify(code.HTTP_CREATED)
+def alloc_resource(name, env, res_name, res_alias=''):
+    app = App.get_by_name(name)
+    if not app:
+        logger.error('app not found, env set ignored')
+        abort(400)
+
+    r = RESOURCES.get(res_name)
+    if not r:
+        abort(code.HTTP_BAD_REQUEST)
+
+    envconfig = app.get_resource_config(env)
+    if envconfig.get(res_alias):
+        abort(code.HTTP_BAD_REQUEST)
+
+    res_alias = res_alias or res_name
+
+    try:
+        mod = import_string(r)
+        result = mod.alloc(**request.get_json())
+        envconfig[res_alias] = result
+        envconfig.save()
+    except Exception, e:
+        logger.exception(e)
+        abort(code.HTTP_BAD_REQUEST)
+    else:
+        return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
 
 
 @bp.errorhandler(404)

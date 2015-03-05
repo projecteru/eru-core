@@ -21,3 +21,6 @@ class EtcdStorage(BaseConfigStorage):
         except KeyError:
             return None
 
+    def list(self, key):
+        return [sub.key.strip('/') for sub in self._client.get(key).children]
+

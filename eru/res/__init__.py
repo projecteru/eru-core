@@ -8,10 +8,6 @@ class Base(object):
         pass
 
     @classmethod
-    def store(cls):
-        pass
-
-    @classmethod
     def free(cls):
         pass
 

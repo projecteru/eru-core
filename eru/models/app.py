@@ -103,6 +103,9 @@ class App(Base):
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
 
+    def list_resource_config(self):
+        return ResourceConfig.list_env(self.name)
+
     def add_version(self, sha):
         version = Version.create(sha, self.id)
         if not version:
