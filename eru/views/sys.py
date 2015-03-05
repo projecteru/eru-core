@@ -8,6 +8,7 @@ from werkzeug.utils import import_string
 
 from eru.common import code
 from eru.common.clients import get_docker_client
+from eru.common.settings import RESOURCES
 from eru.models import Group, Pod, Host
 from eru.utils.views import jsonify, check_request_json, EruAbortException
 
