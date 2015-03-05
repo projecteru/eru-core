@@ -35,6 +35,11 @@ class BaseConfig(object):
             self._data.update(kw)
 
     @classmethod
+    def _list_by_path(cls, path):
+        info = config_backend.list(path) or []
+        return info
+
+    @classmethod
     def _get_by_path(cls, path):
         config = config_backend.get(path) or '{}'
         config = yaml.load(config)
@@ -82,8 +87,13 @@ class ResourceConfig(BaseConfig):
 
     @classmethod
     def get_by_name_and_env(cls, name, env='prod'):
-        path = '/ERU/{0}/resource-{1}'.format(name, env)
+        path = '/ERU/{0}/resource/{1}'.format(name, env)
         return cls._get_by_path(path)
+
+    @classmethod
+    def list_env(cls, name):
+        path = '/ERU/%s/resource' % name
+        return cls._list_by_path(path)
 
     def to_env_dict(self):
         return {key.upper(): str(value) for key, value in self._data.iteritems()}

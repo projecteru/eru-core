@@ -70,13 +70,9 @@ class App(Base):
     token = db.Column(db.CHAR(32), nullable=False, unique=True)
     update = db.Column(db.DateTime, default=datetime.now)
 
-    #TODO FK to more resource
-
     versions = db.relationship('Version', backref='app', lazy='dynamic')
     containers = db.relationship('Container', backref='app', lazy='dynamic')
     tasks = db.relationship('Task', backref='app', lazy='dynamic')
-    mysql = db.relationship('MySQL', backref='app', lazy='dynamic')
-    influxdb = db.relationship('InfluxDB', backref='app', lazy='dynamic')
 
     def __init__(self, name, git, token):
         self.name = name
@@ -106,6 +102,9 @@ class App(Base):
 
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
+
+    def list_resource_config(self):
+        return ResourceConfig.list_env(self.name)
 
     def add_version(self, sha):
         version = Version.create(sha, self.id)

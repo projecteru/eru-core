@@ -20,10 +20,7 @@ class InfluxDB(Base):
     def alloc(cls, dbname, username, pass_len, admin=False):
         return create_influxdb(cls.client, dbname, username, pass_len, admin)
 
-    @classmethod
-    def save(cls, data):
-        pass
-
+    #TODO clean data
     @classmethod
     def free(cls):
         pass

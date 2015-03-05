@@ -11,12 +11,10 @@ from eru.models.group import Group, GroupPod
 from eru.models.app import App, Version
 from eru.models.appconfig import AppConfig, ResourceConfig
 from eru.models.container import Container
-from eru.models.resource import MySQL, InfluxDB
 from eru.models.task import Task
 
 __all__ = [
     'db', 'Base', 'Core', 'Port', 'Host', 'Pod', 'Group', 'GroupPod',
-    'App', 'Version', 'Container', 'MySQL', 'InfluxDB', 'Task',
-    'AppConfig', 'ResourceConfig',
+    'App', 'Version', 'Container', 'Task', 'AppConfig', 'ResourceConfig',
 ]
 

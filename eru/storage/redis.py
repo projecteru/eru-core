@@ -12,8 +12,13 @@ class RedisStorage(BaseConfigStorage):
         return self._client.set(key, value, ex=ttl)
 
     def get(self, key):
-        return self._client.get(key)
+        name, key = key.rsplit('/', 1)
+        return self._client.hget(name, key)
 
     def write(self, key, value, ttl=None, **kwargs):
-        return self.set(key, value, ttl)
+        name, key = key.rsplit('/', 1)
+        return self._client.hset(name, key, value)
+
+    def list(self, key):
+        return self._client.hkeys(key)
 

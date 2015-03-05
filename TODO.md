@@ -8,3 +8,9 @@ TODO
 5. static files.
 6. communicate with agent when a container dies.
 7. daemon container
+8. multiple ports / multiple protocol bind.
+9. users and group.
+10. configure files.
+11. services discovery.
+12. websocket interface for getting build/add logs.
+13. api for getting applog.

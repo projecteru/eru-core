@@ -10,3 +10,6 @@ class BaseConfigStorage(object):
         """should return string or None"""
         raise NotImplementedError()
 
+    def list(self, key):
+        raise NotImplementedError()
+
