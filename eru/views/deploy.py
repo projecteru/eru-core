@@ -9,7 +9,7 @@ from flask import Blueprint, request
 from eru.async.task import create_docker_container, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
-from eru.models import App, Group, Pod, Task
+from eru.models import App, Group, Pod, Task, Host
 from eru.utils.views import check_request_json, jsonify, EruAbortException
 
 
@@ -41,6 +41,9 @@ def create_private(group_name, pod_name, appname):
     ncore = int(data['ncore']) # 是说一个容器要几个核...
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
+
+    if not data['entrypoint'] in appconfig.entrypoints:
+        raise EruAbortException(400, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
     entry = appconfig.entrypoints[data['entrypoint']]
 
     tasks_info = []
@@ -94,6 +97,8 @@ def create_public(group_name, pod_name, appname):
 
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
+    if not data['entrypoint'] in appconfig.entrypoints:
+        raise EruAbortException(400, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
     entry = appconfig['entrypoints'][data['entrypoint']]
 
     tasks_info = []
@@ -148,10 +153,34 @@ def build_image(group_name, pod_name, appname):
         return {'r': 1, 'msg': str(e), 'task': None}
 
 
-@bp.route('/remove/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
+@bp.route('/rmcontainer/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
+@check_request_json(['version', 'host', 'ncontainer'])
+@jsonify()
+def rm_containers(group_name, pod_name, appname):
+    data = request.get_json()
+    group, pod, application, version = validate_instance(group_name,
+            pod_name, appname, data['version'])
+    host = Host.get_by_name(data['host'])
+    # 直接拿前ncontainer个吧, 反正他们都等价的
+    containers = host.get_containers_by_version(version)[:int(data['ncontainer'])]
+    try:
+        cids = [c.id for c in containers]
+        task_props = {'container_ids': cids}
+        task = Task.create(code.TASK_REMOVE, version, host, task_props)
+        remove_containers.apply_async(
+            args=(task.id, cids, False),
+            task_id='task:%d' % task.id
+        )
+        return {'r': 0, 'msg': 'ok', 'task': task.id}
+    except Exception, e:
+        logger.exception(e)
+        return {'r': 1, 'msg': str(e), 'task': None}
+
+
+@bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version'])
 @jsonify()
-def offline_app(group_name, pod_name, appname):
+def offline_version(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, data['version'])
@@ -162,9 +191,7 @@ def offline_app(group_name, pod_name, appname):
             d.setdefault(container.host, []).append(container)
         for host, containers in d.iteritems():
             cids = [c.id for c in containers]
-            task_props = {
-                'container_ids': cids,
-            }
+            task_props = {'container_ids': cids}
             task = Task.create(code.TASK_REMOVE, version, host, task_props)
             remove_containers.apply_async(
                 args=(task.id, cids, True),

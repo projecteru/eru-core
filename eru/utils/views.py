@@ -9,7 +9,7 @@ from eru.models.base import Base
 from eru.common import code
 
 
-def check_request_json(keys, abort_code=code.HTTP_BAD_REQUEST):
+def check_request_json(keys, abort_code=code.HTTP_BAD_REQUEST, abort_msg=''):
     if not isinstance(keys, list):
         keys = [keys, ]
     def deco(function):
@@ -17,7 +17,20 @@ def check_request_json(keys, abort_code=code.HTTP_BAD_REQUEST):
         def _(*args, **kwargs):
             data = request.get_json()
             if not (data and all((k in data) for k in keys)):
-                abort(abort_code)
+                raise EruAbortException(abort_code, abort_msg)
+            return function(*args, **kwargs)
+        return _
+    return deco
+
+
+def check_request_args(keys, abort_code=code.HTTP_BAD_REQUEST, abort_msg=''):
+    if not isinstance(keys, list):
+        keys = [keys, ]
+    def deco(function):
+        @wraps(function)
+        def _(*args, **kwargs):
+            if not all((k in request.args) for k in keys):
+                raise EruAbortException(abort_code, abort_msg)
             return function(*args, **kwargs)
         return _
     return deco

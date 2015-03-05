@@ -18,7 +18,7 @@ def test_container_poll(client, test_db):
     rv = client.get('/api/container/12345/poll')
     assert rv.status_code == 200
     d = json.loads(rv.data)
-    assert d['msg'] == u'404'
+    assert d['status_code'] == 404
     assert d['r'] == 1
 
 

@@ -7,7 +7,8 @@ from werkzeug.utils import import_string
 from eru.models import App
 from eru.common import code
 from eru.common.settings import RESOURCES
-from eru.utils.views import jsonify, check_request_json, EruAbortException
+from eru.utils.views import (jsonify, check_request_json,
+        check_request_args, EruAbortException)
 
 
 bp = Blueprint('app', __name__, url_prefix='/api/app')
@@ -80,6 +81,7 @@ def set_app_env(name):
 
 
 @bp.route('/<name>/env/', methods=['GET', ])
+@check_request_args('env')
 @jsonify()
 def get_app_env(name):
     app = App.get_by_name(name)
@@ -131,6 +133,17 @@ def alloc_resource(name, env, res_name, res_alias=''):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     else:
         return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
+
+
+@bp.route('/<name>/containers/', methods=['GET', ])
+@jsonify()
+def list_app_containers(name):
+    app = App.get_by_name(name)
+    if not app:
+        logger.error('app not found, env list ignored')
+        raise EruAbortException(400, 'App %s not found, env list ignored' % name)
+    containers = app.containers.all()
+    return {'r': 0, 'msg': 'ok', 'containers': containers}
 
 
 @bp.errorhandler(EruAbortException)
