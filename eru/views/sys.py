@@ -111,21 +111,6 @@ def group_max_containers(group_name):
     return {'r':0, 'msg': code.OK, 'data': group.get_max_containers(pod, cores_per_container)}
 
 
-@bp.route('/alloc/<res_name>', methods=['POST', ])
-@jsonify(code.HTTP_CREATED)
-def alloc_resource(res_name):
-    r = RESOURCES.get(res_name)
-    if not r:
-        raise EruAbortException(code.HTTP_BAD_REQUEST)
-
-    try:
-        mod = import_string(r)
-        data = request.get_json()
-        return {'r':0, 'msg': code.OK, 'data': mod.alloc(**data)}
-    except Exception, e:
-        logger.exception(e)
-        raise EruAbortException(code.HTTP_BAD_REQUEST)
-
 @bp.errorhandler(EruAbortException)
 @jsonify()
 def eru_abort_handler(exception):
