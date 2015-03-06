@@ -70,7 +70,7 @@ class Group(Base):
             if count <= 0:
                 continue
             if ncontainer <= count:
-                result[(host, count)] = cores[:ncontainer*cores_per_container]
+                result[(host, ncontainer)] = cores[:ncontainer*cores_per_container]
                 break
             result[(host, count)] = cores[:count*cores_per_container]
             ncontainer = ncontainer - count

@@ -47,7 +47,7 @@ build: "pip install -r ./req.txt"
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'r'] == 1
-    assert r[u'msg'] == u'404'
+    assert r[u'status_code'] == 404
 
     rv = client.get('/api/app/{0}/{1}'.format(data['name'], data['version']))
     r = json.loads(rv.data)
@@ -122,13 +122,13 @@ build: "pip install -r ./req.txt"
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'r'] == 1
-    assert r[u'msg'] == '400'
+    assert r[u'status_code'] == 400
 
     rv = client.get(url)
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'r'] == 1
-    assert r[u'msg'] == '400'
+    assert r[u'status_code'] == 400
 
     # 错误的 env 返回空的
     rv = client.get(url+'?env=xxx')

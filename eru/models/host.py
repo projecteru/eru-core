@@ -85,11 +85,21 @@ class Host(Base):
     def get_by_addr(cls, addr):
         return cls.query.filter(cls.addr == addr).first()
 
+    @classmethod
+    def get_by_name(cls, name):
+        return cls.query.filter(cls.name == name).first()
+
     def get_free_cores(self):
         return [c for c in self.cores.all() if not c.used]
 
     def get_free_ports(self, limit):
         return self.ports.filter_by(used=0).limit(limit).all()
+
+    def get_containers_by_version(self, version):
+        return self.containers.filter_by(version_id=version.id).all()
+
+    def get_containers_by_app(self, app):
+        return self.containers.filter_by(app_id=app.id).all()
 
     def assigned_to_group(self, group):
         """分配给 group, 那么这个 host 被标记为这个 group 私有"""

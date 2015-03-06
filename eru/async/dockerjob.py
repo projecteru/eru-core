@@ -84,12 +84,10 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
     entry = appconfig.entrypoints[entrypoint]
 
+    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
+
     cmd = entry['cmd']
     entryport = entry.get('port', None)
-
-    # build name
-    # {appname}_{entrypoint}_{ident_id}
-    container_name = '_'.join([appname, entrypoint, random_string(6)])
 
     env = {
         'ERU_RUNENV': env.upper(),
@@ -103,10 +101,16 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     working_dir = '/%s' % appname
     cports = [entryport, ] if entryport else None
 
+    for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
+        print line
+
     containers = []
     cores_per_container = len(cores) / ncontainer
     for index in xrange(ncontainer):
-        used_cores = cores[index*cores_per_container:(index+1)*cores_per_container].label if cores else ''
+        # build name
+        # {appname}_{entrypoint}_{ident_id}
+        container_name = '_'.join([appname, entrypoint, random_string(6)])
+        used_cores = cores[index*cores_per_container:(index+1)*cores_per_container] if cores else ''
         cpuset = ','.join([c.label for c in used_cores])
         container = client.create_container(image=image, command=cmd, user=user, environment=env,
                 volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=cports)
@@ -121,4 +125,29 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
 
         containers.append((container_id, container_name, entrypoint, used_cores, port))
     return containers
+
+
+def stop_containers(containers, host):
+    """停止这个host上的这些容器"""
+    client = get_docker_client(host.addr)
+    for c in containers:
+        client.stop(c.container_id)
+
+
+def remove_host_containers(containers, host):
+    """删除这个host上的这些容器"""
+    client = get_docker_client(host.addr)
+    for c in containers:
+        if c.is_alive:
+            client.stop(c.container_id)
+        client.remove_container(c.container_id)
+
+
+def remove_image(version, host):
+    """在host上删除掉version的镜像"""
+    client = get_docker_client(host.addr)
+    appconfig = version.appconfig
+    appname = appconfig.appname
+    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+    client.remove_image(image)
 
