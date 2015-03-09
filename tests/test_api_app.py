@@ -15,7 +15,8 @@ appname: "test_app"
 entrypoints:
     web:
         cmd: "python app.py --port 5000"
-        port: 5000
+        ports:
+            - 5000/tcp
     daemon:
         cmd: "python daemon.py --interval 5"
     service:
@@ -57,7 +58,7 @@ build: "pip install -r ./req.txt"
     assert r[u'appconfig']['appname'] == u'test_app'
     assert len(r[u'appconfig']['entrypoints']) == 3
     assert r[u'appconfig']['entrypoints']['web']['cmd'] == u'python app.py --port 5000'
-    assert r[u'appconfig']['entrypoints']['web']['port'] == 5000
+    assert r[u'appconfig']['entrypoints']['web']['ports'] == ['5000/tcp']
     assert r[u'appconfig']['entrypoints']['daemon']['cmd'] == u'python daemon.py --interval 5'
     assert r[u'appconfig']['entrypoints']['service']['cmd'] == u'go run service.go'
     assert r[u'appconfig']['build'] == u'pip install -r ./req.txt'
@@ -78,7 +79,8 @@ appname: "test_app"
 entrypoints:
     web:
         cmd: "python app.py --port 5000"
-        port: 5000
+        ports:
+            - 5000/tcp
     daemon:
         cmd: "python daemon.py --interval 5"
     service:

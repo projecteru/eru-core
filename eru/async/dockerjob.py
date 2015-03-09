@@ -99,7 +99,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始
     working_dir = '/%s' % appname
-    container_ports = [e.split('/') for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
+    container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
 
     for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
         print line
@@ -121,8 +121,8 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
 
         # start options
         # port binding and volume binding
-        expose_ports = [ports.pop(0).port for _ in entryports]
-        ports_bindings = dict(zip(entryports, expose_ports)) if expose_ports else None
+        expose_ports = [ports.pop(0) for _ in entryports]
+        ports_bindings = dict(zip(entryports, [p.port for p in expose_ports])) if expose_ports else None
 
         binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
         client.start(container=container_id, port_bindings=ports_bindings, binds=binds)
