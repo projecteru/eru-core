@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import geventwebsocket
 from flask import Blueprint, request
 
 from eru.models import Task
@@ -37,7 +38,7 @@ def task_log(task_id):
         else:
             for line in task.log():
                 ws.send(line)
-    except:
+    except geventwebsocket.WebSocketError:
         pass
     finally:
         ws.close()
