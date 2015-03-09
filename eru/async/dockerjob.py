@@ -87,7 +87,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
 
     cmd = entry['cmd']
-    entryport = entry.get('port', None)
+    entryports = entry.get('ports', [])
 
     env = {
         'ERU_RUNENV': env.upper(),
@@ -99,7 +99,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
     user = version.app_id # 可以控制从多少开始
     working_dir = '/%s' % appname
-    cports = [entryport, ] if entryport else None
+    container_ports = [e.split('/') for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
 
     for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
         print line
@@ -112,18 +112,22 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         container_name = '_'.join([appname, entrypoint, random_string(6)])
         used_cores = cores[index*cores_per_container:(index+1)*cores_per_container] if cores else ''
         cpuset = ','.join([c.label for c in used_cores])
-        container = client.create_container(image=image, command=cmd, user=user, environment=env,
-                volumes=volumes, name=container_name, cpuset=cpuset, working_dir=working_dir, ports=cports)
+        container = client.create_container(
+            image=image, command=cmd, user=user, environment=env,
+            volumes=volumes, name=container_name, cpuset=cpuset,
+            working_dir=working_dir, ports=container_ports,
+        )
         container_id = container['Id']
 
         # start options
         # port binding and volume binding
-        port = ports[index]
-        port_bindings = {entryport: port.port} if ports else None
-        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
-        client.start(container=container_id, port_bindings=port_bindings, binds=binds)
+        expose_ports = [ports.pop(0).port for _ in entryports]
+        ports_bindings = dict(zip(entryports, expose_ports)) if expose_ports else None
 
-        containers.append((container_id, container_name, entrypoint, used_cores, port))
+        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
+        client.start(container=container_id, port_bindings=ports_bindings, binds=binds)
+
+        containers.append((container_id, container_name, entrypoint, used_cores, expose_ports))
     return containers
 
 

@@ -26,16 +26,18 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         version = task.version
         entrypoint = task.props['entrypoint']
         env = task.props['env']
-        containers = dockerjob.create_containers(host, version,
-                entrypoint, env, ncontainer, cores, ports)
+        containers = dockerjob.create_containers(
+            host, version, entrypoint,
+            env, ncontainer, cores, ports
+        )
     except Exception, e:
         logger.exception(e)
         host.release_cores(cores)
         host.release_ports(ports)
         task.finish_with_result(code.TASK_FAILED)
     else:
-        for cid, cname, entrypoint, used_cores, port in containers:
-            Container.create(cid, host, version, cname, entrypoint, used_cores, port)
+        for cid, cname, entrypoint, used_cores, expose_ports in containers:
+            Container.create(cid, host, version, cname, entrypoint, used_cores, expose_ports)
 
         task.finish_with_result(code.TASK_SUCCESS)
 

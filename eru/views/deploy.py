@@ -59,7 +59,7 @@ def create_private(group_name, pod_name, appname):
                 raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
 
             for (host, container_count), cores in host_cores.iteritems():
-                ports = host.get_free_ports(container_count) if entry.get('port') else []
+                ports = host.get_free_ports(container_count*len(entry['ports'])) if entry.get('ports') else []
                 tasks_info.append(
                     (version, host, container_count, cores, ports, data['entrypoint'], data['env'])
                 )
