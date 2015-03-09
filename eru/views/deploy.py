@@ -107,7 +107,7 @@ def create_public(group_name, pod_name, appname):
             # 轮询, 尽可能均匀部署
             hosts = pod.get_free_public_hosts(ncontainer)
             for host in itertools.islice(itertools.cycle(hosts), ncontainer):
-                ports = host.get_free_ports(1) if entry.get('port') else []
+                ports = host.get_free_ports(1) if entry.get('ports') else []
                 tasks_info.append(
                     (version, host, 1, [], ports, data['entrypoint'], data['env'])
                 )

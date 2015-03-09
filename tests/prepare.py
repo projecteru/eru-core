@@ -11,7 +11,7 @@ def create_test_suite():
         'entrypoints': {
             'web': {
                 'cmd': 'python app.py',
-                'port': 5000,
+                'ports': ['5000/tcp'],
             },
             'daemon': {
                 'cmd': 'python daemon.py',
@@ -56,7 +56,7 @@ def create_local_test_data(private=False):
         'entrypoints': {
             'web': {
                 'cmd': 'python app.py',
-                'port': 5000,
+                'ports': ['5000/tcp'],
             },
             'daemon': {
                 'cmd': 'python daemon.py',

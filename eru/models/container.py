@@ -41,9 +41,8 @@ class Container(Base):
             db.session.add(container)
             for core in cores:
                 container.cores.append(core)
-            if expose_ports:
-                for port in expose_ports:
-                    container.port.append(port)
+            for port in expose_ports:
+                container.port.append(port)
             db.session.commit()
             return container
         except sqlalchemy.exc.IntegrityError:
