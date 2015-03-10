@@ -20,6 +20,7 @@ def task_log(task_id):
         ws.close()
         return 'websocket closed'
 
+    pub = None
     try:
         pub = rds.pubsub()
         pub.subscribe(task.publish_key)
@@ -39,7 +40,8 @@ def task_log(task_id):
     except geventwebsocket.WebSocketError, e:
         logger.exception(e)
     finally:
-        pub.unsubscribe()
+        if pub:
+            pub.unsubscribe()
         ws.close()
 
     return ''
