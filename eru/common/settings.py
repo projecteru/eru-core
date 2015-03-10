@@ -5,7 +5,7 @@ DEBUG = False
 ERU_BIND = '0.0.0.0:46656'
 ERU_WORKERS = 4
 ERU_TIMEOUT = 300
-ERU_WORKER_CLASS = 'gevent'
+ERU_WORKER_CLASS = 'geventwebsocket.gunicorn.workers.GeventWebSocketWorker'
 
 DOCKER_REGISTRY_URL = 'http://docker-registry.intra.hunantv.com'
 DOCKER_REGISTRY_INSECURE = True
@@ -14,10 +14,6 @@ DOCKER_NETWORK = 'bridge'
 DOCKER_REGISTRY_USERNAME = ''
 DOCKER_REGISTRY_PASSWORD = ''
 DOCKER_REGISTRY_EMAIL = ''
-
-GIT_ENDPOINT = 'http://git.hunantv.com'
-GIT_WORK_DIR = '/tmp'
-GIT_EXTEND_DIR = '/mnt/sda1/tmp/extend'
 
 LOGSTASH = [
     'udp://10.100.1.154:50433',
@@ -89,6 +85,9 @@ ERU_HOST_PERMDIR = '/mnt/mfs/permdir/%s'
 ERU_CONTAINER_PERMDIR = '/%s/permdir'
 
 ERU_CONFIG_BACKEND = 'redis' # must be etcd/redis
+
+ERU_TASK_PUBKEY = 'eru:task:pub:%s'
+ERU_TASK_LOGKEY = 'eru:task:log:%s'
 
 try:
     from local_settings import *

@@ -5,6 +5,7 @@ import logging
 from celery import current_app
 
 from eru.common import code
+from eru.common.clients import rds
 from eru.async import dockerjob
 from eru.models import Container, Task, Core, Port
 
@@ -47,7 +48,9 @@ def build_docker_image(task_id, base):
     task = Task.get(task_id)
     try:
         for line in dockerjob.build_image(task.host, task.version, base):
-            print line
+            rds.rpush(task.log_key, line)
+            rds.publish(task.publish_key, line)
+        rds.publish(task.publish_key, code.PUB_END_MESSAGE)
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)

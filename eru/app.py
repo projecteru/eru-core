@@ -13,7 +13,7 @@ from eru.models import db
 from eru.utils.views import EruJSONEncoder
 
 
-blueprints = ('version', 'sys', 'deploy', 'container', 'app', )
+blueprints = ('version', 'sys', 'deploy', 'container', 'app', 'websockets', )
 exts = (db, )
 
 
