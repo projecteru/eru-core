@@ -3,24 +3,27 @@
 
 # SETTINGS FILE
 
-DEBUG = True
+DEBUG = False
+ERU_BIND = 'localhost:5000'
 
-DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
+DOCKER_REGISTRY_URL = 'https://containerops.cn/v1/'
+DOCKER_REGISTRY_INSECURE = False
+DOCKER_REGISTRY = 'containerops.cn/tonicbupt'
 DOCKER_NETWORK = 'bridge'
+DOCKER_REGISTRY_USERNAME = ''
+DOCKER_REGISTRY_PASSWORD = ''
+DOCKER_REGISTRY_EMAIL = ''
 
 GIT_ENDPOINT = 'http://git.hunantv.com'
-GIT_WORK_DIR = '/tmp'
-GIT_EXTEND_DIR = '/mnt/sda1/tmp/extend'
 
 LOGSTASH = [
     'udp://10.100.1.154:50433',
 ]
 
 ETCD_SYNC = True
-ETCD_MACHINES = [
-    'http://10.1.201.110:4001',
-    'http://10.1.201.110:4002',
-]
+ETCD_MACHINES = (
+    ('127.0.0.1', 4001),
+)
 
 INFLUXDB_HOST = '10.1.201.42'
 INFLUXDB_PORT = 8086
@@ -38,9 +41,13 @@ SQLALCHEMY_POOL_SIZE = 100
 SQLALCHEMY_POOL_TIMEOUT = 10
 SQLALCHEMY_POOL_RECYCLE = 2000
 
+ADMINS = ()
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+
 REPORT_INTERVAL = 10
 CLEAN_NITERVAL = 86400
 CLEAN_DIR = '/var/lib/docker/containers'
 
 PORT_START = 49000
-PORT_RANGE = 100
+PORT_RANGE = 10
