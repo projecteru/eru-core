@@ -24,14 +24,14 @@ def task_log(task_id):
         return 'websocket closed'
 
     try:
+        pub = rds.pubsub()
+        pub.subscribe(task.publish_key)
+
         for line in task.log():
             ws.send(line)
 
         if task.finished:
             return ''
-
-        pub = rds.pubsub()
-        pub.subscribe(task.publish_key)
 
         for line in pub.listen():
             if line['data'] == code.PUB_END_MESSAGE:
