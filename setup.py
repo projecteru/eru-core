@@ -20,7 +20,7 @@ ENTRY_POINTS = {
 
 INSTALL_REQUIRES = [
     'influxdb',
-    'python-etcd',
+    'gevent-websocket',
     'MySQL-python',
     'PyYAML',
     'requests',
