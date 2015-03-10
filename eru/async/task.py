@@ -50,6 +50,9 @@ def build_docker_image(task_id, base):
         for line in dockerjob.build_image(task.host, task.version, base):
             rds.rpush(task.log_key, line)
             rds.publish(task.publish_key, line)
+        for line in dockerjob.push_image(task.host, task.version):
+            rds.rpush(task.log_key, line)
+            rds.publish(task.publish_key, line)
         rds.publish(task.publish_key, code.PUB_END_MESSAGE)
     except Exception, e:
         logger.exception(e)

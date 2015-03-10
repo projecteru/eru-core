@@ -5,7 +5,6 @@ import os
 import tempfile
 import pygit2
 import contextlib
-from itertools import chain
 
 from res.ext.common import random_string
 
@@ -59,14 +58,20 @@ def build_image(host, version, base):
     """
     client = get_docker_client(host.addr)
     appname = version.app.name
-    rev = version.short_sha
     repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
+    rev = version.short_sha
     tag = '{0}:{1}'.format(repo, rev)
 
     with build_image_environment(version, base, rev) as build_path:
-        build_gen = client.build(path=build_path, rm=True, tag=tag)
-        push_gen = client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
-        return chain(build_gen, push_gen)
+        return client.build(path=build_path, rm=True, tag=tag)
+
+
+def push_image(host, version):
+    client = get_docker_client(host.addr)
+    appname = version.app.name
+    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
+    rev = version.short_sha
+    return client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
 
 def create_containers(host, version, entrypoint, env, ncontainer, cores=[], ports=[], daemon=False):
