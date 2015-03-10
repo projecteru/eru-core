@@ -24,27 +24,26 @@ def task_log(task_id):
         return 'websocket closed'
 
     try:
+        for line in task.log():
+            ws.send(line)
 
-        if not task.finished:
-            for line in task.log():
-                ws.send(line)
+        if task.finished:
+            return ''
 
-            pub = rds.pubsub()
-            pub.subscribe(task.publish_key)
-            for line in pub.listen():
-                if line['data'] == code.PUB_END_MESSAGE:
-                    pub.unsubscribe()
-                    break
-                if line['type'] != 'message':
-                    continue
-                ws.send(line['data'])
-        else:
-            for line in task.log():
-                ws.send(line)
+        pub = rds.pubsub()
+        pub.subscribe(task.publish_key)
+
+        for line in pub.listen():
+            if line['data'] == code.PUB_END_MESSAGE:
+                break
+            if line['type'] != 'message':
+                continue
+            ws.send(line['data'])
     except geventwebsocket.WebSocketError as e:
         logger.exception(e)
     finally:
+        pub.unsubscribe()
         ws.close()
 
-    return 'websocket closed'
+    return ''
 
