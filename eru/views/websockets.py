@@ -11,12 +11,9 @@ from eru.common.clients import rds
 bp = Blueprint('websockets', __name__, url_prefix='/websockets')
 logger = logging.getLogger(__name__)
 
-def _get_websocket_from_request(request):
-    return request.environ['wsgi.websocket']
-
 @bp.route('/tasklog/<int:task_id>/')
 def task_log(task_id):
-    ws = _get_websocket_from_request(request)
+    ws = request.environ['wsgi.websocket']
 
     task = Task.get(task_id)
     if not task:
@@ -39,7 +36,7 @@ def task_log(task_id):
             if line['type'] != 'message':
                 continue
             ws.send(line['data'])
-    except geventwebsocket.WebSocketError as e:
+    except geventwebsocket.WebSocketError, e:
         logger.exception(e)
     finally:
         pub.unsubscribe()
