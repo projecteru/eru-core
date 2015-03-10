@@ -102,6 +102,7 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
 
     for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
+        #TODO 接了日志输出后写入 redis
         print line
 
     containers = []

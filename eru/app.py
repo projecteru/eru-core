@@ -10,7 +10,6 @@ from eru.common.settings import ERU_BIND, ERU_WORKERS,\
         ERU_TIMEOUT, ERU_WORKER_CLASS
 from eru.async import make_celery
 from eru.models import db
-from eru.utils.views import EruJSONEncoder
 
 
 blueprints = ('version', 'sys', 'deploy', 'container', 'app', 'websockets', )
