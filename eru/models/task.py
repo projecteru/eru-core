@@ -7,6 +7,7 @@ from datetime import datetime
 
 from eru.models import db
 from eru.common.clients import rds
+from eru.common.settings import ERU_TASK_PUBKEY, ERU_TASK_LOGKEY
 from eru.models.base import Base
 
 
@@ -69,11 +70,11 @@ class Task(Base):
 
     @property
     def publish_key(self):
-        return 'eru:task:publish:%s' % self.id
+        return ERU_TASK_PUBKEY % self.id
 
     @property
     def log_key(self):
-        return 'eru:task:log:%s' % self.id
+        return ERU_TASK_LOGKEY % self.id
 
     def log(self):
         return rds.lrange(self.log_key, 0, -1)

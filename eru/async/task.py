@@ -50,7 +50,7 @@ def build_docker_image(task_id, base):
         for line in dockerjob.build_image(task.host, task.version, base):
             rds.rpush(task.log_key, line)
             rds.publish(task.publish_key, line)
-        rds.publish(task.publish_key, "ERU_KILL_PUB")
+        rds.publish(task.publish_key, code.PUB_END_MESSAGE)
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)

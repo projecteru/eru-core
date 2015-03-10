@@ -1,12 +1,15 @@
 # coding: utf-8
 
+import logging
 import geventwebsocket
 from flask import Blueprint, request
 
 from eru.models import Task
+from eru.common import code
 from eru.common.clients import rds
 
 bp = Blueprint('websockets', __name__, url_prefix='/websockets')
+logger = logging.getLogger(__name__)
 
 def _get_websocket_from_request(request):
     return request.environ['wsgi.websocket']
@@ -29,7 +32,7 @@ def task_log(task_id):
             pub = rds.pubsub()
             pub.subscribe(task.publish_key)
             for line in pub.listen():
-                if line['data'] == 'ERU_KILL_PUB':
+                if line['data'] == code.PUB_END_MESSAGE:
                     pub.unsubscribe()
                     break
                 if line['type'] != 'message':
@@ -38,8 +41,8 @@ def task_log(task_id):
         else:
             for line in task.log():
                 ws.send(line)
-    except geventwebsocket.WebSocketError:
-        pass
+    except geventwebsocket.WebSocketError as e:
+        logger.exception(e)
     finally:
         ws.close()
 
