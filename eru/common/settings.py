@@ -100,6 +100,6 @@ SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
 
 RESOURCES = {
     'influxdb': 'eru.res.influxdb:InfluxDB',
-    #'redis': 'eru.res.redis:Redis',
+    'mysql': 'eru.res.mysql:MySQL',
 }
 
