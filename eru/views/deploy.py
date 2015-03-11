@@ -201,7 +201,7 @@ def offline_version(group_name, pod_name, appname):
             )
             ts.append(task.id)
             keys.append(task.result_key)
-            return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
+        return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
     except Exception, e:
         logger.exception(e)
         return {'r': 1, 'msg': str(e), 'tasks': [], 'watch_keys': []}
