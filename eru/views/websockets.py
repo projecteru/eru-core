@@ -49,8 +49,8 @@ def task_log(task_id):
 
 @bp.route('/containerlog/<cid>/')
 def container_log(cid):
-    stderr = request.args.get('stderr', type=bool, default=False)
-    stdout = request.args.get('stdout', type=bool, default=False)
+    stderr = request.args.get('stderr', type=int, default=0)
+    stdout = request.args.get('stdout', type=int, default=0)
     tail = request.args.get('tail', type=int, default=10)
 
     # docker client's argument
@@ -65,7 +65,7 @@ def container_log(cid):
         return 'websocket closed'
     try:
         client = get_docker_client(container.host.addr)
-        for line in client.logs(cid, stream=True, stderr=stderr, stdout=stdout, tail=tail):
+        for line in client.logs(cid, stream=True, stderr=bool(stderr), stdout=bool(stdout), tail=tail):
             ws.send(line)
     except geventwebsocket.WebSocketError, e:
         logger.exception(e)
