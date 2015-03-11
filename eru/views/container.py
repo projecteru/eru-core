@@ -24,7 +24,7 @@ def kill_container(cid):
 def poll_container(cid):
     c = Container.get_by_container_id(cid)
     if not c:
-        raise EruAbortException(404, 'Container %s not found' % cid)
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Container %s not found' % cid)
     return {'r':0, 'container': c.container_id, 'status': c.is_alive}
 
 

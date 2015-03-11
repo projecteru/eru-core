@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def get_app(name):
     app = App.get_by_name(name)
     if not app:
-        raise EruAbortException(404, 'App %s not found' % name)
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'App %s not found' % name)
     return app
 
 
@@ -31,11 +31,11 @@ def get_app(name):
 def get_version(name, version):
     app = App.get_by_name(name)
     if not app:
-        raise EruAbortException(404, 'App %s not found' % name)
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'App %s not found' % name)
 
     v = app.get_version(version)
     if not v:
-        raise EruAbortException(404, 'Version %s not found' % version)
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
     return v
 
 
@@ -51,12 +51,12 @@ def register_app_version():
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
         logger.error('app create failed')
-        raise EruAbortException(400, 'App %s create failed' % name)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s create failed' % name)
 
     v = app.add_version(version)
     if not v:
         logger.error('version create failed')
-        raise EruAbortException(400, 'Version %s create failed' % version[:7])
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Version %s create failed' % version[:7])
 
     appconfig = v.appconfig
     appconfig.update(**data['appyaml'])
@@ -72,7 +72,7 @@ def set_app_env(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        raise EruAbortException(400, 'App %s not found, env set ignored' % name)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env set ignored' % name)
 
     data = request.get_json()
     env = data.pop('env')
@@ -89,7 +89,7 @@ def get_app_env(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env list ignored')
-        raise EruAbortException(400, 'App %s not found, env list ignored' % name)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
 
     envconfig = app.get_resource_config(request.args['env'])
     return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
@@ -101,7 +101,7 @@ def list_app_env(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        raise EruAbortException(400)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
 
@@ -112,7 +112,7 @@ def alloc_resource(name, env, res_name, res_alias):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        raise EruAbortException(400)
+        raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     r = RESOURCES.get(res_name)
     if not r:
@@ -126,10 +126,8 @@ def alloc_resource(name, env, res_name, res_alias):
         mod = import_string(r)
         args = inspect.getargspec(mod.alloc)
         data = request.get_json()
-        for arg in args.args[1:]:
-            if data.get(arg):
-                continue
-            raise
+        if set(data.iterkeys()) >= set(args.args[1:]):
+            raise Exception()
         result = mod.alloc(**data)
         envconfig[res_alias] = result
         envconfig.save()
@@ -146,7 +144,7 @@ def list_app_containers(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env list ignored')
-        raise EruAbortException(400, 'App %s not found, env list ignored' % name)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
     containers = app.containers.all()
     return {'r': 0, 'msg': 'ok', 'containers': containers}
 

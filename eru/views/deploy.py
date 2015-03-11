@@ -43,7 +43,7 @@ def create_private(group_name, pod_name, appname):
     appconfig = version.appconfig
 
     if not data['entrypoint'] in appconfig.entrypoints:
-        raise EruAbortException(400, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
     entry = appconfig.entrypoints[data['entrypoint']]
 
     tasks_info = []
@@ -98,7 +98,7 @@ def create_public(group_name, pod_name, appname):
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
     if not data['entrypoint'] in appconfig.entrypoints:
-        raise EruAbortException(400, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
     entry = appconfig['entrypoints'][data['entrypoint']]
 
     tasks_info = []
