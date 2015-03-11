@@ -26,3 +26,7 @@ class Base(db.Model):
         keys = [c.key for c in self.__table__.columns]
         return {k: getattr(self, k) for k in keys}
 
+    def __repr__(self):
+        attrs = ', '.join('{0}={1}'.format(k, v) for k, v in self.to_dict().iteritems())
+        return '{0}({1})'.format(self.__class__.__name__, attrs)
+
