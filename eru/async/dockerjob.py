@@ -74,6 +74,11 @@ def push_image(host, version):
     return client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
 
+def pull_image(host, repo, tag):
+    client = get_docker_client(host.addr)
+    return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
+
+
 def create_containers(host, version, entrypoint, env, ncontainer, cores=[], ports=[], daemon=False):
     # TODO now daemon is not actually used
     """
