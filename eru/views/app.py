@@ -1,6 +1,8 @@
 # coding: utf-8
 
+import inspect
 import logging
+
 from flask import Blueprint, request
 from werkzeug.utils import import_string
 
@@ -104,10 +106,9 @@ def list_app_env(name):
     return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
 
 
-@bp.route('/alloc/<name>/<env>/<res_name>/', methods=['POST', ])
 @bp.route('/alloc/<name>/<env>/<res_name>/<res_alias>/', methods=['POST', ])
 @jsonify(code.HTTP_CREATED)
-def alloc_resource(name, env, res_name, res_alias=''):
+def alloc_resource(name, env, res_name, res_alias):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
@@ -121,11 +122,15 @@ def alloc_resource(name, env, res_name, res_alias=''):
     if envconfig.get(res_alias):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
 
-    res_alias = res_alias or res_name
-
     try:
         mod = import_string(r)
-        result = mod.alloc(**request.get_json())
+        args = inspect.getargspec(mod.alloc)
+        data = request.get_json()
+        for arg in args.args[1:]:
+            if data.get(arg):
+                continue
+            raise
+        result = mod.alloc(**data)
         envconfig[res_alias] = result
         envconfig.save()
     except Exception, e:
