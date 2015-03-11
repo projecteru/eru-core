@@ -49,3 +49,6 @@ class Pod(Base):
         return self.hosts.filter(Host.group_id == None)\
                 .order_by(Host.count).limit(limit).all()
 
+    def get_random_host(self):
+        return self.hosts.limit(1).all()[0]
+

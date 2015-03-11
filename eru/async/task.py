@@ -53,6 +53,7 @@ def build_docker_image(task_id, base):
         for line in dockerjob.push_image(task.host, task.version):
             rds.rpush(task.log_key, line)
             rds.publish(task.publish_key, line)
+        dockerjob.remove_image(task.version, task.host)
         rds.publish(task.publish_key, code.PUB_END_MESSAGE)
     except Exception, e:
         logger.exception(e)

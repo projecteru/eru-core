@@ -21,7 +21,7 @@ class Container(Base):
     is_alive = db.Column(db.Integer, default=1)
 
     cores = db.relationship('Core', backref='container', lazy='dynamic')
-    port = db.relationship('Port', backref='container', lazy='dynamic')
+    ports = db.relationship('Port', backref='container', lazy='dynamic')
 
     def __init__(self, container_id, host, version, name, entrypoint):
         self.container_id = container_id
@@ -39,10 +39,12 @@ class Container(Base):
         try:
             container = cls(container_id, host, version, name, entrypoint)
             db.session.add(container)
+            host.count += 1
+            db.session.add(host)
             for core in cores:
                 container.cores.append(core)
             for port in expose_ports:
-                container.port.append(port)
+                container.ports.append(port)
             db.session.commit()
             return container
         except sqlalchemy.exc.IntegrityError:
@@ -61,7 +63,9 @@ class Container(Base):
         """删除这条记录, 记得要释放自己占用的资源"""
         host = self.host
         host.release_cores(self.cores.all())
-        host.release_ports(self.port.all())
+        host.release_ports(self.ports.all())
+        host.count -= 1
+        db.session.add(host)
         db.session.delete(self)
         db.session.commit()
 
@@ -69,4 +73,11 @@ class Container(Base):
         self.is_alive = 0
         db.session.add(self)
         db.session.commit()
+
+    def to_dict(self):
+        d = super(Container, self).to_dict()
+        host = self.host.addr.split(':')[0]
+        ports = [p.port for p in self.ports.all()]
+        d.update(host=host, ports=ports)
+        return d
 
