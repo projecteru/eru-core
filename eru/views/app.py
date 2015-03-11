@@ -112,15 +112,15 @@ def alloc_resource(name, env, res_name, res_alias):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env set ignored')
-        raise EruAbortException(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_NOT_FOUND)
 
     r = RESOURCES.get(res_name)
     if not r:
-        raise EruAbortException(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_NOT_FOUND)
 
     envconfig = app.get_resource_config(env)
     if envconfig.get(res_alias):
-        raise EruAbortException(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_CONFLICT)
 
     try:
         mod = import_string(r)
@@ -135,7 +135,7 @@ def alloc_resource(name, env, res_name, res_alias):
         logger.exception(e)
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     else:
-        return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
+        return {'r': 0, 'msg': 'ok', 'data': envconfig.to_dict()}
 
 
 @bp.route('/<name>/containers/', methods=['GET', ])
