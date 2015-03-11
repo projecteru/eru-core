@@ -139,7 +139,7 @@ def build_image(group_name, pod_name, appname):
     # 这个group可以用这个pod不?
     # 这个group可以build这个version不?
     base = data['base']
-    host = pod.get_free_public_hosts(1)[0]
+    host = pod.get_random_host()
     try:
         task_props = {'base': base}
         task = Task.create(code.TASK_BUILD, version, host, task_props)

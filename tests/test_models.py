@@ -126,6 +126,7 @@ def test_container(test_db):
         assert len(host.get_free_cores()) == 1
         assert len(host.get_free_ports(10)) == 10 # -_-!
         assert len(host.containers.all()) == 1
+        assert host.count == 1
 
     assert len(containers) == 3
     assert len(v.containers.all()) == 3
@@ -137,7 +138,7 @@ def test_container(test_db):
         assert c.version.id == v.id
         assert c.is_alive
         assert len(c.cores.all()) == 3
-        assert len(c.port.all()) == 0
+        assert len(c.ports.all()) == 0
         all_core_labels = sorted(['0', '1', '2', '3', ])
         used_core_labels = [core.label for core in c.cores.all()]
         free_core_labels = [core.label for core in c.host.get_free_cores()]
@@ -155,4 +156,5 @@ def test_container(test_db):
         assert len(host.get_free_cores()) == 4
         assert len(host.get_free_ports(10)) == 10 # -_-!
         assert len(host.containers.all()) == 0
+        assert host.count == 0
 
