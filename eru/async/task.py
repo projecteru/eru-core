@@ -47,6 +47,10 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
 def build_docker_image(task_id, base):
     task = Task.get(task_id)
     try:
+        repo, tag = base.split(':', 1)
+        for line in dockerjob.pull_image(task.host, repo, tag):
+            rds.rpush(task.log_key, line)
+            rds.publish(task.publish_key, line)
         for line in dockerjob.build_image(task.host, task.version, base):
             rds.rpush(task.log_key, line)
             rds.publish(task.publish_key, line)
