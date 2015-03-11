@@ -111,16 +111,16 @@ def list_app_env(name):
 def alloc_resource(name, env, res_name, res_alias):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env set ignored')
+        logger.error('app not found, allocation ignored')
         raise EruAbortException(code.HTTP_NOT_FOUND)
 
     r = RESOURCES.get(res_name)
     if not r:
-        raise EruAbortException(code.HTTP_NOT_FOUND)
+        raise EruAbortException(code.HTTP_NOT_FOUND, '%s doesn\'t exist' % res_name)
 
     envconfig = app.get_resource_config(env)
     if envconfig.get(res_alias):
-        raise EruAbortException(code.HTTP_CONFLICT)
+        raise EruAbortException(code.HTTP_CONFLICT, '%s already in env' % res_alias)
 
     try:
         mod = import_string(r)
