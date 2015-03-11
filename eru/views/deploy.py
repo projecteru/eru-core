@@ -69,7 +69,7 @@ def create_private(group_name, pod_name, appname):
             logger.exception(e)
             raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
 
-    ts = []
+    ts, keys = [], []
     for task_info in tasks_info:
         #task_info contain (application, version, host, num, cpus, ports)
         #create_task will always correct
@@ -77,8 +77,9 @@ def create_private(group_name, pod_name, appname):
         if not t:
             continue
         ts.append(t.id)
+        keys.append(t.result_key)
 
-    return {'r': 0, 'msg': 'ok', 'tasks': ts}
+    return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
 
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
@@ -116,7 +117,7 @@ def create_public(group_name, pod_name, appname):
             logger.exception(e)
             raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
 
-    ts = []
+    ts, keys = [], []
     for task_info in tasks_info:
         #task_info contain (version, host, num, cpus, ports)
         #create_task will always correct
@@ -124,8 +125,9 @@ def create_public(group_name, pod_name, appname):
         if not t:
             continue
         ts.append(t.id)
+        keys.append(t.result_key)
 
-    return {'r':0, 'msg': 'ok', 'tasks': ts}
+    return {'r':0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
 
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
@@ -147,10 +149,10 @@ def build_image(group_name, pod_name, appname):
             args=(task.id, base),
             task_id='task:%d' % task.id
         )
-        return {'r': 0, 'msg': 'ok', 'task': task.id}
+        return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
     except Exception, e:
         logger.exception(e)
-        return {'r': 1, 'msg': str(e), 'task': None}
+        return {'r': 1, 'msg': str(e), 'task': None, 'watch_key': None}
 
 
 @bp.route('/rmcontainer/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
@@ -171,10 +173,10 @@ def rm_containers(group_name, pod_name, appname):
             args=(task.id, cids, False),
             task_id='task:%d' % task.id
         )
-        return {'r': 0, 'msg': 'ok', 'task': task.id}
+        return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
     except Exception, e:
         logger.exception(e)
-        return {'r': 1, 'msg': str(e), 'task': None}
+        return {'r': 1, 'msg': str(e), 'task': None, 'watch_key': None}
 
 
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
@@ -186,7 +188,7 @@ def offline_version(group_name, pod_name, appname):
             pod_name, appname, data['version'])
     try:
         d = {}
-        ts = []
+        ts, keys = [], []
         for container in version.containers.all():
             d.setdefault(container.host, []).append(container)
         for host, containers in d.iteritems():
@@ -198,10 +200,11 @@ def offline_version(group_name, pod_name, appname):
                 task_id='task:%d' % task.id
             )
             ts.append(task.id)
-        return {'r': 0, 'msg': 'ok', 'tasks': ts}
+            keys.append(task.result_key)
+            return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
     except Exception, e:
         logger.exception(e)
-        return {'r': 1, 'msg': str(e), 'tasks': []}
+        return {'r': 1, 'msg': str(e), 'tasks': [], 'watch_keys': []}
 
 
 def validate_instance(group_name, pod_name, appname, version):

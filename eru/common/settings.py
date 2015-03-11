@@ -88,6 +88,7 @@ ERU_CONFIG_BACKEND = 'redis' # must be etcd/redis
 
 ERU_TASK_PUBKEY = 'eru:task:pub:%s'
 ERU_TASK_LOGKEY = 'eru:task:log:%s'
+ERU_TASK_RESULTKEY = 'eru:task:result:%s'
 
 try:
     from local_settings import *

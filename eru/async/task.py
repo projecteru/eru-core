@@ -36,11 +36,13 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         host.release_cores(cores)
         host.release_ports(ports)
         task.finish_with_result(code.TASK_FAILED)
+        rds.publish(task.result_key, 'fail')
     else:
         for cid, cname, entrypoint, used_cores, expose_ports in containers:
             Container.create(cid, host, version, cname, entrypoint, used_cores, expose_ports)
 
         task.finish_with_result(code.TASK_SUCCESS)
+        rds.publish(task.result_key, 'success')
 
 
 @current_app.task()
@@ -62,8 +64,10 @@ def build_docker_image(task_id, base):
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
+        rds.publish(task.result_key, 'fail')
     else:
         task.finish_with_result(code.TASK_SUCCESS)
+        rds.publish(task.result_key, 'success')
 
 
 @current_app.task()
@@ -77,8 +81,10 @@ def remove_containers(task_id, cids, rmi):
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
+        rds.publish(task.result_key, 'fail')
     else:
         for c in containers:
             c.delete()
         task.finish_with_result(code.TASK_SUCCESS)
+        rds.publish(task.result_key, 'success')
 

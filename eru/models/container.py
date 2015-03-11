@@ -78,6 +78,7 @@ class Container(Base):
         d = super(Container, self).to_dict()
         host = self.host.addr.split(':')[0]
         ports = [p.port for p in self.ports.all()]
-        d.update(host=host, ports=ports)
+        version = self.version.short_sha
+        d.update(host=host, ports=ports, version=version)
         return d
 
