@@ -133,7 +133,7 @@ def alloc_resource(name, env, res_name, res_alias):
         envconfig.save()
     except Exception, e:
         logger.exception(e)
-        raise EruAbortException(code.HTTP_BAD_REQUEST)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Error in creating %s' % res_name)
     else:
         return {'r': 0, 'msg': 'ok', 'data': envconfig.to_dict()}
 
