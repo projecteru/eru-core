@@ -88,7 +88,6 @@ def remove_containers(task_id, cids, rmi):
     else:
         for c in containers:
             c.delete()
-            notifier.notify_agent(c.container_id, 0)
         task.finish_with_result(code.TASK_SUCCESS)
         notifier.on_failed()
 

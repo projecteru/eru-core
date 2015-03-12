@@ -35,11 +35,10 @@ class TaskNotifier(object):
     def get_store_logs(self):
         return rds.lrange(self.log_key, 0, -1)
 
-    def notify_agent(self, cid, type=1):
-        flag = '+' if type else '-'
+    def notify_agent(self, cid):
         containers_key = ERU_AGENT_CONTAINERSKEY % self.task.host.addr
         watcher_key = ERU_AGENT_WATCHERKEY % self.task.host.addr
-        message = '%s|%s' % (flag, cid)
+        message = '+|%s' % cid
         rds.rpush(containers_key, cid)
         rds.publish(watcher_key, message)
 
