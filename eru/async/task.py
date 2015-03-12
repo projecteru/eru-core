@@ -60,7 +60,6 @@ def build_docker_image(task_id, base):
         ):
             notifier.store_and_broadcast(iterable)
         dockerjob.remove_image(task.version, task.host)
-        notifier.pub_build_finish()
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
@@ -69,7 +68,7 @@ def build_docker_image(task_id, base):
         task.finish_with_result(code.TASK_SUCCESS)
         notifier.pub_success()
     finally:
-        notifier.on_build_finish()
+        notifier.pub_build_finish()
 
 
 @current_app.task()

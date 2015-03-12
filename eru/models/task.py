@@ -7,7 +7,7 @@ from datetime import datetime
 
 from eru.models import db
 from eru.models.base import Base
-
+from eru.common.settings import ERU_TASK_RESULTKEY
 
 class Task(Base):
     __tablename__ = 'task'
@@ -65,4 +65,8 @@ class Task(Base):
         self.properties = json.dumps(p)
         db.session.add(self)
         db.session.commit()
+
+    @property
+    def result_key(self):
+        return ERU_TASK_RESULTKEY % self.id 
 
