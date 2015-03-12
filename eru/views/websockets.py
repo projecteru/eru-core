@@ -18,12 +18,12 @@ def task_log(task_id):
     ws = request.environ['wsgi.websocket']
 
     task = Task.get(task_id)
-    notifier = TaskNotifier(task)
     if not task:
         ws.close()
         logger.info('Task %s not found, close websocket' % task_id)
         return 'websocket closed'
 
+    notifier = TaskNotifier(task)
     try:
         pub = rds.pubsub()
         pub.subscribe(task.publish_key)
