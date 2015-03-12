@@ -90,6 +90,9 @@ ERU_TASK_PUBKEY = 'eru:task:pub:%s'
 ERU_TASK_LOGKEY = 'eru:task:log:%s'
 ERU_TASK_RESULTKEY = 'eru:task:result:%s'
 
+ERU_AGENT_CONTAINERSKEY = 'eru:agent:%s:containers'
+ERU_AGENT_WATCHERKEY = 'eru:agent:%s:watcher'
+
 try:
     from local_settings import *
 except ImportError:

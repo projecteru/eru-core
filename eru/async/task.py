@@ -5,8 +5,8 @@ import logging
 from celery import current_app
 
 from eru.common import code
-from eru.common.clients import rds
 from eru.async import dockerjob
+from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Core, Port
 
 
@@ -20,6 +20,7 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
     可能占用 cores 这些核, 以及 ports 这些端口.
     """
     task = Task.get(task_id)
+    notifier = TaskNotifier(task)
     cores = Core.get_multi(core_ids)
     ports = Port.get_multi(port_ids)
     try:
@@ -36,43 +37,45 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         host.release_cores(cores)
         host.release_ports(ports)
         task.finish_with_result(code.TASK_FAILED)
-        rds.publish(task.result_key, 'fail')
+        notifier.on_success()
     else:
         for cid, cname, entrypoint, used_cores, expose_ports in containers:
             Container.create(cid, host, version, cname, entrypoint, used_cores, expose_ports)
-
+            # Notify agent update its status
+            notifier.notify_agent(cid)
         task.finish_with_result(code.TASK_SUCCESS)
-        rds.publish(task.result_key, 'success')
+        notifier.on_failed()
 
 
 @current_app.task()
 def build_docker_image(task_id, base):
     task = Task.get(task_id)
+    notifier = TaskNotifier(task)
     try:
         repo, tag = base.split(':', 1)
-        for line in dockerjob.pull_image(task.host, repo, tag):
-            rds.rpush(task.log_key, line)
-            rds.publish(task.publish_key, line)
-        for line in dockerjob.build_image(task.host, task.version, base):
-            rds.rpush(task.log_key, line)
-            rds.publish(task.publish_key, line)
-        for line in dockerjob.push_image(task.host, task.version):
-            rds.rpush(task.log_key, line)
-            rds.publish(task.publish_key, line)
+        for lines in [
+            dockerjob.pull_image(task.host, repo, tag),
+            dockerjob.build_image(task.host, task.version, base),
+            dockerjob.push_image(task.host, task.version),
+        ]:
+            notifier.store_and_broadcast(lines)
         dockerjob.remove_image(task.version, task.host)
-        rds.publish(task.publish_key, code.PUB_END_MESSAGE)
+        notifier.on_build_finish()
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
-        rds.publish(task.result_key, 'fail')
+        notifier.on_failed()
     else:
         task.finish_with_result(code.TASK_SUCCESS)
-        rds.publish(task.result_key, 'success')
+        notifier.on_success()
+    finally:
+        notifier.on_build_finish()
 
 
 @current_app.task()
 def remove_containers(task_id, cids, rmi):
     task = Task.get(task_id)
+    notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
     try:
         dockerjob.remove_host_containers(containers, task.host)
@@ -81,10 +84,11 @@ def remove_containers(task_id, cids, rmi):
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
-        rds.publish(task.result_key, 'fail')
+        notifier.on_success()
     else:
         for c in containers:
             c.delete()
+            notifier.notify_agent(c.container_id, 0)
         task.finish_with_result(code.TASK_SUCCESS)
-        rds.publish(task.result_key, 'success')
+        notifier.on_failed()
 

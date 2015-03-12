@@ -5,6 +5,8 @@ import geventwebsocket
 from flask import Blueprint, request
 
 from eru.models import Task, Container
+from eru.utils.notify import TaskNotifier
+
 from eru.common import code
 from eru.common.clients import rds, get_docker_client
 
@@ -16,17 +18,17 @@ def task_log(task_id):
     ws = request.environ['wsgi.websocket']
 
     task = Task.get(task_id)
+    notifier = TaskNotifier(task)
     if not task:
         ws.close()
         logger.info('Task %s not found, close websocket' % task_id)
         return 'websocket closed'
 
-    pub = None
     try:
         pub = rds.pubsub()
         pub.subscribe(task.publish_key)
 
-        for line in task.log():
+        for line in notifier.get_store_logs():
             ws.send(line)
 
         if task.finished:
@@ -41,8 +43,7 @@ def task_log(task_id):
     except geventwebsocket.WebSocketError, e:
         logger.exception(e)
     finally:
-        if pub:
-            pub.unsubscribe()
+        pub.unsubscribe()
         ws.close()
 
     return ''
