@@ -47,7 +47,6 @@ def register_app_version():
     name = data['name']
     version = data['version']
 
-    #TODO dirty data
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
         logger.error('app create failed')

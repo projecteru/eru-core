@@ -5,8 +5,8 @@ import logging
 
 from eru.common import code
 from eru.common.clients import rds
-from eru.common.settings import ERU_AGENT_CONTAINERSKEY, ERU_AGENT_WATCHERKEY
-from eru.common.settings import ERU_TASK_PUBKEY, ERU_TASK_LOGKEY, ERU_TASK_RESULTKEY
+from eru.common.settings import (ERU_AGENT_CONTAINERSKEY, ERU_AGENT_WATCHERKEY,
+        ERU_TASK_PUBKEY, ERU_TASK_LOGKEY, ERU_TASK_RESULTKEY)
 
 logger = logging.getLogger(__name__)
 
@@ -18,17 +18,17 @@ class TaskNotifier(object):
         self.log_key = ERU_TASK_LOGKEY % task.id
         self.publish_key = ERU_TASK_PUBKEY % task.id
 
-    def on_success(self):
+    def pub_success(self):
         rds.publish(self.result_key, code.TASK_RESULT_SUCCESS)
 
-    def on_failed(self):
+    def pub_fail(self):
         rds.publish(self.result_key, code.TASK_RESULT_FAILED)
 
-    def on_build_finish(self):
+    def pub_build_finish(self):
         rds.publish(self.publish_key, code.PUB_END_MESSAGE)
 
-    def store_and_broadcast(self, lines):
-        for line in lines:
+    def store_and_broadcast(self, iterable):
+        for line in iterable:
             rds.rpush(self.log_key, line)
             rds.publish(self.publish_key, line)
 

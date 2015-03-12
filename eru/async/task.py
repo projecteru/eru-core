@@ -37,14 +37,14 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         host.release_cores(cores)
         host.release_ports(ports)
         task.finish_with_result(code.TASK_FAILED)
-        notifier.on_success()
+        notifier.pub_success()
     else:
         for cid, cname, entrypoint, used_cores, expose_ports in containers:
             Container.create(cid, host, version, cname, entrypoint, used_cores, expose_ports)
             # Notify agent update its status
             notifier.notify_agent(cid)
         task.finish_with_result(code.TASK_SUCCESS)
-        notifier.on_failed()
+        notifier.pub_fail()
 
 
 @current_app.task()
@@ -53,21 +53,21 @@ def build_docker_image(task_id, base):
     notifier = TaskNotifier(task)
     try:
         repo, tag = base.split(':', 1)
-        for lines in [
+        for iterable in (
             dockerjob.pull_image(task.host, repo, tag),
             dockerjob.build_image(task.host, task.version, base),
             dockerjob.push_image(task.host, task.version),
-        ]:
-            notifier.store_and_broadcast(lines)
+        ):
+            notifier.store_and_broadcast(iterable)
         dockerjob.remove_image(task.version, task.host)
-        notifier.on_build_finish()
+        notifier.pub_build_finish()
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
-        notifier.on_failed()
+        notifier.pub_fail()
     else:
         task.finish_with_result(code.TASK_SUCCESS)
-        notifier.on_success()
+        notifier.pub_success()
     finally:
         notifier.on_build_finish()
 
@@ -84,10 +84,10 @@ def remove_containers(task_id, cids, rmi):
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
-        notifier.on_success()
+        notifier.pub_success()
     else:
         for c in containers:
             c.delete()
         task.finish_with_result(code.TASK_SUCCESS)
-        notifier.on_failed()
+        notifier.pub_fail()
 
