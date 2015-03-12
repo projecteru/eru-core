@@ -6,8 +6,6 @@ import sqlalchemy.exc
 from datetime import datetime
 
 from eru.models import db
-from eru.common.clients import rds
-from eru.common.settings import ERU_TASK_PUBKEY, ERU_TASK_LOGKEY, ERU_TASK_RESULTKEY
 from eru.models.base import Base
 
 
@@ -67,19 +65,4 @@ class Task(Base):
         self.properties = json.dumps(p)
         db.session.add(self)
         db.session.commit()
-
-    @property
-    def publish_key(self):
-        return ERU_TASK_PUBKEY % self.id
-
-    @property
-    def log_key(self):
-        return ERU_TASK_LOGKEY % self.id
-
-    @property
-    def result_key(self):
-        return ERU_TASK_RESULTKEY % self.id
-
-    def log(self):
-        return rds.lrange(self.log_key, 0, -1)
 
