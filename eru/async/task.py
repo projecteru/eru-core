@@ -53,12 +53,9 @@ def build_docker_image(task_id, base):
     notifier = TaskNotifier(task)
     try:
         repo, tag = base.split(':', 1)
-        for iterable in (
-            dockerjob.pull_image(task.host, repo, tag),
-            dockerjob.build_image(task.host, task.version, base),
-            dockerjob.push_image(task.host, task.version),
-        ):
-            notifier.store_and_broadcast(iterable)
+        notifier.store_and_broadcast(dockerjob.pull_image(task.host, repo, tag))
+        notifier.store_and_broadcast(dockerjob.build_image(task.host, task.version, base))
+        notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
         dockerjob.remove_image(task.version, task.host)
     except Exception, e:
         logger.exception(e)
