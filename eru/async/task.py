@@ -5,6 +5,7 @@ import logging
 from celery import current_app
 
 from eru.common import code
+from eru.common.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Core, Port
@@ -37,14 +38,15 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         host.release_cores(cores)
         host.release_ports(ports)
         task.finish_with_result(code.TASK_FAILED)
-        notifier.pub_success()
+        notifier.pub_fail()
     else:
         for cid, cname, entrypoint, used_cores, expose_ports in containers:
             Container.create(cid, host, version, cname, entrypoint, used_cores, expose_ports)
             # Notify agent update its status
             notifier.notify_agent(cid)
+            rds.sadd('eru:agent:%s:containers' % host.name, cid)
         task.finish_with_result(code.TASK_SUCCESS)
-        notifier.pub_fail()
+        notifier.pub_success()
 
 
 @current_app.task()
@@ -56,7 +58,10 @@ def build_docker_image(task_id, base):
         notifier.store_and_broadcast(dockerjob.pull_image(task.host, repo, tag))
         notifier.store_and_broadcast(dockerjob.build_image(task.host, task.version, base))
         notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
-        dockerjob.remove_image(task.version, task.host)
+        try:
+            dockerjob.remove_image(task.version, task.host)
+        except:
+            pass
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
@@ -73,17 +78,23 @@ def remove_containers(task_id, cids, rmi):
     task = Task.get(task_id)
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
+    container_ids = [c.container_id for c in containers]
+    host = task.host
     try:
+        flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
+        rds.mset(**flags)
         dockerjob.remove_host_containers(containers, task.host)
         if rmi:
             dockerjob.remove_image(task.version, task.host)
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
-        notifier.pub_success()
+        notifier.pub_fail()
     else:
         for c in containers:
             c.delete()
         task.finish_with_result(code.TASK_SUCCESS)
-        notifier.pub_fail()
+        notifier.pub_success()
+        rds.srem('eru:agent:%s:containers' % host.name, *container_ids)
+        rds.delete(*flags.keys())
 
