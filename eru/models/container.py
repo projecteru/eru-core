@@ -74,6 +74,11 @@ class Container(Base):
         db.session.add(self)
         db.session.commit()
 
+    def cure(self):
+        self.is_alive = 1
+        db.session.add(self)
+        db.session.commit()
+
     def to_dict(self):
         d = super(Container, self).to_dict()
         host = self.host.addr.split(':')[0]

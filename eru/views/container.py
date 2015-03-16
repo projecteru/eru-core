@@ -19,6 +19,15 @@ def kill_container(cid):
     return {'r':0, 'msg': code.OK}
 
 
+@bp.route('/<cid>/cure', methods=['PUT', ])
+@jsonify()
+def cure_container(cid):
+    c = Container.get_by_container_id(cid)
+    if c:
+        c.cure()
+    return {'r':0, 'msg': code.OK}
+
+
 @bp.route('/<cid>/poll', methods=['GET', ])
 @jsonify()
 def poll_container(cid):

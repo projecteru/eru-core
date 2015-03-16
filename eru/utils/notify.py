@@ -5,7 +5,7 @@ import logging
 
 from eru.common import code
 from eru.common.clients import rds
-from eru.common.settings import (ERU_AGENT_CONTAINERSKEY, ERU_AGENT_WATCHERKEY,
+from eru.common.settings import (ERU_AGENT_WATCHERKEY,
         ERU_TASK_PUBKEY, ERU_TASK_LOGKEY, ERU_TASK_RESULTKEY)
 
 logger = logging.getLogger(__name__)
@@ -36,9 +36,7 @@ class TaskNotifier(object):
         return rds.lrange(self.log_key, 0, -1)
 
     def notify_agent(self, cid):
-        containers_key = ERU_AGENT_CONTAINERSKEY % self.task.host.addr
-        watcher_key = ERU_AGENT_WATCHERKEY % self.task.host.addr
+        watcher_key = ERU_AGENT_WATCHERKEY % self.task.host.name
         message = '+|%s' % cid
-        rds.rpush(containers_key, cid)
         rds.publish(watcher_key, message)
 
