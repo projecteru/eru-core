@@ -99,14 +99,20 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     cmd = entry['cmd']
     entryports = entry.get('ports', [])
 
+    volumes, binds = None, None
     env = {
+        'APP_NAME': appname,
         'ERU_RUNENV': env.upper(),
         'ERU_POD': host.pod.name,
-        'ERU_PERMDIR': settings.ERU_CONTAINER_PERMDIR % appname,
     }
     env.update(envconfig.to_env_dict())
 
-    volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
+    # 设置留空表示不 mount 任何 permdir 进来
+    if settings.ERU_CONTAINER_PERMDIR:
+        env['ERU_PERMDIR'] = settings.ERU_CONTAINER_PERMDIR % appname
+        volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
+        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
+
     user = version.app_id # 可以控制从多少开始
     working_dir = '/%s' % appname
     container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
@@ -135,7 +141,6 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
         expose_ports = [ports.pop(0) for _ in entryports]
         ports_bindings = dict(zip(entryports, [p.port for p in expose_ports])) if expose_ports else None
 
-        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
         client.start(container=container_id, port_bindings=ports_bindings, binds=binds)
 
         containers.append((container_id, container_name, entrypoint, used_cores, expose_ports))
