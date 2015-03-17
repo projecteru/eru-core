@@ -27,6 +27,10 @@ def build_image_environment(version, base, rev):
     appname = version.appconfig.appname
     build_cmd = version.appconfig.build
 
+    if isinstance(build_cmd, list):
+        # 好 tricky...
+        build_cmd = '\nRUN '.join(build_cmd)
+
     # checkout code of version @ rev
     build_path = tempfile.mkdtemp()
     clone_path = os.path.join(build_path, appname)
