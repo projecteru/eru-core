@@ -47,7 +47,7 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
                 notifier.notify_agent(cid)
                 rds.sadd('eru:agent:%s:containers' % host.name, cid)
                 rds.hset('eru:app:%s:backends' % version.name, entrypoint, 'eru:app:entrypoint:%s:backends' % entrypoint)
-                backends = ['%s:%s' % (c.ip, p.port) for p in expose_ports]
+                backends = ['%s:%s' % (host.ip, p.port) for p in expose_ports]
                 rds.sadd('eru:app:entrypoint:%s:backends' % entrypoint, *backends)
         task.finish_with_result(code.TASK_SUCCESS)
         notifier.pub_success()
@@ -96,7 +96,7 @@ def remove_containers(task_id, cids, rmi):
         notifier.pub_fail()
     else:
         for c in containers:
-            backends = ['%s:%s' % (c.ip, p.port) for p in c.ports]
+            backends = ['%s:%s' % (host.ip, p.port) for p in c.ports]
             entrypoint_backend_key = 'eru:app:entrypoint:%s:backends' % c.entrypoint
             rds.srem(entrypoint_backend_key, *backends)
             if not rds.scard(entrypoint_backend_key):
