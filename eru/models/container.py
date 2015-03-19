@@ -59,6 +59,10 @@ class Container(Base):
     def get_by_container_id(cls, cid):
         return cls.query.filter(cls.container_id.like('{}%'.format(cid))).first()
 
+    @property
+    def appname(self):
+        return self.name.split('_')[0]
+
     def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
         host = self.host

@@ -89,6 +89,10 @@ class Host(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
+    @property
+    def ip(self):
+        return self.addr.split(':', 1)[0]
+
     def get_free_cores(self):
         return [c for c in self.cores.all() if not c.used]
 
