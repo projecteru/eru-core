@@ -99,6 +99,16 @@ class Host(Base):
     def get_free_ports(self, limit):
         return self.ports.filter_by(used=0).limit(limit).all()
 
+    def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
+        q = self.containers
+        if version is not None:
+            q = q.filter_by(version_id=version.id)
+        if entrypoint is not None:
+            q = q.filter_by(entrypoint=entrypoint)
+        if app is not None:
+            q = q.filter_by(app_id=app.id)
+        return q.offset(start).limit(limit).all()
+
     def get_containers_by_version(self, version):
         return self.containers.filter_by(version_id=version.id).all()
 

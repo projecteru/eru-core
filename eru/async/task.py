@@ -87,6 +87,11 @@ def remove_containers(task_id, cids, rmi):
     try:
         flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
         rds.mset(**flags)
+        for c in containers:
+            backends = ['%s:%s' % (host.ip, p.port) for p in c.ports]
+            entrypoint_backend_key = 'eru:app:entrypoint:%s:backends' % c.entrypoint
+            rds.srem(entrypoint_backend_key, *backends)
+
         dockerjob.remove_host_containers(containers, task.host)
         if rmi:
             dockerjob.remove_image(task.version, task.host)
@@ -96,11 +101,6 @@ def remove_containers(task_id, cids, rmi):
         notifier.pub_fail()
     else:
         for c in containers:
-            backends = ['%s:%s' % (host.ip, p.port) for p in c.ports]
-            entrypoint_backend_key = 'eru:app:entrypoint:%s:backends' % c.entrypoint
-            rds.srem(entrypoint_backend_key, *backends)
-            if not rds.scard(entrypoint_backend_key):
-                rds.hdel('eru:app:%s:backends' % c.appname, c.entrypoint)
             c.delete()
         task.finish_with_result(code.TASK_SUCCESS)
         notifier.pub_success()
