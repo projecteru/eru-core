@@ -92,7 +92,7 @@ def remove_containers(task_id, cids, rmi):
             backends = ['%s:%s' % (host.ip, p.port) for p in c.ports]
             entrypoint_backend_key = 'eru:app:entrypoint:%s:backends' % c.entrypoint
             rds.srem(entrypoint_backend_key, *backends)
-        appnames = {c.appnames for c in containers}
+        appnames = {c.appname for c in containers}
         for appname in appnames:
             rds.publish('eru:discovery:published', appname)
 
