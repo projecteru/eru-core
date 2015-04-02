@@ -6,6 +6,7 @@ ERU_BIND = '0.0.0.0:46656'
 ERU_WORKERS = 4
 ERU_TIMEOUT = 300
 ERU_WORKER_CLASS = 'geventwebsocket.gunicorn.workers.GeventWebSocketWorker'
+ERU_DAEMON = False
 
 DOCKER_REGISTRY_URL = 'http://docker-registry.intra.hunantv.com'
 DOCKER_REGISTRY_INSECURE = True

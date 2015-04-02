@@ -6,8 +6,8 @@ from flask import Flask
 from gunicorn.app.wsgiapp import WSGIApplication
 from werkzeug.utils import import_string
 
-from eru.common.settings import ERU_BIND, ERU_WORKERS,\
-        ERU_TIMEOUT, ERU_WORKER_CLASS
+from eru.common.settings import (ERU_BIND, ERU_WORKERS,
+        ERU_TIMEOUT, ERU_WORKER_CLASS, ERU_DAEMON)
 from eru.async import make_celery
 from eru.models import db
 
@@ -54,6 +54,7 @@ def main():
             bind = opts.bind and opts.bind[0] or ERU_BIND
             return {
                 'bind': bind,
+                'daemon': opts.daemon or ERU_DAEMON,
                 'workers': opts.workers or ERU_WORKERS,
                 'timeout': opts.timeout or ERU_TIMEOUT,
                 'worker_class': opts.worker_class or ERU_WORKER_CLASS,
