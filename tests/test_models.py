@@ -117,7 +117,7 @@ def test_container(test_db):
             cid = random_sha1()
             used_cores = cores[i*cores_per_container:(i+1)*cores_per_container]
             # not using a port
-            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores)
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
             assert c is not None
             containers.append(c)
         host.occupy_cores(cores)
