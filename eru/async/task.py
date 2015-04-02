@@ -41,7 +41,7 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         notifier.pub_fail()
     else:
         for cid, cname, entrypoint, used_cores, expose_ports in containers:
-            c = Container.create(cid, host, version, cname, entrypoint, used_cores, expose_ports)
+            c = Container.create(cid, host, version, cname, entrypoint, used_cores, env, expose_ports)
             if c:
                 # Notify agent update its status
                 notifier.notify_agent(cid)

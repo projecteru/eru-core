@@ -17,27 +17,29 @@ class Container(Base):
     container_id = db.Column(db.CHAR(64), nullable=False, index=True)
     name = db.Column(db.CHAR(255), nullable=False)
     entrypoint = db.Column(db.CHAR(255), nullable=False)
+    env = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)
     is_alive = db.Column(db.Integer, default=1)
 
     cores = db.relationship('Core', backref='container', lazy='dynamic')
     ports = db.relationship('Port', backref='container', lazy='dynamic')
 
-    def __init__(self, container_id, host, version, name, entrypoint):
+    def __init__(self, container_id, host, version, name, entrypoint, env):
         self.container_id = container_id
         self.host_id = host.id
         self.version_id = version.id
         self.app_id = version.app_id
         self.name = name
         self.entrypoint = entrypoint
+        self.env = env
 
     @classmethod
-    def create(cls, container_id, host, version, name, entrypoint, cores, expose_ports=[]):
+    def create(cls, container_id, host, version, name, entrypoint, cores, env, expose_ports=[]):
         """
         创建一个容器. cores 是 [core, core, ...] port 则是 port.
         """
         try:
-            container = cls(container_id, host, version, name, entrypoint)
+            container = cls(container_id, host, version, name, entrypoint, env)
             db.session.add(container)
             host.count += 1
             db.session.add(host)
@@ -87,7 +89,8 @@ class Container(Base):
         d = super(Container, self).to_dict()
         host = self.host.addr.split(':')[0]
         ports = [p.port for p in self.ports.all()]
+        cores = [c.label for c in self.cores.all()]
         version = self.version.short_sha
-        d.update(host=host, ports=ports, version=version)
+        d.update(host=host, ports=ports, cores=cores, version=version)
         return d
 
