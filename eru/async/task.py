@@ -24,6 +24,7 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
     notifier = TaskNotifier(task)
     cores = Core.get_multi(core_ids)
     ports = Port.get_multi(port_ids)
+    cids = []
     try:
         host = task.host
         version = task.version
@@ -37,7 +38,7 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
         logger.exception(e)
         host.release_cores(cores)
         host.release_ports(ports)
-        task.finish_with_result(code.TASK_FAILED)
+        task.finish_with_result(code.TASK_FAILED, container_ids=cids)
         notifier.pub_fail()
     else:
         for cid, cname, entrypoint, used_cores, expose_ports in containers:
@@ -49,8 +50,9 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
                 rds.hset('eru:app:%s:backends' % version.name, entrypoint, 'eru:app:entrypoint:%s:backends' % entrypoint)
                 backends = ['%s:%s' % (host.ip, p.port) for p in expose_ports]
                 rds.sadd('eru:app:%s:entrypoint:%s:backends' % (version.name, entrypoint), *backends)
+                cids.append(cid)
         rds.publish('eru:discovery:published', version.name)
-        task.finish_with_result(code.TASK_SUCCESS)
+        task.finish_with_result(code.TASK_SUCCESS, container_ids=cids)
         notifier.pub_success()
 
 
