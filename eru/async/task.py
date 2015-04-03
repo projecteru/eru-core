@@ -49,6 +49,7 @@ def create_docker_container(task_id, ncontainer, core_ids, port_ids):
                 rds.sadd('eru:agent:%s:containers' % host.name, cid)
                 rds.hset('eru:app:%s:backends' % version.name, entrypoint, 'eru:app:entrypoint:%s:backends' % entrypoint)
                 backends = ['%s:%s' % (host.ip, p.port) for p in expose_ports]
+                # TODO: daemon 是这么默默无闻的么
                 if backends:
                     rds.sadd('eru:app:%s:entrypoint:%s:backends' % (version.name, entrypoint), *backends)
                 cids.append(cid)
