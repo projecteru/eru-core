@@ -148,6 +148,20 @@ def list_app_containers(name):
     return {'r': 0, 'msg': 'ok', 'containers': containers}
 
 
+@bp.route('/<name>/<version>/containers/', methods=['GET', ])
+@jsonify()
+def list_version_containers(name, version):
+    app = App.get_by_name(name)
+    if not app:
+        logger.error('app not found, env list ignored')
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
+    v = app.get_version(version)
+    if not v:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
+    containers = v.containers.all()
+    return {'r': 0, 'msg': 'ok', 'containers': containers}
+
+
 @bp.errorhandler(EruAbortException)
 @jsonify()
 def eru_abort_handler(exception):
