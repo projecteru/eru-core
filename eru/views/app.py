@@ -165,5 +165,5 @@ def list_version_containers(name, version):
 @bp.errorhandler(EruAbortException)
 @jsonify()
 def eru_abort_handler(exception):
-    return {'r':1, 'msg': exception.msg, 'status_code': exception.code}
+    return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}
 
