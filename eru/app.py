@@ -12,9 +12,9 @@ from eru.async import make_celery
 from eru.models import db
 
 
-blueprints = ['version', 'sys', 'deploy', 'container',
-              'app', 'websockets', 'scale', 'task', ]
-exts = [db, ]
+blueprints = ('version', 'sys', 'deploy', 'container',
+              'app', 'websockets', 'scale', 'task', )
+exts = (db, )
 
 
 def init_logging(app):

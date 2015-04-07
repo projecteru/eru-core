@@ -19,11 +19,15 @@ def touch_version_scale_info(name, version):
     v = app.get_version(version)
     if not v:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
-    cs = v.containers.limit(1).all()
-    if not cs:
+    containers = v.containers.limit(1).all()
+    if not containers:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Not deployed')
-    c = cs[0]
-    return {'group': c.host.group.name, 'pod': c.host.pod.name, 'ncore': len(c.cores.all())}
+    container = containers[0]
+    return {
+        'group': container.host.group.name,
+        'pod': container.host.pod.name,
+        'ncore': len(container.cores.all())
+    }
 
 
 @bp.errorhandler(EruAbortException)
