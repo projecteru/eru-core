@@ -49,9 +49,13 @@ class Task(Base):
         db.session.add(self)
         db.session.commit()
 
-    def finish_with_result(self, result):
+    def finish_with_result(self, result, **kw):
         self.finished = datetime.now()
         self.result = result
+        if kw:
+            p = self.props
+            p.update(kw)
+            self.properties = json.dumps(p)
         db.session.add(self)
         db.session.commit()
 
@@ -77,4 +81,10 @@ class Task(Base):
     @property
     def result_key(self):
         return ERU_TASK_RESULTKEY % self.id 
+
+    def to_dict(self):
+        d = super(Task, self).to_dict()
+        d.update(props=self.props)
+        d.pop('properties', '')
+        return d
 

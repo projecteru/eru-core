@@ -12,7 +12,8 @@ from eru.async import make_celery
 from eru.models import db
 
 
-blueprints = ('version', 'sys', 'deploy', 'container', 'app', 'websockets', )
+blueprints = ('version', 'sys', 'deploy', 'container',
+              'app', 'websockets', 'scale', 'task', )
 exts = (db, )
 
 
