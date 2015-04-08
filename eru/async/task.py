@@ -160,7 +160,6 @@ def update_containers(task_id, version_id, cids):
     version = Version.get(version_id)
     containers = Container.get_multi(cids)
     port_count = sum(len(c.ports.all()) for c in containers)
-    container_ids = [c.container_id for c in containers]
     host = task.host
     rs = []
     # cids 要从 eru:agent:%s:containers host.name 里删掉
@@ -171,13 +170,14 @@ def update_containers(task_id, version_id, cids):
     u_containers = [c for c in containers if c.version_id != version_id]
     if not u_containers:
         return
+    container_ids = [c.container_id for c in u_containers]
     used_ports = host.get_free_ports(port_count)
     host.occupy_ports(used_ports)
     try:
 
         for c in u_containers:
             _backends = ['%s:%s' % (host.ip, p.port) for p in c.ports]
-            backends.setdefault('eru:app:%s:entrypoint:%s:backends' % (c.appname, c.entrypoint), []).append(_backends)
+            backends.setdefault('eru:app:%s:entrypoint:%s:backends' % (c.appname, c.entrypoint), []).extend(_backends)
         rs = dockerjob.update_containers(host, u_containers, version, used_ports)
     except Exception, e:
         logger.exception(e)
