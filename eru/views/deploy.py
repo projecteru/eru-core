@@ -6,7 +6,7 @@ import itertools
 
 from flask import Blueprint, request
 
-from eru.async.task import create_docker_container, build_docker_image, remove_containers
+from eru.async.task import create_docker_container, build_docker_image, remove_containers, update_containers
 from eru.common import code
 from eru.common.clients import rds
 from eru.models import App, Group, Pod, Task, Host
@@ -197,6 +197,34 @@ def offline_version(group_name, pod_name, appname):
             task = Task.create(code.TASK_REMOVE, version, host, task_props)
             remove_containers.apply_async(
                 args=(task.id, cids, True),
+                task_id='task:%d' % task.id
+            )
+            ts.append(task.id)
+            keys.append(task.result_key)
+        return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
+    except Exception, e:
+        logger.exception(e)
+        return {'r': 1, 'msg': str(e), 'tasks': [], 'watch_keys': []}
+
+
+@bp.route('/updateversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
+@check_request_json(['version'])
+@jsonify()
+def update_version(group_name, pod_name, appname):
+    data = request.get_json()
+    group, pod, application, version = validate_instance(group_name,
+            pod_name, appname, data['version'])
+    try:
+        d = {}
+        ts, keys = [], []
+        for container in application.containers.all():
+            d.setdefault(container.host, []).append(container)
+        for host, containers in d.iteritems():
+            cids = [c.id for c in containers]
+            task_props = {'container_ids': cids}
+            task = Task.create(code.TASK_REMOVE, version, host, task_props)
+            update_containers.apply_async(
+                args=(task.id, version.id, cids),
                 task_id='task:%d' % task.id
             )
             ts.append(task.id)

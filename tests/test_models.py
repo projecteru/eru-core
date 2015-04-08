@@ -158,3 +158,67 @@ def test_container(test_db):
         assert len(host.containers.all()) == 0
         assert host.count == 0
 
+
+def test_container_transform(test_db):
+    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
+    assert a is not None
+
+    v = a.add_version(random_sha1())
+    v2 = a.add_version(random_sha1())
+    assert v is not None
+    assert v.app.id == a.id
+    assert v.name == a.name
+    assert len(v.containers.all()) == 0
+    assert len(v.tasks.all()) == 0
+
+    g = Group.create('group', 'group')
+    p = Pod.create('pod', 'pod')
+    assert p.assigned_to_group(g)
+    hosts = [Host.create(p, random_ipv4(), random_string(prefix='host'),
+        random_uuid(), 4, 4096) for i in range(6)]
+
+    for host in hosts[:3]:
+        host.assigned_to_group(g)
+
+    assert g.get_max_containers(p, 3) == 3
+    host_cores = g.get_free_cores(p, 3, 3)
+    assert len(host_cores) == 3
+
+    containers = []
+    for (host, count), cores in host_cores.iteritems():
+        cores_per_container = len(cores) / count
+        for i in range(count):
+            cid = random_sha1()
+            used_cores = cores[i*cores_per_container:(i+1)*cores_per_container]
+            used_ports = host.get_free_ports(2)
+            host.occupy_ports(used_ports)
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env', used_ports)
+            assert c is not None
+            containers.append(c)
+        host.occupy_cores(cores)
+
+    for host in g.private_hosts.all():
+        assert len(host.get_free_cores()) == 1
+        assert len(host.get_free_ports(10)) == 10 # -_-!
+        assert len(host.containers.all()) == 1
+        assert host.count == 1
+
+    assert len(containers) == 3
+    assert len(v.containers.all()) == 3
+
+    cids = [c.container_id for c in containers]
+    for c in containers:
+        host = c.host
+        plen = len(c.ports.all())
+        ports = c.ports.all()
+        cid = c.container_id
+        used_ports = host.get_free_ports(plen)
+        c.transform(v2, used_ports, random_sha1(), random_string())
+        assert len(c.ports.all()) == plen
+        assert set(p.port for p in ports) != set(p.port for p in used_ports)
+        assert set(p.port for p in c.ports) == set(p.port for p in used_ports)
+        assert c.container_id != cid
+
+    new_cids = [c.container_id for c in containers]
+    assert new_cids != cids
+
