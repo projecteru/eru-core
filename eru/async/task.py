@@ -199,7 +199,7 @@ def update_containers(task_id, version_id, cids):
         for c in u_containers:
             add_container_backends(c)
             add_container_for_agent(c)
-        
+
         for key, bs in backends.iteritems():
             if bs:
                 rds.srem(key, *bs)
