@@ -208,6 +208,13 @@ def update_containers(host, containers, version, ports=[]):
     return rs
 
 
+def start_containers(containers, host):
+    """启动这个host上的这些容器"""
+    client = get_docker_client(host.addr)
+    for c in containers:
+        client.start(c.container_id)
+
+
 def stop_containers(containers, host):
     """停止这个host上的这些容器"""
     client = get_docker_client(host.addr)
