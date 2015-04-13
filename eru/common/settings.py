@@ -56,6 +56,7 @@ PORT_START = 49000
 PORT_RANGE = 2
 
 # Celery Settings
+CELERY_FORCE_ROOT = False
 CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']

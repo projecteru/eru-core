@@ -13,7 +13,7 @@ from eru.models import db
 
 
 blueprints = ('version', 'sys', 'deploy', 'container',
-              'app', 'websockets', 'scale', 'task', )
+              'app', 'websockets', 'scale', 'task', 'resource', )
 exts = (db, )
 
 

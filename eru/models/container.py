@@ -65,6 +65,25 @@ class Container(Base):
     def appname(self):
         return self.name.split('_')[0]
 
+    def transform(self, version, ports, cid, name):
+        """变身!
+        更新容器的时候需要让这个容器修改一下
+        修改这个容器, 用新的version, cid, ports, cid来替换.
+        版本, 端口, 容器的id一定会更新.
+        """
+        # 把原来的端口释放掉
+        for port in self.ports.all():
+            port.used = 0
+            db.session.add(port)
+        # 核不需要释放, 继续复用原有的
+        # 新的属性设置上去
+        self.version_id = version.id
+        self.ports = ports
+        self.container_id = cid
+        self.name = name
+        db.session.add(self)
+        db.session.commit()
+
     def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
         host = self.host

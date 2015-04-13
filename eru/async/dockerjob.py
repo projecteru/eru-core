@@ -151,6 +151,70 @@ def create_containers(host, version, entrypoint, env, ncontainer, cores=[], port
     return containers
 
 
+def update_containers(host, containers, version, ports=[]):
+    client = get_docker_client(host.addr)
+    appconfig = version.appconfig
+    appname = appconfig.appname
+    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
+    for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
+        #TODO 接了日志输出后写入 redis
+        print line
+
+    rs = []
+    for c in containers:
+        envconfig = version.get_resource_config(c.env)
+        entry = appconfig.entrypoints[c.entrypoint]
+
+        cmd = entry['cmd']
+        entryports = entry.get('ports', [])
+
+        volumes, binds = None, None
+        env_dict = {
+            'APP_NAME': appname,
+            'ERU_RUNENV': c.env.upper(),
+            'ERU_POD': host.pod.name,
+        }
+        env_dict.update(envconfig.to_env_dict())
+
+        # 设置留空表示不 mount 任何 permdir 进来
+        if settings.ERU_CONTAINER_PERMDIR:
+            env_dict['ERU_PERMDIR'] = settings.ERU_CONTAINER_PERMDIR % appname
+            volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
+            binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
+
+        user = version.app_id # 可以控制从多少开始
+        working_dir = '/%s' % appname
+        container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
+
+        # update的时候不需要改变核
+        cpuset = ','.join([core.label for core in c.cores.all()])
+        container_name = '_'.join([appname, c.entrypoint, random_string(6)])
+        container = client.create_container(
+            image=image, command=cmd, user=user, environment=env_dict,
+            volumes=volumes, name=container_name, cpuset=cpuset,
+            working_dir=working_dir, ports=container_ports,
+        )
+        container_id = container['Id']
+
+        # start options
+        # port binding and volume binding
+        expose_ports = [ports.pop(0) for _ in entryports]
+        ports_bindings = dict(zip(entryports, [p.port for p in expose_ports])) if expose_ports else None
+
+        client.start(container=container_id, port_bindings=ports_bindings, binds=binds)
+        rs.append((container_id, container_name, expose_ports))
+
+    return rs
+
+
+def start_containers(containers, host):
+    """启动这个host上的这些容器"""
+    client = get_docker_client(host.addr)
+    for c in containers:
+        client.start(c.container_id)
+
+
 def stop_containers(containers, host):
     """停止这个host上的这些容器"""
     client = get_docker_client(host.addr)
@@ -165,6 +229,13 @@ def remove_host_containers(containers, host):
         if c.is_alive:
             client.stop(c.container_id)
         client.remove_container(c.container_id)
+
+
+def remove_container_by_cid(cids, host):
+    client = get_docker_client(host.addr)
+    for cid in cids:
+        client.stop(cid)
+        client.remove_container(cid)
 
 
 def remove_image(version, host):

@@ -5,10 +5,9 @@ from flask import Blueprint
 from eru.common import code
 from eru.models import Container
 from eru.utils.views import jsonify, EruAbortException
-
+from eru.async import dockerjob
 
 bp = Blueprint('container', __name__, url_prefix='/api/container')
-
 
 @bp.route('/<cid>/kill', methods=['PUT', ])
 @jsonify()
@@ -18,7 +17,6 @@ def kill_container(cid):
         c.kill()
     return {'r':0, 'msg': code.OK}
 
-
 @bp.route('/<cid>/cure', methods=['PUT', ])
 @jsonify()
 def cure_container(cid):
@@ -26,7 +24,6 @@ def cure_container(cid):
     if c:
         c.cure()
     return {'r':0, 'msg': code.OK}
-
 
 @bp.route('/<cid>/poll', methods=['GET', ])
 @jsonify()
@@ -36,6 +33,23 @@ def poll_container(cid):
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Container %s not found' % cid)
     return {'r':0, 'container': c.container_id, 'status': c.is_alive}
 
+@bp.route('/<cid>/start', methods=['PUT', ])
+@jsonify()
+def start_container(cid):
+    c = Container.get_by_container_id(cid)
+    if c:
+        c.cure()
+        dockerjob.start_containers([c,], c.host)
+    return {'r':0, 'msg': code.OK}
+
+@bp.route('/<cid>/stop', methods=['PUT', ])
+@jsonify()
+def stop_container(cid):
+    c = Container.get_by_container_id(cid)
+    if c:
+        c.kill()
+        dockerjob.stop_containers([c,], c.host)
+    return {'r':0, 'msg': code.OK}
 
 @bp.errorhandler(EruAbortException)
 @jsonify()
