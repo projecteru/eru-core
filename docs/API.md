@@ -44,3 +44,6 @@ API
 
     Just like above, only you can't bind your container on cores
 
+* Remove one container
+
+        DELETE /api/container/:container_id/
