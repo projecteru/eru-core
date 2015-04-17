@@ -6,7 +6,7 @@ from eru.models import Host, Pod
 from eru.common import code
 from eru.utils.views import jsonify, EruAbortException
 
-bp = Blueprint('scale', __name__, url_prefix='/api/resource')
+bp = Blueprint('resource', __name__, url_prefix='/api/resource')
 
 @bp.route('/host/<host_id>/resource/')
 @jsonify()

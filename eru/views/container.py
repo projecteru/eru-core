@@ -9,6 +9,20 @@ from eru.async import dockerjob
 
 bp = Blueprint('container', __name__, url_prefix='/api/container')
 
+@bp.route('/<cid>/', methods=['GET', ])
+@jsonify()
+def get_container(cid):
+    return Container.get_by_container_id(cid)
+
+@bp.route('/<cid>/', methods=['DELETE', ])
+@jsonify()
+def remove_container(cid):
+    c = Container.get_by_container_id(cid)
+    if not c:
+        return {'r': 1, 'msg': 'container %s not found' % cid}
+    dockerjob.remove_container_by_cid([cid], c.host)
+    return {'r': 0, 'msg': code.OK}
+
 @bp.route('/<cid>/kill', methods=['PUT', ])
 @jsonify()
 def kill_container(cid):
