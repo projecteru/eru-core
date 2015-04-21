@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from eru.models import Group, Pod, Host, App, Container
+from eru.models import Group, Pod, Host, App, Container, Network
 
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
 
@@ -221,4 +221,3 @@ def test_container_transform(test_db):
 
     new_cids = [c.container_id for c in containers]
     assert new_cids != cids
-

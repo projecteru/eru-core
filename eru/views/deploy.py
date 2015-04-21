@@ -6,21 +6,18 @@ import itertools
 
 from flask import Blueprint, request
 
-from eru.async.task import create_docker_container, build_docker_image, remove_containers, update_containers
+from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers, update_containers
 from eru.common import code
 from eru.common.clients import rds
-from eru.models import App, Group, Pod, Task, Host
+from eru.models import App, Group, Pod, Task, Host, Network
 from eru.utils.views import check_request_json, jsonify, EruAbortException
-
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
 
-
 @bp.route('/')
 def index():
     return 'deploy control'
-
 
 @bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
@@ -40,11 +37,11 @@ def create_private(group_name, pod_name, appname):
 
     ncore = int(data['ncore']) # 是说一个容器要几个核...
     ncontainer = int(data['ncontainer'])
+    networks = Network.get_multi(data.get('networks', []))
     appconfig = version.appconfig
 
     if not data['entrypoint'] in appconfig.entrypoints:
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
-    entry = appconfig.entrypoints[data['entrypoint']]
 
     tasks_info = []
     with rds.lock('%s:%s' % (group_name, pod_name)):
@@ -59,19 +56,16 @@ def create_private(group_name, pod_name, appname):
                 raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
 
             for (host, container_count), cores in host_cores.iteritems():
-                ports = host.get_free_ports(container_count*len(entry['ports'])) if entry.get('ports') else []
                 tasks_info.append(
-                    (version, host, container_count, cores, ports, data['entrypoint'], data['env'])
+                    (version, host, container_count, cores, networks, data['entrypoint'], data['env'])
                 )
                 host.occupy_cores(cores)
-                host.occupy_ports(ports)
         except Exception, e:
             logger.exception(e)
             raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
 
     ts, keys = [], []
     for task_info in tasks_info:
-        #task_info contain (application, version, host, num, cpus, ports)
         #create_task will always correct
         t = _create_task(code.TASK_CREATE, *task_info)
         if not t:
@@ -80,7 +74,6 @@ def create_private(group_name, pod_name, appname):
         keys.append(t.result_key)
 
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
-
 
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
@@ -96,11 +89,11 @@ def create_public(group_name, pod_name, appname):
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, data['version'])
 
+    networks = Network.get_multi(data.get('networks', []))
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
     if not data['entrypoint'] in appconfig.entrypoints:
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
-    entry = appconfig['entrypoints'][data['entrypoint']]
 
     tasks_info = []
     with rds.lock('%s:%s' % (group_name, pod_name)):
@@ -108,18 +101,15 @@ def create_public(group_name, pod_name, appname):
             # 轮询, 尽可能均匀部署
             hosts = pod.get_free_public_hosts(ncontainer)
             for host in itertools.islice(itertools.cycle(hosts), ncontainer):
-                ports = host.get_free_ports(1) if entry.get('ports') else []
                 tasks_info.append(
-                    (version, host, 1, [], ports, data['entrypoint'], data['env'])
+                    (version, host, 1, [], networks, data['entrypoint'], data['env'])
                 )
-                host.occupy_ports(ports)
         except Exception, e:
             logger.exception(e)
             raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
 
     ts, keys = [], []
     for task_info in tasks_info:
-        #task_info contain (version, host, num, cpus, ports)
         #create_task will always correct
         t = _create_task(code.TASK_CREATE, *task_info)
         if not t:
@@ -128,7 +118,6 @@ def create_public(group_name, pod_name, appname):
         keys.append(t.result_key)
 
     return {'r':0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
-
 
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['base', 'version'])
@@ -154,7 +143,6 @@ def build_image(group_name, pod_name, appname):
         logger.exception(e)
         return {'r': 1, 'msg': str(e), 'task': None, 'watch_key': None}
 
-
 @bp.route('/rmcontainer/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version', 'host', 'ncontainer'])
 @jsonify()
@@ -177,7 +165,6 @@ def rm_containers(group_name, pod_name, appname):
     except Exception, e:
         logger.exception(e)
         return {'r': 1, 'msg': str(e), 'task': None, 'watch_key': None}
-
 
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version'])
@@ -206,7 +193,6 @@ def offline_version(group_name, pod_name, appname):
         logger.exception(e)
         return {'r': 1, 'msg': str(e), 'tasks': [], 'watch_keys': []}
 
-
 @bp.route('/updateversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version'])
 @jsonify()
@@ -234,7 +220,6 @@ def update_version(group_name, pod_name, appname):
         logger.exception(e)
         return {'r': 1, 'msg': str(e), 'tasks': [], 'watch_keys': []}
 
-
 def validate_instance(group_name, pod_name, appname, version):
     group = Group.get_by_name(group_name)
     if not group:
@@ -254,30 +239,27 @@ def validate_instance(group_name, pod_name, appname, version):
 
     return group, pod, application, version
 
-
-def _create_task(type_, version, host, ncontainer, cores, ports, entrypoint, env):
+def _create_task(type_, version, host, ncontainer, cores, networks, entrypoint, env):
     try:
         core_ids = [c.id for c in cores]
-        port_ids = [p.id for p in ports]
+        network_ids = [n.id for n in networks]
         task_props = {
             'ncontainer': ncontainer,
             'entrypoint': entrypoint,
             'env': env,
             'cores': core_ids,
-            'ports': port_ids,
+            'networks': network_ids,
         }
         task = Task.create(type_, version, host, task_props)
-        create_docker_container.apply_async(
-            args=(task.id, ncontainer, core_ids, port_ids),
+        create_containers_with_macvlan.apply_async(
+            args=(task.id, ncontainer, core_ids, network_ids),
             task_id='task:%d' % task.id
         )
         return task
     except Exception, e:
         logger.exception(e)
-        host.release_ports(ports)
         host.release_cores(cores)
     return None
-
 
 @bp.errorhandler(EruAbortException)
 @jsonify()

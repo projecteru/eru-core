@@ -13,7 +13,6 @@ Example of app.yaml:
     entrypoints:
         web:
             cmd: "python app.py --port 5000"
-            port: 5000
         daemon:
             cmd: "python daemon.py --interval 5"
         service:

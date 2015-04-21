@@ -54,6 +54,11 @@ class Version(Base):
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
 
+    def get_ports(self, entrypoint):
+        entry = self.appconfig.entrypoints.get(entrypoint, {})
+        ports = entry.get('ports', [])
+        return [int(p.split('/')[0]) for p in ports]
+
     def to_dict(self):
         d = super(Version, self).to_dict()
         d['name'] = self.name
