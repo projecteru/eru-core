@@ -158,8 +158,6 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
                                 insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
             print line
 
-    entryports = entry.get('ports', [])
-
     env_dict = {
         'APP_NAME': appname,
         'ERU_RUNENV': env.upper(),
@@ -168,8 +166,6 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     }
     env_dict.update(envconfig.to_env_dict())
 
-    # ['4001/tcp', '5001/udp'] --> [('4001', 'tcp'), ('5001', 'udp')]
-    container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None
     # container name: {appname}_{entrypoint}_{ident_id}
     container_name = '_'.join([appname, entrypoint, random_string(6)])
     # cpuset: '0,1,2,3'
@@ -182,7 +178,6 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
         name=container_name,
         cpuset=cpuset,
         working_dir='/%s' % appname,
-        ports=container_ports,
     )
     container_id = container['Id']
 

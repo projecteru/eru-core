@@ -144,8 +144,9 @@ class Network(Base):
 
     @property
     def used_count(self):
+        # 网关就不要给别人了
         n = self.network
-        return n.num_addresses - self.pool_size
+        return (n.num_addresses - 1) - self.pool_size
 
     def acquire_ip(self):
         """take an IP from network, return an IP object"""

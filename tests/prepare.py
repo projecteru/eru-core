@@ -1,9 +1,10 @@
 # coding: utf-8
 
+import docker
 import requests
+from docker.utils import kwargs_from_env
 from eru.models import App, Group, Pod, Host, Container
 from tests.utils import random_sha1, random_string, random_uuid, random_ipv4
-
 
 def create_test_suite():
     appyaml = {
@@ -49,7 +50,6 @@ def create_test_suite():
         host.occupy_cores(cores)
     return app, version, group, pod, hosts, containers
 
-
 def create_local_test_data(private=False):
     appyaml = {
         'appname': 'blueberry',
@@ -77,8 +77,9 @@ def create_local_test_data(private=False):
     pod = Pod.create('pod', 'pod')
     pod.assigned_to_group(group)
 
-    r = requests.get('http://192.168.59.103:2375/info').json()
-    host = Host.create(pod, '192.168.59.103:2375', r['Name'], r['ID'], r['NCPU'], r['MemTotal'])
+    c = docker.Client(**kwargs_from_env(assert_hostname=False))
+    r = c.info()
+    host = Host.create(pod, '192.168.59.103:2376', r['Name'], r['ID'], r['NCPU'], r['MemTotal'])
 
     if private:
         host.assigned_to_group(group)
