@@ -5,23 +5,6 @@ import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
-from eru.common import settings
-
-
-class Port(Base):
-    __tablename__ = 'port'
-
-    host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
-    used = db.Column(db.Integer, default=0)
-    container_id = db.Column(db.Integer, db.ForeignKey('container.id'))
-    port = db.Column(db.Integer, nullable=False)
-
-    def __init__(self, port):
-        self.port = port
-
-    def is_used(self):
-        return self.used == 1
-
 
 class Core(Base):
     __tablename__ = 'core'
@@ -37,7 +20,6 @@ class Core(Base):
     def is_used(self):
         return self.used == 1
 
-
 class Host(Base):
     __tablename__ = 'host'
 
@@ -51,7 +33,6 @@ class Host(Base):
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
 
     cores = db.relationship('Core', backref='host', lazy='dynamic')
-    ports = db.relationship('Port', backref='host', lazy='dynamic')
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
 
@@ -72,8 +53,6 @@ class Host(Base):
             host = cls(addr, name, uid, ncore, mem, pod.id)
             for i in xrange(ncore):
                 host.cores.append(Core(str(i)))
-            for i in xrange(settings.PORT_START, settings.PORT_START+ncore*settings.PORT_RANGE):
-                host.ports.append(Port(i))
             db.session.add(host)
             db.session.commit()
             return host
@@ -95,9 +74,6 @@ class Host(Base):
 
     def get_free_cores(self):
         return [c for c in self.cores.all() if not c.used]
-
-    def get_free_ports(self, limit):
-        return self.ports.filter_by(used=0).limit(limit).all()
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
         q = self.containers
@@ -130,21 +106,9 @@ class Host(Base):
             db.session.add(core)
         db.session.commit()
 
-    def occupy_ports(self, ports):
-        for port in ports:
-            port.used = 1
-            db.session.add(port)
-        db.session.commit()
-
     def release_cores(self, cores):
         for core in cores:
             core.used = 0
             db.session.add(core)
-        db.session.commit()
-
-    def release_ports(self, ports):
-        for port in ports:
-            port.used = 0
-            db.session.add(port)
         db.session.commit()
 

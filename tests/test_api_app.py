@@ -6,7 +6,6 @@ import yaml
 from tests.utils import random_string, random_sha1
 from tests.mock import FakeEtcd
 
-
 def test_create_app(client, test_db, monkeypatch):
     monkeypatch.setattr('eru.models.appconfig.config_backend', FakeEtcd())
 
@@ -69,7 +68,6 @@ build: "pip install -r ./req.txt"
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
     assert r[u'sha'] == data['version']
-
 
 def test_app_env(client, test_db, monkeypatch):
     monkeypatch.setattr('eru.models.appconfig.config_backend', FakeEtcd())

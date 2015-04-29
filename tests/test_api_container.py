@@ -1,9 +1,7 @@
 # coding: utf-8
 
 import json
-
 from tests.prepare import create_test_suite
-
 
 def test_container_kill(client, test_db):
     # kill 永远对外成功.
@@ -13,14 +11,12 @@ def test_container_kill(client, test_db):
     assert d['msg'] == u'ok'
     assert d['r'] == 0
 
-
 def test_container_poll(client, test_db):
     rv = client.get('/api/container/12345/poll')
     assert rv.status_code == 200
     d = json.loads(rv.data)
     assert d['status_code'] == 404
     assert d['r'] == 1
-
 
 def test_container_status(client, test_db):
     app, version, group, pod, hosts, containers = create_test_suite()

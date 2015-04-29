@@ -1,9 +1,7 @@
 # coding: utf-8
 
-from eru.models import Group, Pod, Host, App, Container
-
+from eru.models import Group, Pod, Host, App, Container, Network
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
-
 
 def test_group_pod(test_db):
     g1 = Group.create('group1', 'group1')
@@ -29,7 +27,6 @@ def test_group_pod(test_db):
     assert g3.get_max_containers(p3, 1) == 0
     assert g3.get_free_cores(p3, 1, 1) == {}
 
-
 def test_host(test_db):
     g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod')
@@ -40,8 +37,6 @@ def test_host(test_db):
         assert host is not None
         assert len(host.cores.all()) == 4
         assert len(host.get_free_cores()) == 4
-        # 肯定有这么多的 -_-!
-        assert len(host.get_free_ports(10)) == 10
 
     assert len(g.private_hosts.all()) == 0
     assert g.get_max_containers(p, 1) == 0
@@ -83,7 +78,6 @@ def test_host(test_db):
         assert count == 2
         assert len(cores) == 4
 
-
 def test_container(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
     assert a is not None
@@ -124,7 +118,6 @@ def test_container(test_db):
 
     for host in g.private_hosts.all():
         assert len(host.get_free_cores()) == 1
-        assert len(host.get_free_ports(10)) == 10 # -_-!
         assert len(host.containers.all()) == 1
         assert host.count == 1
 
@@ -138,7 +131,6 @@ def test_container(test_db):
         assert c.version.id == v.id
         assert c.is_alive
         assert len(c.cores.all()) == 3
-        assert len(c.ports.all()) == 0
         all_core_labels = sorted(['0', '1', '2', '3', ])
         used_core_labels = [core.label for core in c.cores.all()]
         free_core_labels = [core.label for core in c.host.get_free_cores()]
@@ -154,10 +146,8 @@ def test_container(test_db):
 
     for host in g.private_hosts.all():
         assert len(host.get_free_cores()) == 4
-        assert len(host.get_free_ports(10)) == 10 # -_-!
         assert len(host.containers.all()) == 0
         assert host.count == 0
-
 
 def test_container_transform(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
@@ -190,16 +180,13 @@ def test_container_transform(test_db):
         for i in range(count):
             cid = random_sha1()
             used_cores = cores[i*cores_per_container:(i+1)*cores_per_container]
-            used_ports = host.get_free_ports(2)
-            host.occupy_ports(used_ports)
-            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env', used_ports)
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
             assert c is not None
             containers.append(c)
         host.occupy_cores(cores)
 
     for host in g.private_hosts.all():
         assert len(host.get_free_cores()) == 1
-        assert len(host.get_free_ports(10)) == 10 # -_-!
         assert len(host.containers.all()) == 1
         assert host.count == 1
 
@@ -209,16 +196,35 @@ def test_container_transform(test_db):
     cids = [c.container_id for c in containers]
     for c in containers:
         host = c.host
-        plen = len(c.ports.all())
-        ports = c.ports.all()
         cid = c.container_id
-        used_ports = host.get_free_ports(plen)
-        c.transform(v2, used_ports, random_sha1(), random_string())
-        assert len(c.ports.all()) == plen
-        assert set(p.port for p in ports) != set(p.port for p in used_ports)
-        assert set(p.port for p in c.ports) == set(p.port for p in used_ports)
+        c.transform(v2, random_sha1(), random_string())
         assert c.container_id != cid
 
     new_cids = [c.container_id for c in containers]
     assert new_cids != cids
 
+def test_network(test_db):
+    n = Network.create('net', '10.1.0.0/16')
+    assert n is not None
+    assert len(n.ips.all()) == 0
+    assert n.hostmask_string == '16'
+    assert n.pool_size == 65535
+    assert n.used_count == 0
+
+    ip = n.acquire_ip()
+    assert ip is not None
+    assert ip.network_id == n.id
+    assert ip.vethname == ''
+    assert not ip.container_id
+    assert ip.hostmask == n.hostmask_string
+    assert ip.vlan_seq_id == n.id
+    assert ip.address.startswith('10.1')
+
+    assert len(n.ips.all()) == 1
+    assert n.pool_size == 65534
+    assert n.used_count == 1
+
+    ip.release()
+    assert len(n.ips.all()) == 0
+    assert n.pool_size == 65535
+    assert n.used_count == 0
