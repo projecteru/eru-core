@@ -73,71 +73,11 @@ def push_image(host, version):
     rev = version.short_sha
     return client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
+
 def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
-def create_containers(host, version, entrypoint, env, ncontainer, cores=None):
-    # TODO now daemon is not actually used
-    """
-    在 host 机器上, 用 entrypoint 在 env 下运行 ncontainer 个容器.
-    """
-    if cores is None:
-        cores = []
-
-    client = get_docker_client(host.addr)
-    appconfig = version.appconfig
-    envconfig = version.get_resource_config(env)
-
-    appname = appconfig.appname
-    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
-    entry = appconfig.entrypoints[entrypoint]
-
-    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
-
-    cmd = entry['cmd']
-    entryports = entry.get('ports', [])
-
-    volumes, binds = None, None
-    env_dict = {
-        'APP_NAME': appname,
-        'ERU_RUNENV': env.upper(),
-        'ERU_POD': host.pod.name,
-    }
-    env_dict.update(envconfig.to_env_dict())
-
-    # 设置留空表示不 mount 任何 permdir 进来
-    if settings.ERU_CONTAINER_PERMDIR:
-        env_dict['ERU_PERMDIR'] = settings.ERU_CONTAINER_PERMDIR % appname
-        volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
-        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
-
-    user = version.app_id # 可以控制从多少开始
-    working_dir = '/%s' % appname
-    container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
-
-    for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
-        #TODO 接了日志输出后写入 redis
-        print line
-
-    containers = []
-    cores_per_container = len(cores) / ncontainer
-    for index in xrange(ncontainer):
-        # build name
-        # {appname}_{entrypoint}_{ident_id}
-        container_name = '_'.join([appname, entrypoint, random_string(6)])
-        used_cores = cores[index*cores_per_container:(index+1)*cores_per_container] if cores else ''
-        cpuset = ','.join([c.label for c in used_cores])
-        container = client.create_container(
-            image=image, command=cmd, user=user, environment=env_dict,
-            volumes=volumes, name=container_name, cpuset=cpuset,
-            working_dir=working_dir, ports=container_ports,
-        )
-        container_id = container['Id']
-
-        client.start(container=container_id, binds=binds)
-        containers.append((container_id, container_name, entrypoint, used_cores))
-    return containers
 
 def create_one_container(host, version, entrypoint, env='prod', cores=None):
     if cores is None:
@@ -178,71 +118,16 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
         name=container_name,
         cpuset=cpuset,
         working_dir='/%s' % appname,
+        network_disabled=settings.DOCKER_NETWORK_DISABLED,
     )
     container_id = container['Id']
 
-    client.start(container=container_id)
+    client.start(container=container_id, network_mode=settings.DOCKER_NETWORK_MODE)
     return container_id, container_name
 
 def execute_container(host, container_id, cmd):
     client = get_docker_client(host.addr)
     client.execute(cmd)
-
-def update_containers(host, containers, version, ports=[]):
-    client = get_docker_client(host.addr)
-    appconfig = version.appconfig
-    appname = appconfig.appname
-    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
-    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
-    for line in client.pull(repo, tag=version.short_sha, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
-        #TODO 接了日志输出后写入 redis
-        print line
-
-    rs = []
-    for c in containers:
-        envconfig = version.get_resource_config(c.env)
-        entry = appconfig.entrypoints[c.entrypoint]
-
-        cmd = entry['cmd']
-        entryports = entry.get('ports', [])
-
-        volumes, binds = None, None
-        env_dict = {
-            'APP_NAME': appname,
-            'ERU_RUNENV': c.env.upper(),
-            'ERU_POD': host.pod.name,
-        }
-        env_dict.update(envconfig.to_env_dict())
-
-        # 设置留空表示不 mount 任何 permdir 进来
-        if settings.ERU_CONTAINER_PERMDIR:
-            env_dict['ERU_PERMDIR'] = settings.ERU_CONTAINER_PERMDIR % appname
-            volumes = [settings.ERU_CONTAINER_PERMDIR % appname, ]
-            binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': settings.ERU_CONTAINER_PERMDIR % appname, 'ro': False}}
-
-        user = version.app_id # 可以控制从多少开始
-        working_dir = '/%s' % appname
-        container_ports = [tuple(e.split('/')) for e in entryports] if entryports else None # ['4001/tcp', '5001/udp']
-
-        # update的时候不需要改变核
-        cpuset = ','.join([core.label for core in c.cores.all()])
-        container_name = '_'.join([appname, c.entrypoint, random_string(6)])
-        container = client.create_container(
-            image=image, command=cmd, user=user, environment=env_dict,
-            volumes=volumes, name=container_name, cpuset=cpuset,
-            working_dir=working_dir, ports=container_ports,
-        )
-        container_id = container['Id']
-
-        # start options
-        # port binding and volume binding
-        expose_ports = [ports.pop(0) for _ in entryports]
-        ports_bindings = dict(zip(entryports, [p.port for p in expose_ports])) if expose_ports else None
-
-        client.start(container=container_id, port_bindings=ports_bindings, binds=binds)
-        rs.append((container_id, container_name, expose_ports))
-
-    return rs
 
 
 def start_containers(containers, host):
