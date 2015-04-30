@@ -31,6 +31,7 @@ class Host(Base):
     count = db.Column(db.Integer, nullable=False, default=0)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
+    is_alive = db.Column(db.Boolean, default=True)
 
     cores = db.relationship('Core', backref='host', lazy='dynamic')
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
@@ -112,3 +113,12 @@ class Host(Base):
             db.session.add(core)
         db.session.commit()
 
+    def kill(self):
+        self.is_alive = False
+        db.session.add(self)
+        db.session.commit()
+
+    def cure(self):
+        self.is_alive = True
+        db.session.add(self)
+        db.session.commit()
