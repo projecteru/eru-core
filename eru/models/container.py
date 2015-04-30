@@ -17,7 +17,7 @@ class Container(Base):
     container_id = db.Column(db.CHAR(64), nullable=False, index=True)
     name = db.Column(db.CHAR(255), nullable=False)
     entrypoint = db.Column(db.CHAR(255), nullable=False)
-    # 默认 40m
+    # 默认 40m, 最小单位为 k
     memory = db.Column(db.Integer, nullable=False, default=40960)
     env = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)

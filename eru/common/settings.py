@@ -11,11 +11,13 @@ ERU_DAEMON = False
 DOCKER_REGISTRY_URL = 'http://docker-registry.intra.hunantv.com'
 DOCKER_REGISTRY_INSECURE = True
 DOCKER_REGISTRY = 'docker-registry.intra.hunantv.com'
-DOCKER_NETWORK = 'bridge'
 DOCKER_REGISTRY_USERNAME = ''
 DOCKER_REGISTRY_PASSWORD = ''
 DOCKER_REGISTRY_EMAIL = ''
 DOCKER_CERT_PATH = ''
+
+DOCKER_NETWORK_MODE = 'bridge'
+DOCKER_NETWORK_DISABLED = False
 
 LOGSTASH = [
     'udp://10.100.1.154:50433',
