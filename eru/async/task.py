@@ -9,7 +9,7 @@ from eru.common import code
 from eru.common.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
-from eru.models import Container, Task, Core, Version, Network
+from eru.models import Container, Task, Core, Network
 
 logger = logging.getLogger(__name__)
 
@@ -55,45 +55,6 @@ def dont_report_these(container_ids):
     """告诉agent这些不要care了"""
     flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
     rds.mset(**flags)
-
-#@current_app.task()
-#def create_docker_container(task_id, ncontainer, core_ids, port_ids):
-#    """
-#    这个任务是在 host 上部署 ncontainer 个容器.
-#    可能占用 cores 这些核, 以及 ports 这些端口.
-#    """
-#    task = Task.get(task_id)
-#    notifier = TaskNotifier(task)
-#    cores = Core.get_multi(core_ids)
-#    ports = Port.get_multi(port_ids)
-#    cids = []
-#    try:
-#        host = task.host
-#        version = task.version
-#        entrypoint = task.props['entrypoint']
-#        env = task.props['env']
-#        containers = dockerjob.create_containers(
-#            host, version, entrypoint,
-#            env, ncontainer, cores, ports
-#        )
-#    except Exception, e:
-#        logger.exception(e)
-#        host.release_cores(cores)
-#        host.release_ports(ports)
-#        task.finish_with_result(code.TASK_FAILED, container_ids=cids)
-#        notifier.pub_fail()
-#    else:
-#        for cid, cname, entrypoint, used_cores, expose_ports in containers:
-#            c = Container.create(cid, host, version, cname, entrypoint, used_cores, env, expose_ports)
-#            if not c:
-#                continue
-#            notifier.notify_agent(cid)
-#            add_container_for_agent(c)
-#            add_container_backends(c)
-#            cids.append(cid)
-#        publish_to_service_discovery(version.name)
-#        task.finish_with_result(code.TASK_SUCCESS, container_ids=cids)
-#        notifier.pub_success()
 
 @current_app.task()
 def build_docker_image(task_id, base):
@@ -148,60 +109,6 @@ def remove_containers(task_id, cids, rmi):
         if container_ids:
             rds.srem('eru:agent:%s:containers' % host.name, *container_ids)
         rds.delete(*flags.keys())
-
-@current_app.task()
-def update_containers(task_id, version_id, cids):
-    task = Task.get(task_id)
-    notifier = TaskNotifier(task)
-    version = Version.get(version_id)
-    containers = Container.get_multi(cids)
-    port_count = sum(len(c.ports.all()) for c in containers)
-    host = task.host
-    rs = []
-    # cids 要从 eru:agent:%s:containers host.name 里删掉
-    # eru:agent:%s:container:flag ~ cids 要mset
-    # backends 要删掉
-    backends = {}
-
-    u_containers = [c for c in containers if c.version_id != version_id]
-    if not u_containers:
-        return
-    container_ids = [c.container_id for c in u_containers]
-    used_ports = host.get_free_ports(port_count)
-    host.occupy_ports(used_ports)
-    try:
-
-        for c in u_containers:
-            _backends = ['%s:%s' % (host.ip, p.port) for p in c.ports]
-            backends.setdefault('eru:app:%s:entrypoint:%s:backends' % (c.appname, c.entrypoint), []).extend(_backends)
-        rs = dockerjob.update_containers(host, u_containers, version, used_ports)
-    except Exception, e:
-        logger.exception(e)
-        host.release_ports(used_ports)
-        task.finish_with_result(code.TASK_FAILED)
-        notifier.pub_fail()
-    else:
-        if not rs:
-            return
-        for c, (cid, cname, expose_ports) in zip(u_containers, rs):
-            c.transform(version, expose_ports, cid, cname)
-        flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
-        rds.mset(**flags)
-        dockerjob.remove_container_by_cid(container_ids, host)
-        rds.delete(*flags.keys())
-
-        task.finish_with_result(code.TASK_SUCCESS)
-
-        for c in u_containers:
-            add_container_backends(c)
-            add_container_for_agent(c)
-
-        for key, bs in backends.iteritems():
-            if bs:
-                rds.srem(key, *bs)
-        rds.srem('eru:agent:%s:containers' % host.name, *container_ids)
-        publish_to_service_discovery(version.name)
-        notifier.pub_success()
 
 @current_app.task()
 def create_containers_with_macvlan(task_id, ncontainer, core_ids, network_ids):

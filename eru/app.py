@@ -11,12 +11,20 @@ from eru.common.settings import (ERU_BIND, ERU_WORKERS,
 from eru.async import make_celery
 from eru.models import db
 
-
-blueprints = ('version', 'sys', 'deploy', 'container',
-              'app', 'websockets', 'scale', 'task', 'resource',
-              'network', )
+blueprints = (
+    'app',
+    'container',
+    'deploy',
+    'host',
+    'network',
+    'version',
+    'resource',
+    'sys',
+    'scale',
+    'task',
+    'websockets',
+)
 exts = (db, )
-
 
 def init_logging(app):
     args = {
@@ -24,7 +32,6 @@ def init_logging(app):
         'format': '%(levelname)s:%(asctime)s:%(message)s',
     }
     logging.basicConfig(**args)
-
 
 def create_app_with_celery(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
@@ -44,9 +51,7 @@ def create_app_with_celery(static_url_path=None):
 
     return app, celery
 
-
 app, celery = create_app_with_celery()
-
 
 def main():
 
@@ -67,7 +72,6 @@ def main():
             return app
 
     Eru().run()
-
 
 if __name__ == '__main__':
     main()
