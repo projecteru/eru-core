@@ -12,12 +12,18 @@ bp = Blueprint('container', __name__, url_prefix='/api/container')
 @bp.route('/<string:cid>/', methods=['GET', ])
 @jsonify()
 def get_container_by_cid(cid):
-    return Container.get_by_container_id(cid)
+    c = Container.get_by_container_id(cid)
+    if not c:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Container %s not found' % cid)
+    return c
 
 @bp.route('/<int:id>/', methods=['GET', ])
 @jsonify()
 def get_container_by_id(id):
-    return Container.get(id)
+    c = Container.get(id)
+    if not c:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Container %s not found' % id)
+    return c
 
 @bp.route('/<cid>/', methods=['DELETE', ])
 @jsonify()
