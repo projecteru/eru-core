@@ -9,7 +9,7 @@ from flask import Blueprint, request
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
-from eru.common.settings import CORE_SPLIT, CORE_SHARE_BASE
+from eru.common.settings import CORE_SPLIT
 from eru.models import App, Group, Pod, Task, Host, Network
 from eru.utils.views import check_request_json, jsonify, EruAbortException
 
