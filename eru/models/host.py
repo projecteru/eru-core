@@ -5,6 +5,7 @@ import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
+from eru.common.settings import CORE_SPLIT
 
 class Core(Base):
     __tablename__ = 'core'
@@ -17,8 +18,8 @@ class Core(Base):
     def __init__(self, label):
         self.label = label
 
-    def is_used(self):
-        return self.used == 1
+    def is_free(self):
+        return self.used < CORE_SPLIT
 
 class Host(Base):
     __tablename__ = 'host'
@@ -74,7 +75,9 @@ class Host(Base):
         return self.addr.split(':', 1)[0]
 
     def get_free_cores(self):
-        return [c for c in self.cores.all() if not c.used]
+        full_cores = [c for c in self.cores.all() if not c.used]
+        part_cores = [c for c in self.cores.all() if c.used]
+        return full_cores, part_cores
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
         q = self.containers
@@ -101,15 +104,23 @@ class Host(Base):
         db.session.commit()
         return True
 
-    def occupy_cores(self, cores):
-        for core in cores:
-            core.used = 1
+    def occupy_cores(self, cores, nshare):
+        for core in cores.get('full', []):
+            core.used = CORE_SPLIT
+            db.session.add(core)
+        for core in cores.get('part', []):
+            # 控制原子性
+            core.used = Core.used + nshare
             db.session.add(core)
         db.session.commit()
 
-    def release_cores(self, cores):
-        for core in cores:
+    def release_cores(self, cores, nshare):
+        for core in cores.get('full', []):
             core.used = 0
+            db.session.add(core)
+        for core in cores.get('part', []):
+            # 控制原子性
+            core.used = Core.used - nshare
             db.session.add(core)
         db.session.commit()
 

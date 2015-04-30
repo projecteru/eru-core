@@ -67,7 +67,7 @@ def build_docker_image(task_id, base):
         notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
         try:
             dockerjob.remove_image(task.version, task.host)
-        except:
+        except Exception:
             pass
     except Exception, e:
         logger.exception(e)

@@ -9,6 +9,7 @@ from flask import Blueprint, request
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
+from eru.common.settings import CORE_SPLIT, CORE_SHARE_BASE
 from eru.models import App, Group, Pod, Task, Host, Network
 from eru.utils.views import check_request_json, jsonify, EruAbortException
 
@@ -24,7 +25,7 @@ def index():
 @jsonify()
 def create_private(group_name, pod_name, appname):
     """
-    ncore: int cpu num per container -1 means share
+    ncore: int cpu num per container -1 means share, support 1/CORE_SPLIT
     ncontainer: int container nums
     version: string deploy version
     expose: bool true or false, default true
@@ -35,7 +36,10 @@ def create_private(group_name, pod_name, appname):
 
     # TODO check if group has this pod
 
-    ncore = int(data['ncore']) # 是说一个容器要几个核...
+    core_require = int(float(data['ncore']) * CORE_SPLIT) # 是说一个容器要几个核...
+    ncore = core_require / CORE_SPLIT
+    nshare = core_require % CORE_SPLIT
+
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
     appconfig = version.appconfig
@@ -46,20 +50,20 @@ def create_private(group_name, pod_name, appname):
     tasks_info = []
     with rds.lock('%s:%s' % (group_name, pod_name)):
         # 不够了
-        if ncore > 0 and group.get_max_containers(pod, ncore) < ncontainer:
-            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
+        if group.get_max_containers(pod, ncore, nshare) < ncontainer:
+            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         try:
-            host_cores = group.get_free_cores(pod, ncontainer, ncore)
+            host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare)
             # 这个pod都不够host了
             if not host_cores:
-                raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
+                raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
 
             for (host, container_count), cores in host_cores.iteritems():
                 tasks_info.append(
-                    (version, host, container_count, cores, networks, data['entrypoint'], data['env'])
+                    (version, host, container_count, cores, nshare, networks, data['entrypoint'], data['env'])
                 )
-                host.occupy_cores(cores)
+                host.occupy_cores(cores, nshare)
         except Exception, e:
             logger.exception(e)
             raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
@@ -212,20 +216,25 @@ def validate_instance(group_name, pod_name, appname, version):
 
     return group, pod, application, version
 
-def _create_task(type_, version, host, ncontainer, cores, networks, entrypoint, env):
+def _create_task(type_, version, host, ncontainer, cores, nshare, networks, entrypoint, env):
     try:
-        core_ids = [c.id for c in cores]
+        full_core_ids = [c.id for c in cores.get('full', [])]
+        part_core_ids = [c.id for c in cores.get('part', [])]
         network_ids = [n.id for n in networks]
         task_props = {
             'ncontainer': ncontainer,
             'entrypoint': entrypoint,
             'env': env,
-            'cores': core_ids,
+            'full_cores': full_core_ids,
+            'part_cores': part_core_ids,
+            'nshare': nshare,
             'networks': network_ids,
         }
+        #TODO 修改 TASK 记录 models
+        #TODO 修改 create_containers_with_macvlan 接口
         task = Task.create(type_, version, host, task_props)
         create_containers_with_macvlan.apply_async(
-            args=(task.id, ncontainer, core_ids, network_ids),
+            args=(task.id, ncontainer, nshare, full_core_ids, part_core_ids, network_ids),
             task_id='task:%d' % task.id
         )
         return task

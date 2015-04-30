@@ -6,6 +6,7 @@ import logging
 from flask import Blueprint, request
 
 from eru.common import code
+from eru.common.settings import CORE_SPLIT
 from eru.common.clients import get_docker_client
 from eru.models import Group, Pod, Host
 from eru.utils.views import jsonify, check_request_json, EruAbortException
@@ -97,7 +98,7 @@ def assign_host_to_group(addr):
 @jsonify()
 def group_max_containers(group_name):
     pod_name = request.args.get('pod_name', type=str, default='')
-    cores_per_container = request.args.get('ncore', type=int, default=1)
+    core_require = request.args.get('ncore', type=float, default=1)
 
     group = Group.get_by_name(group_name)
     if not group:
@@ -106,7 +107,11 @@ def group_max_containers(group_name):
     if not pod:
         raise EruAbortException(code.HTTP_BAD_REQUEST)
 
-    return {'r':0, 'msg': code.OK, 'data': group.get_max_containers(pod, cores_per_container)}
+    core_require = int(core_require * CORE_SPLIT) # 是说一个容器要几个核...
+    ncore = core_require / CORE_SPLIT
+    nshare = core_require % CORE_SPLIT
+
+    return {'r':0, 'msg': code.OK, 'data': group.get_max_containers(pod, ncore, nshare)}
 
 
 @bp.errorhandler(EruAbortException)
