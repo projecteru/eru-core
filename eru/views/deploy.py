@@ -9,7 +9,6 @@ from flask import Blueprint, request
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
-from eru.common.settings import CORE_SPLIT
 from eru.models import App, Group, Pod, Task, Host, Network
 from eru.utils.views import check_request_json, jsonify, EruAbortException
 
@@ -25,7 +24,7 @@ def index():
 @jsonify()
 def create_private(group_name, pod_name, appname):
     """
-    ncore: int cpu num per container -1 means share, support 1/CORE_SPLIT
+    ncore: int cpu num per container -1 means share, support x.x
     ncontainer: int container nums
     version: string deploy version
     expose: bool true or false, default true
@@ -36,9 +35,9 @@ def create_private(group_name, pod_name, appname):
 
     # TODO check if group has this pod
 
-    core_require = int(float(data['ncore']) * CORE_SPLIT) # 是说一个容器要几个核...
-    ncore = core_require / CORE_SPLIT
-    nshare = core_require % CORE_SPLIT
+    core_require = int(float(data['ncore']) * pod.core_share) # 是说一个容器要几个核...
+    ncore = core_require / pod.core_share
+    nshare = core_require % pod.core_share
 
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))

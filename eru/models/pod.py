@@ -5,24 +5,28 @@ import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
-
+from eru.common.settings import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 
 class Pod(Base):
     __tablename__ = 'pod'
 
     name = db.Column(db.CHAR(30), nullable=False, unique=True)
+    core_share = db.Column(db.Integer, nullable=False, default=DEFAULT_CORE_SHARE)
+    max_share_core = db.Column(db.Integer, nullable=False, default=DEFAULT_MAX_SHARE_CORE)
     description = db.Column(db.Text)
 
     hosts = db.relationship('Host', backref='pod', lazy='dynamic')
 
-    def __init__(self, name, description):
+    def __init__(self, name, description, core_share, max_share_core):
         self.name = name
+        self.core_share = core_share
+        self.max_share_core = max_share_core
         self.description = description
 
     @classmethod
-    def create(cls, name, description=''):
+    def create(cls, name, description='', core_share=DEFAULT_CORE_SHARE, max_share_core=DEFAULT_MAX_SHARE_CORE):
         try:
-            pod = cls(name, description)
+            pod = cls(name, description, core_share, max_share_core)
             db.session.add(pod)
             db.session.commit()
             return pod

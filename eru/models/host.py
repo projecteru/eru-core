@@ -5,7 +5,6 @@ import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
-from eru.common.settings import CORE_SPLIT
 
 class Core(Base):
     __tablename__ = 'core'
@@ -19,7 +18,7 @@ class Core(Base):
         self.label = label
 
     def is_free(self):
-        return self.used < CORE_SPLIT
+        return self.used < self.host.pod.core_share
 
 class Host(Base):
     __tablename__ = 'host'
@@ -75,8 +74,9 @@ class Host(Base):
         return self.addr.split(':', 1)[0]
 
     def get_free_cores(self):
+        #TODO 用 SQL 查询解决啊
         full_cores = [c for c in self.cores.all() if not c.used]
-        part_cores = [c for c in self.cores.all() if c.used]
+        part_cores = [c for c in self.cores.all() if c.used < self.pod.core_share and c.used > 0]
         return full_cores, part_cores
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
@@ -106,7 +106,7 @@ class Host(Base):
 
     def occupy_cores(self, cores, nshare):
         for core in cores.get('full', []):
-            core.used = CORE_SPLIT
+            core.used = self.pod.core_share
             db.session.add(core)
         for core in cores.get('part', []):
             # 控制原子性
