@@ -111,10 +111,11 @@ def remove_containers(task_id, cids, rmi):
         rds.delete(*flags.keys())
 
 @current_app.task()
-def create_containers_with_macvlan(task_id, ncontainer, core_ids, network_ids):
+def create_containers_with_macvlan(task_id, ncontainer, nshare, full_core_ids, part_core_ids, network_ids):
     """
-    执行task_id的任务. 部署ncontainer个容器, 占用core_ids这些核, 绑定到networks这些子网
+    执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
+    #TODO support part core
     task = Task.get(task_id)
     if not task:
         return

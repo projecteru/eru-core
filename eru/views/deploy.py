@@ -48,16 +48,12 @@ def create_private(group_name, pod_name, appname):
 
     tasks_info = []
     with rds.lock('%s:%s' % (group_name, pod_name)):
-        # 不够了
-        if group.get_max_containers(pod, ncore, nshare) < ncontainer:
+        # 分配时不够直接raise
+        host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare)
+        if not host_cores:
             raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         try:
-            host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare)
-            # 这个pod都不够host了
-            if not host_cores:
-                raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
-
             for (host, container_count), cores in host_cores.iteritems():
                 tasks_info.append(
                     (version, host, container_count, cores, nshare, networks, data['entrypoint'], data['env'])
@@ -229,8 +225,6 @@ def _create_task(type_, version, host, ncontainer, cores, nshare, networks, entr
             'nshare': nshare,
             'networks': network_ids,
         }
-        #TODO 修改 TASK 记录 models
-        #TODO 修改 create_containers_with_macvlan 接口
         task = Task.create(type_, version, host, task_props)
         create_containers_with_macvlan.apply_async(
             args=(task.id, ncontainer, nshare, full_core_ids, part_core_ids, network_ids),

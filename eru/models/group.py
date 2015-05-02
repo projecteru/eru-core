@@ -115,9 +115,10 @@ class Group(Base):
                     # ncontainer 超过 part_result 不会影响
                     if ncontainer <= len(part_result):
                         result[(host, ncontainer)] = {'part': part_result[:ncontainer]}
+                        ncontainer = 0
                         break
                     result[(host, len(part_result))] = {'part': part_result}
-                    ncontainer = ncontainer - len(part_result)
+                    ncontainer -= len(part_result)
                 else:
                     # 计算使几个核为碎片核可以使整体可部署容器数最大
                     # 时间复杂度 O(N)
@@ -139,9 +140,10 @@ class Group(Base):
                     part_result.sort(cmp=lambda x, y: cmp(pod.core_share - x.used, pod.core_share - y.used))
                     if ncontainer <= count:
                         result[(host, ncontainer)] = {'full':full_result[:ncontainer*ncore],'part': part_result[:ncontainer]}
+                        ncontainer = 0
                         break
                     result[(host, count)] = {'full': full_result[:count*ncore], 'part': part_result[:count]}
-                    ncontainer = ncontainer - count
+                    ncontainer -= count
             else:
                 # 这个时候 ncore 肯定大于 0
                 count = full_cores_num / ncore
@@ -149,8 +151,13 @@ class Group(Base):
                     continue
                 if ncontainer <= count:
                     result[(host, ncontainer)] = {'full': full_cores[:ncontainer*ncore]}
+                    ncontainer = 0
                     break
                 result[(host, count)] = {'full': full_cores[:count*ncore]}
-                ncontainer = ncontainer - count
+                ncontainer -= count
+
+        if ncontainer != 0:
+            return {}
+
         return result
 
