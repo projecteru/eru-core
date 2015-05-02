@@ -7,6 +7,7 @@ from flask import Blueprint, request
 
 from eru.common import code
 from eru.common.clients import get_docker_client
+from eru.common.settings import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 from eru.models import Group, Pod, Host
 from eru.utils.views import jsonify, check_request_json, EruAbortException
 
@@ -35,7 +36,12 @@ def create_group():
 @jsonify(code.HTTP_CREATED)
 def create_pod():
     data = request.get_json()
-    if not Pod.create(data['name'], data.get('description', '')):
+    if not Pod.create(
+            data['name'],
+            data.get('description', ''),
+            data.get('core_share', DEFAULT_CORE_SHARE),
+            data.get('max_share_core', DEFAULT_MAX_SHARE_CORE),
+    ):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
