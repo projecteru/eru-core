@@ -132,7 +132,7 @@ class Group(Base):
                         # 算出这个组合最多部署多少个
                         can_deploy = max(
                             can_deploy, (full_cores[i:], part_cores+extend_part_cores),
-                            key=lambda x: min(x[0]/ncore, len(x[1]))
+                            key=lambda x: min(len(x[0])/ncore, len(x[1]))
                         )
                     full_result, part_result = can_deploy
                     count = min(full_result/ncore, len(part_result))
