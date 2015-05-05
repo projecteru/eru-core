@@ -108,7 +108,7 @@ class Group(Base):
                     part_result.extend(fragment for _ in range((pod.core_share - fragment.used) / nshare))
                 if ncore == 0:
                     # 考虑1个核以下的需求
-                    for fragment in full_cores[:max_share_core] - len(part_cores):
+                    for fragment in full_cores[:max_share_core - len(part_cores)]:
                         part_result.extend(fragment for _ in range(pod.core_share / nshare))
                     # 尽量使用空闲份数少的核
                     part_result.sort(cmp=lambda x, y: cmp(pod.core_share - x.used, pod.core_share - y.used))
