@@ -73,11 +73,9 @@ def push_image(host, version):
     rev = version.short_sha
     return client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
-
 def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
-
 
 def create_one_container(host, version, entrypoint, env='prod', cores=None):
     if cores is None:
@@ -135,8 +133,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
 
 def execute_container(host, container_id, cmd):
     client = get_docker_client(host.addr)
-    client.execute(cmd)
-
+    exec_id = client.exec_create(container_id, cmd)
+    return client.exec_start(exec_id)
 
 def start_containers(containers, host):
     """启动这个host上的这些容器"""
@@ -144,13 +142,11 @@ def start_containers(containers, host):
     for c in containers:
         client.start(c.container_id)
 
-
 def stop_containers(containers, host):
     """停止这个host上的这些容器"""
     client = get_docker_client(host.addr)
     for c in containers:
         client.stop(c.container_id)
-
 
 def remove_host_containers(containers, host):
     """删除这个host上的这些容器"""
@@ -160,13 +156,11 @@ def remove_host_containers(containers, host):
             client.stop(c.container_id)
         client.remove_container(c.container_id)
 
-
 def remove_container_by_cid(cids, host):
     client = get_docker_client(host.addr)
     for cid in cids:
         client.stop(cid)
         client.remove_container(cid)
-
 
 def remove_image(version, host):
     """在host上删除掉version的镜像"""
