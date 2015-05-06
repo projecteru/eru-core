@@ -6,6 +6,8 @@ import tempfile
 import pygit2
 import contextlib
 
+from docker.utils import create_host_config, LogConfig
+
 from res.ext.common import random_string
 
 from eru.common import settings
@@ -73,11 +75,9 @@ def push_image(host, version):
     rev = version.short_sha
     return client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
-
 def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
-
 
 def create_one_container(host, version, entrypoint, env='prod', cores=None):
     if cores is None:
@@ -117,6 +117,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     container_name = '_'.join([appname, entrypoint, random_string(6)])
     # cpuset: '0,1,2,3'
     cpuset = ','.join([c.label for c in cores])
+    # host_config, include log_config
+    host_config = create_host_config(log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER))
     container = client.create_container(
         image=image,
         command=entry['cmd'],
@@ -127,6 +129,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
         working_dir='/%s' % appname,
         network_disabled=settings.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
+        host_config=host_config,
     )
     container_id = container['Id']
 
@@ -135,8 +138,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
 
 def execute_container(host, container_id, cmd):
     client = get_docker_client(host.addr)
-    client.execute(cmd)
-
+    exec_id = client.exec_create(container_id, cmd)
+    return client.exec_start(exec_id)
 
 def start_containers(containers, host):
     """启动这个host上的这些容器"""
@@ -144,13 +147,11 @@ def start_containers(containers, host):
     for c in containers:
         client.start(c.container_id)
 
-
 def stop_containers(containers, host):
     """停止这个host上的这些容器"""
     client = get_docker_client(host.addr)
     for c in containers:
         client.stop(c.container_id)
-
 
 def remove_host_containers(containers, host):
     """删除这个host上的这些容器"""
@@ -160,13 +161,11 @@ def remove_host_containers(containers, host):
             client.stop(c.container_id)
         client.remove_container(c.container_id)
 
-
 def remove_container_by_cid(cids, host):
     client = get_docker_client(host.addr)
     for cid in cids:
         client.stop(cid)
         client.remove_container(cid)
-
 
 def remove_image(version, host):
     """在host上删除掉version的镜像"""
