@@ -6,6 +6,8 @@ import tempfile
 import pygit2
 import contextlib
 
+from docker.utils import create_host_config, LogConfig
+
 from res.ext.common import random_string
 
 from eru.common import settings
@@ -115,6 +117,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     container_name = '_'.join([appname, entrypoint, random_string(6)])
     # cpuset: '0,1,2,3'
     cpuset = ','.join([c.label for c in cores])
+    # host_config, include log_config
+    host_config = create_host_config(log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER))
     container = client.create_container(
         image=image,
         command=entry['cmd'],
@@ -125,6 +129,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
         working_dir='/%s' % appname,
         network_disabled=settings.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
+        host_config=host_config,
     )
     container_id = container['Id']
 
