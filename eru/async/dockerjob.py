@@ -106,6 +106,13 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     }
     env_dict.update(envconfig.to_env_dict())
 
+    volumes, binds = None, None
+    if settings.ERU_CONTAINER_PERMDIR:
+        permdir = settings.ERU_CONTAINER_PERMDIR % appname
+        env_dict['ERU_PERMDIR'] = permdir
+        volumes = [permdir,]
+        binds = {settings.ERU_HOST_PERMDIR % appname: {'bind': permdir, 'ro': False}}
+
     # container name: {appname}_{entrypoint}_{ident_id}
     container_name = '_'.join([appname, entrypoint, random_string(6)])
     # cpuset: '0,1,2,3'
@@ -119,10 +126,11 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
         cpuset=cpuset,
         working_dir='/%s' % appname,
         network_disabled=settings.DOCKER_NETWORK_DISABLED,
+        volumes=volumes,
     )
     container_id = container['Id']
 
-    client.start(container=container_id, network_mode=settings.DOCKER_NETWORK_MODE)
+    client.start(container=container_id, network_mode=settings.DOCKER_NETWORK_MODE, binds=binds)
     return container_id, container_name
 
 def execute_container(host, container_id, cmd):
