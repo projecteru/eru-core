@@ -61,7 +61,7 @@ class Group(Base):
         for host in hosts:
             full_cores, part_cores = host.get_free_cores()
             full_cores_num = len(full_cores)
-            full_total, part_total = 0
+            part_total = 0
             max_share_core = full_cores_num if pod.max_share_core == -1 else pod.max_share_core
             if nshare:
                 part_total = sum((pod.core_share - fragment.used) / nshare for fragment in part_cores)

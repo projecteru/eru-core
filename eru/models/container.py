@@ -102,7 +102,11 @@ class Container(Base):
         [ip.release() for ip in self.ips]
         # release core
         host = self.host
-        host.release_cores(self.cores.all())
+        cores_to_release = {
+                'full': [core for core in self.cores.all() if core.used == core.host.pod.core_share],
+                'part': [core for core in self.cores.all() if core.used < core.host.pod.core_share]
+                }
+        host.release_cores(cores_to_release, 0)
         host.count -= 1
         db.session.add(host)
         # remove container
