@@ -47,8 +47,13 @@ class Container(Base):
             db.session.add(container)
             host.count += 1
             db.session.add(host)
-            for core in cores:
+
+            for core in cores.get('full', []):
                 container.cores.append(core)
+
+            for core in cores.get('part', []):
+                container.cores.append(core)
+
             db.session.commit()
             return container
         except sqlalchemy.exc.IntegrityError:
@@ -100,7 +105,7 @@ class Container(Base):
         db.session.add(self)
         db.session.commit()
 
-    def delete(self):
+    def delete(self, nshare=0):
         """删除这条记录, 记得要释放自己占用的资源"""
         # release ip
         [ip.release() for ip in self.ips]
@@ -110,7 +115,7 @@ class Container(Base):
                 'full': [core for core in self.cores.all() if core.used == core.host.pod.core_share],
                 'part': [core for core in self.cores.all() if core.used < core.host.pod.core_share]
                 }
-        host.release_cores(cores_to_release, 0)
+        host.release_cores(cores_to_release, nshare)
         host.count -= 1
         db.session.add(host)
         # remove container

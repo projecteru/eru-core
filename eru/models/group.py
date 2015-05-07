@@ -135,7 +135,7 @@ class Group(Base):
                             key=lambda x: min(len(x[0])/ncore, len(x[1]))
                         )
                     full_result, part_result = can_deploy
-                    count = min(full_result/ncore, len(part_result))
+                    count = min(len(full_result) / ncore, len(part_result))
                     # 尽量使用空闲份数少的核
                     part_result.sort(cmp=lambda x, y: cmp(pod.core_share - x.used, pod.core_share - y.used))
                     if ncontainer <= count:

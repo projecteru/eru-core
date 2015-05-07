@@ -108,10 +108,11 @@ class Host(Base):
         for core in cores.get('full', []):
             core.used = self.pod.core_share
             db.session.add(core)
+
         for core in cores.get('part', []):
-            # 控制原子性
-            core.used = Core.used + nshare
+            core.used = core.used + nshare
             db.session.add(core)
+
         db.session.commit()
 
     def release_cores(self, cores, nshare):
