@@ -108,7 +108,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
 
     # TODO use settings!!!
     # This modification for applying sysctl params
-    volumes, binds = ['/writable-proc'], {'/proc': {'bind': '/writable-proc', 'ro': False}}
+    volumes = ['/writable-proc/sys']
+    binds = {'/proc/sys': {'bind': '/writable-proc/sys', 'ro': False}}
     if settings.ERU_CONTAINER_PERMDIR:
         permdir = settings.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
@@ -124,7 +125,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     container = client.create_container(
         image=image,
         command=entry['cmd'],
-        user=version.app_id,
+        # TODO because we have to modify kernel params, so use root
+        #user=version.app_id,
         environment=env_dict,
         name=container_name,
         cpuset=cpuset,
