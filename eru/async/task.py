@@ -180,6 +180,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, full_core_ids, p
         dockerjob.remove_container_by_cid([cid], host)
         host.release_cores(cores)
         [ip.release() for ip in ips]
+        # 失败了就得清理掉这个key
+        rds.delete(feedback_key)
 
     publish_to_service_discovery(version.name)
     task.finish_with_result(code.TASK_SUCCESS, container_ids=cids)

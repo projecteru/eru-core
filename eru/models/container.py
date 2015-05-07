@@ -67,6 +67,10 @@ class Container(Base):
     def appname(self):
         return self.name.split('_')[0]
 
+    @property
+    def ident_id(self):
+        return self.name.split('_')[-1]
+
     def get_ports(self):
         appconfig = self.version.appconfig
         entry = appconfig.entrypoints[self.entrypoint]

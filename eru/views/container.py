@@ -6,18 +6,25 @@ from eru.common import code
 from eru.models import Container
 from eru.utils.views import jsonify, EruAbortException
 from eru.async import dockerjob
+from eru.helpers.network import rebind_container_ip
 
 bp = Blueprint('container', __name__, url_prefix='/api/container')
 
 @bp.route('/<string:cid>/', methods=['GET', ])
 @jsonify()
 def get_container_by_cid(cid):
-    return Container.get_by_container_id(cid)
+    c = Container.get_by_container_id(cid)
+    if not c:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Container %s not found' % cid)
+    return c
 
 @bp.route('/<int:id>/', methods=['GET', ])
 @jsonify()
 def get_container_by_id(id):
-    return Container.get(id)
+    c = Container.get(id)
+    if not c:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Container %s not found' % id)
+    return c
 
 @bp.route('/<cid>/', methods=['DELETE', ])
 @jsonify()
@@ -41,6 +48,7 @@ def kill_container(cid):
 def cure_container(cid):
     c = Container.get_by_container_id(cid)
     if c:
+        rebind_container_ip(c)
         c.cure()
     return {'r':0, 'msg': code.OK}
 
@@ -59,6 +67,7 @@ def start_container(cid):
     if c:
         c.cure()
         dockerjob.start_containers([c,], c.host)
+        rebind_container_ip(c)
     return {'r':0, 'msg': code.OK}
 
 @bp.route('/<cid>/stop', methods=['PUT', ])

@@ -107,7 +107,8 @@ class Network(Base):
             network = n.network
             base = int(network.network_address)
             # 一次写500个吧
-            for ipnums in more_itertools.chunked(xrange(base+1, base+network.num_addresses), 500):
+            # IP 留一个 xx.xx.xx.1 做网关
+            for ipnums in more_itertools.chunked(xrange(base+2, base+network.num_addresses), 500):
                 rds.sadd(n.storekey, *ipnums)
 
             return n
