@@ -107,8 +107,8 @@ class Network(Base):
             network = n.network
             base = int(network.network_address)
             # 一次写500个吧
-            # IP 留一个 xx.xx.xx.1 做网关
-            for ipnums in more_itertools.chunked(xrange(base+2, base+network.num_addresses), 500):
+            # IP留100个 xx.xx.xx.(1-100) 做网关
+            for ipnums in more_itertools.chunked(xrange(base+100, base+network.num_addresses), 500):
                 rds.sadd(n.storekey, *ipnums)
 
             return n
@@ -145,9 +145,9 @@ class Network(Base):
 
     @property
     def used_count(self):
-        # 网关就不要给别人了
+        # 网关就不要给别人了, 留了100个
         n = self.network
-        return (n.num_addresses - 1) - self.pool_size
+        return (n.num_addresses - 100) - self.pool_size
 
     def acquire_ip(self):
         """take an IP from network, return an IP object"""
