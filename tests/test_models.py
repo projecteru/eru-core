@@ -208,7 +208,7 @@ def test_network(test_db):
     assert n is not None
     assert len(n.ips.all()) == 0
     assert n.hostmask_string == '16'
-    assert n.pool_size == 65534
+    assert n.pool_size == 65436
     assert n.used_count == 0
 
     ip = n.acquire_ip()
@@ -221,10 +221,10 @@ def test_network(test_db):
     assert ip.address.startswith('10.1')
 
     assert len(n.ips.all()) == 1
-    assert n.pool_size == 65533
+    assert n.pool_size == 65435
     assert n.used_count == 1
 
     ip.release()
     assert len(n.ips.all()) == 0
-    assert n.pool_size == 65534
+    assert n.pool_size == 65436
     assert n.used_count == 0
