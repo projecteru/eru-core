@@ -122,13 +122,15 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     cpuset = ','.join([c.label for c in cores])
     # host_config, include log_config
     host_config = create_host_config(log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER))
-    command = 'launch %d %s %s' % (version.app_id, appname, entry['cmd'])
+    #TODO use setting files
+    command = '%d %s %s' % (4000+version.app_id, appname, entry['cmd'])
     container = client.create_container(
         image=image,
         command=command,
         # TODO because we have to modify kernel params, so use root
         #user=version.app_id,
         environment=env_dict,
+        entrypoint='launch',
         name=container_name,
         cpuset=cpuset,
         working_dir='/%s' % appname,
