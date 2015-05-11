@@ -8,4 +8,4 @@ name=$1
 shift
 
 useradd -u $uid -d /nonexistent -s /sbin/nologin -U $name
-exec sudo -u $name $@
+exec sudo -E -u $name $@
