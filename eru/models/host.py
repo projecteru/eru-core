@@ -75,8 +75,12 @@ class Host(Base):
 
     def get_free_cores(self):
         #TODO 用 SQL 查询解决啊
-        full_cores = [c for c in self.cores.all() if not c.used]
-        part_cores = [c for c in self.cores.all() if c.used < self.pod.core_share and c.used > 0]
+        full_cores, part_cores = [], []
+        for c in self.cores.all():
+            if not c.used:
+                full_cores.append(c)
+            elif c.used < self.pod.core_share:
+                part_cores.append(c)
         return full_cores, part_cores
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):

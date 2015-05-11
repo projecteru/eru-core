@@ -112,9 +112,9 @@ class Container(Base):
         # release core
         host = self.host
         cores_to_release = {
-                'full': [core for core in self.cores.all() if core.used == core.host.pod.core_share],
-                'part': [core for core in self.cores.all() if core.used < core.host.pod.core_share]
-                }
+            'full': [core for core in self.cores.all() if core.used == core.host.pod.core_share],
+            'part': [core for core in self.cores.all() if core.used < core.host.pod.core_share]
+        }
         host.release_cores(cores_to_release, nshare)
         host.count -= 1
         db.session.add(host)
