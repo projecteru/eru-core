@@ -2,10 +2,4 @@
 echo 32768 > /writable-proc/sys/net/core/somaxconn
 echo 1 > /writable-proc/sys/vm/overcommit_memory
 
-uid=$1
-shift
-name=$1
-shift
-
-useradd -u $uid -d /nonexistent -s /sbin/nologin -U $name
-exec sudo -E -u $name $@
+exec sudo -E -u {{appname}} $@

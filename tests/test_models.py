@@ -81,6 +81,7 @@ def test_host(test_db):
 def test_container(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
     assert a is not None
+    assert a.id == a.user_id
 
     v = a.add_version(random_sha1())
     assert v is not None
