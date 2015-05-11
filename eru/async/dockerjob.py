@@ -12,24 +12,16 @@ from res.ext.common import random_string
 
 from eru.common import settings
 from eru.common.clients import get_docker_client
+from eru.templates import template
 from eru.utils.ensure import ensure_dir_absent, ensure_file
-
-DOCKER_FILE_TEMPLATE = '''
-FROM {base}
-ENV ERU 1
-ADD {appname} /{appname}
-WORKDIR /{appname}
-RUN {build_cmd}
-'''
 
 @contextlib.contextmanager
 def build_image_environment(version, base, rev):
     appname = version.appconfig.appname
-    build_cmd = version.appconfig.build
+    build_cmds = version.appconfig.build
 
-    if isinstance(build_cmd, list):
-        # 好 tricky...
-        build_cmd = '\nRUN '.join(build_cmd)
+    if not isinstance(build_cmds, list):
+        build_cmds = [build_cmds,]
 
     # checkout code of version @ rev
     build_path = tempfile.mkdtemp()
@@ -42,13 +34,16 @@ def build_image_environment(version, base, rev):
     # remove git history
     ensure_dir_absent(os.path.join(clone_path, '.git'))
 
+    # launcher script
+    launcher = template.render_template('launcher.jinja', appname=appname)
+    ensure_file(os.path.join(build_path, 'launch'), content=launcher, mode=0755)
+
     # build dockerfile
-    dockerfile = DOCKER_FILE_TEMPLATE.format(
-        base=base, appname=appname, build_cmd=build_cmd
-    )
+    dockerfile = template.render_template(
+        'dockerfile.jinja', base=base, appname=appname,
+        build_cmds=build_cmds, user_id=version.user_id)
     ensure_file(os.path.join(build_path, 'Dockerfile'), content=dockerfile)
 
-    # TODO 这里可能需要加上静态文件的处理
     yield build_path
 
     # clean build dir
@@ -122,13 +117,9 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
     cpuset = ','.join([c.label for c in cores])
     # host_config, include log_config
     host_config = create_host_config(log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER))
-    #TODO use setting files
-    command = '%d %s %s' % (4000+version.app_id, appname, entry['cmd'])
     container = client.create_container(
         image=image,
-        command=command,
-        # TODO because we have to modify kernel params, so use root
-        #user=version.app_id,
+        command=entry['cmd'],
         environment=env_dict,
         entrypoint='launch',
         name=container_name,
