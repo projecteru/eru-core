@@ -3,6 +3,7 @@
 import pytest
 
 from eru.app import create_app_with_celery
+from eru.common.clients import rds
 from eru.models import db
 
 
@@ -35,6 +36,7 @@ def test_db(request, app):
     def tear_down():
         db.session.remove()
         db.drop_all()
+        rds.flushall()
 
     request.addfinalizer(tear_down)
 
