@@ -154,11 +154,13 @@ def test_container(test_db):
         assert c.app.id == a.id
         assert c.version.id == v.id
         assert c.is_alive
-        assert len(c.cores.all()) == 3
+        assert len(c.full_cores.all()) == 3
+        assert len(c.part_cores.all()) == 0
         all_core_labels = sorted(['0', '1', '2', '3', ])
-        used_core_labels = [core.label for core in c.cores.all()]
+        used_full_core_labels = [core.label for core in c.full_cores.all()]
+        used_part_core_labels = [core.label for core in c.part_cores.all()]
         free_core_labels = [core.label for core in c.host.get_free_cores()[0]]
-        assert all_core_labels == sorted(used_core_labels + free_core_labels)
+        assert all_core_labels == sorted(used_full_core_labels + used_part_core_labels + free_core_labels)
 
     #释放核
     for c in containers:
@@ -209,10 +211,14 @@ def test_container(test_db):
         assert c.app.id == a.id
         assert c.version.id == v.id
         assert c.is_alive
-        assert len(c.cores.all()) == 4  ## 3 full cores and 1 part core
+        assert len(c.full_cores.all()) == 3
+        assert len(c.part_cores.all()) == 1
         all_core_labels = sorted(['0', '1', '2', '3', ])
-        used_core_labels = [core.label for core in c.cores.all()]
+        used_full_core_labels = [core.label for core in c.full_cores.all()]
+        used_part_core_labels = [core.label for core in c.part_cores.all()]
         free_core_labels = [core.label for core in c.host.get_free_cores()[0]]
+        assert all_core_labels == sorted(used_full_core_labels + used_part_core_labels + free_core_labels)
+
 
     #释放核
     for c in containers:
@@ -228,6 +234,59 @@ def test_container(test_db):
         assert len(full_cores) == 4
         assert len(host.containers.all()) == 0
         assert host.count == 0
+
+    #获取
+    host_cores = g.get_free_cores(p, 6, 1, 5)
+    containers = []
+    for (host, count), cores in host_cores.iteritems():
+        cores_per_container = len(cores['full']) / count
+        for i in range(count):
+            cid = random_sha1()
+            used_cores = {'full':  cores['full'][i*cores_per_container:(i+1)*cores_per_container],
+                    'part': cores['part'][i:i+1]}
+            # not using a port
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
+            assert c is not None
+            containers.append(c)
+            host.occupy_cores(used_cores, 5)
+
+    for host in g.private_hosts.all():
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 1
+        assert len(part_cores) == 0
+        assert len(host.containers.all()) == 2
+        assert host.count == 2
+
+    assert len(containers) == 6
+    assert len(v.containers.all()) == 6
+
+    for c in containers:
+        assert c.host_id in host_ids1
+        assert c.host_id not in host_ids2
+        assert c.app.id == a.id
+        assert c.version.id == v.id
+        assert c.is_alive
+        assert len(c.full_cores.all()) == 1
+        assert len(c.part_cores.all()) == 1
+
+    ##释放核
+    for c in containers:
+        c.delete(5)
+
+    assert len(v.containers.all()) == 0
+    assert g.get_max_containers(p, 3, 0) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
+    assert len(host_cores) == 3
+
+    for host in g.private_hosts.all():
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 4
+        assert len(part_cores) == 0
+        assert len(host.containers.all()) == 0
+        assert host.count == 0
+
+
+
 
 def test_container_transform(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')

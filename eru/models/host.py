@@ -6,6 +6,7 @@ import sqlalchemy.exc
 from eru.models import db
 from eru.models.base import Base
 
+
 class Core(Base):
     __tablename__ = 'core'
 
@@ -19,6 +20,7 @@ class Core(Base):
 
     def is_free(self):
         return self.used < self.host.pod.core_share
+
 
 class Host(Base):
     __tablename__ = 'host'
