@@ -24,7 +24,7 @@ def index():
 @jsonify()
 def create_private(group_name, pod_name, appname):
     """
-    ncore: int cpu num per container -1 means share
+    ncore: int cpu num per container -1 means share, support x.x
     ncontainer: int container nums
     version: string deploy version
     expose: bool true or false, default true
@@ -35,7 +35,10 @@ def create_private(group_name, pod_name, appname):
 
     # TODO check if group has this pod
 
-    ncore = int(data['ncore']) # 是说一个容器要几个核...
+    core_require = int(float(data['ncore']) * pod.core_share) # 是说一个容器要几个核...
+    ncore = core_require / pod.core_share
+    nshare = core_require % pod.core_share
+
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
     appconfig = version.appconfig
@@ -45,21 +48,17 @@ def create_private(group_name, pod_name, appname):
 
     tasks_info = []
     with rds.lock('%s:%s' % (group_name, pod_name)):
-        # 不够了
-        if ncore > 0 and group.get_max_containers(pod, ncore) < ncontainer:
-            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
+        # 分配时不够直接raise
+        host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare)
+        if not host_cores:
+            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         try:
-            host_cores = group.get_free_cores(pod, ncontainer, ncore)
-            # 这个pod都不够host了
-            if not host_cores:
-                raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough cores')
-
             for (host, container_count), cores in host_cores.iteritems():
                 tasks_info.append(
-                    (version, host, container_count, cores, networks, data['entrypoint'], data['env'])
+                    (version, host, container_count, cores, nshare, networks, data['entrypoint'], data['env'])
                 )
-                host.occupy_cores(cores)
+                host.occupy_cores(cores, nshare)
         except Exception, e:
             logger.exception(e)
             raise EruAbortException(code.HTTP_BAD_REQUEST, str(e))
@@ -212,20 +211,23 @@ def validate_instance(group_name, pod_name, appname, version):
 
     return group, pod, application, version
 
-def _create_task(type_, version, host, ncontainer, cores, networks, entrypoint, env):
+def _create_task(type_, version, host, ncontainer, cores, nshare, networks, entrypoint, env):
     try:
-        core_ids = [c.id for c in cores]
+        full_core_ids = [c.id for c in cores.get('full', [])]
+        part_core_ids = [c.id for c in cores.get('part', [])]
         network_ids = [n.id for n in networks]
         task_props = {
             'ncontainer': ncontainer,
             'entrypoint': entrypoint,
             'env': env,
-            'cores': core_ids,
+            'full_cores': full_core_ids,
+            'part_cores': part_core_ids,
+            'nshare': nshare,
             'networks': network_ids,
         }
         task = Task.create(type_, version, host, task_props)
         create_containers_with_macvlan.apply_async(
-            args=(task.id, ncontainer, core_ids, network_ids),
+            args=(task.id, ncontainer, nshare, full_core_ids, part_core_ids, network_ids),
             task_id='task:%d' % task.id
         )
         return task

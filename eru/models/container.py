@@ -8,6 +8,12 @@ from datetime import datetime
 from eru.models import db
 from eru.models.base import Base
 
+
+container_part_cores = db.Table('container_part_cores', db.Model.metadata,
+    db.Column('containers_id', db.Integer, db.ForeignKey('container.id')),
+    db.Column('full_core_id', db.Integer, db.ForeignKey('core.id')))
+
+
 class Container(Base):
     __tablename__ = 'container'
 
@@ -23,7 +29,8 @@ class Container(Base):
     created = db.Column(db.DateTime, default=datetime.now)
     is_alive = db.Column(db.Integer, default=1)
 
-    cores = db.relationship('Core', backref='container', lazy='dynamic')
+    full_cores = db.relationship('Core', backref='container', lazy='dynamic')
+    part_cores = db.relationship('Core', secondary=container_part_cores, backref='containers', lazy='dynamic')
     ips = db.relationship('IP', backref='container', lazy='dynamic')
 
     def __init__(self, container_id, host, version, name, entrypoint, env):
@@ -39,7 +46,7 @@ class Container(Base):
     def create(cls, container_id, host, version, name,
             entrypoint, cores, env):
         """
-        创建一个容器. cores 是 [core, core, ...].
+        创建一个容器. cores 是 {'full': [core, core, ...], 'part': [core, core, ...]}
         ips是string
         """
         try:
@@ -47,8 +54,13 @@ class Container(Base):
             db.session.add(container)
             host.count += 1
             db.session.add(host)
-            for core in cores:
-                container.cores.append(core)
+
+            for core in cores.get('full', []):
+                container.full_cores.append(core)
+
+            for core in cores.get('part', []):
+                container.part_cores.append(core)
+
             db.session.commit()
             return container
         except sqlalchemy.exc.IntegrityError:
@@ -100,13 +112,17 @@ class Container(Base):
         db.session.add(self)
         db.session.commit()
 
-    def delete(self):
+    def delete(self, nshare=0):
         """删除这条记录, 记得要释放自己占用的资源"""
         # release ip
         [ip.release() for ip in self.ips]
         # release core
         host = self.host
-        host.release_cores(self.cores.all())
+        cores_to_release = {
+            'full': [core for core in self.full_cores.all()],
+            'part': [core for core in self.part_cores.all()]
+        }
+        host.release_cores(cores_to_release, nshare)
         host.count -= 1
         db.session.add(host)
         # remove container
@@ -127,7 +143,7 @@ class Container(Base):
         d = super(Container, self).to_dict()
         d.update(
             host=self.host.addr.split(':')[0],
-            cores=[c.label for c in self.cores.all()],
+            cores={'full': [c.label for c in self.full_cores.all()], 'part': [c.label for c in self.part_cores.all()]},
             version=self.version.short_sha,
             networks=self.ips.all(),
         )

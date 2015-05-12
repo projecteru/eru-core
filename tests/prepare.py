@@ -40,14 +40,14 @@ def create_test_suite():
         host.assigned_to_group(group)
 
     containers = []
-    for (host, count), cores in group.get_free_cores(pod, 4, 4).iteritems():
+    for (host, count), cores in group.get_free_cores(pod, 4, 4, 0).iteritems():
         cores_per_container = len(cores) / count
         for i in range(count):
             cid = random_sha1()
-            used_cores = cores[i*cores_per_container:(i+1)*cores_per_container]
+            used_cores = cores['full'][i*cores_per_container:(i+1)*cores_per_container]
             c = Container.create(cid, host, version, random_string(), 'entrypoint', used_cores, 'env')
             containers.append(c)
-        host.occupy_cores(cores)
+        host.occupy_cores(cores, 0)
     return app, version, group, pod, hosts, containers
 
 def create_local_test_data(private=False):

@@ -2,6 +2,8 @@
 
 from eru.models import Group, Pod, Host, App, Container, Network
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
+import pytest
+
 
 def test_group_pod(test_db):
     g1 = Group.create('group1', 'group1')
@@ -24,59 +26,79 @@ def test_group_pod(test_db):
 
     assert p3.assigned_to_group(g3)
     assert p3.get_free_public_hosts(10) == []
-    assert g3.get_max_containers(p3, 1) == 0
-    assert g3.get_free_cores(p3, 1, 1) == {}
+    assert g3.get_max_containers(p3, 1, 2) == 0
+    assert g3.get_free_cores(p3, 1, 1, 2) == {}
 
 def test_host(test_db):
     g = Group.create('group', 'group')
-    p = Pod.create('pod', 'pod')
+    p = Pod.create('pod', 'pod', 10, -1)
     assert p.assigned_to_group(g)
     hosts = [Host.create(p, random_ipv4(), random_string(prefix='host'),
         random_uuid(), 4, 4096) for i in range(6)]
     for host in hosts:
         assert host is not None
         assert len(host.cores.all()) == 4
-        assert len(host.get_free_cores()) == 4
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 4
+        assert len(part_cores) == 0
 
     assert len(g.private_hosts.all()) == 0
-    assert g.get_max_containers(p, 1) == 0
-    assert g.get_free_cores(p, 1, 1) == {}
+    assert g.get_max_containers(p, 1, 0) == 0
+    assert g.get_free_cores(p, 1, 1, 0) == {}
 
     for host in hosts[:3]:
         host.assigned_to_group(g)
     host_ids1 = {h.id for h in hosts[:3]}
     host_ids2 = {h.id for h in hosts[3:]}
 
+
     assert len(g.private_hosts.all()) == 3
-    assert g.get_max_containers(p, 1) == 12
-    host_cores = g.get_free_cores(p, 12, 1)
+    assert g.get_max_containers(p, 1, 0) == 12
+    host_cores = g.get_free_cores(p, 12, 1, 0)
     assert len(host_cores) == 3
-    
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
         assert host.id not in host_ids2
         assert count == 4
-        assert len(cores) == 4
+        assert len(cores['full']) == 4
 
-    assert g.get_max_containers(p, 3) == 3
-    host_cores = g.get_free_cores(p, 3, 3)
+    assert g.get_max_containers(p, 3, 0) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
     assert len(host_cores) == 3
-
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
         assert host.id not in host_ids2
         assert count == 1
-        assert len(cores) == 3
+        assert len(cores['full']) == 3
 
-    assert g.get_max_containers(p, 2) == 6
-    host_cores = g.get_free_cores(p, 4, 2)
+    assert g.get_max_containers(p, 2, 0) == 6
+    host_cores = g.get_free_cores(p, 4, 2, 0)
     assert len(host_cores) == 2
-
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
         assert host.id not in host_ids2
         assert count == 2
-        assert len(cores) == 4
+        assert len(cores['full']) == 4
+
+    assert g.get_max_containers(p, 1, 1) == 9
+    host_cores = g.get_free_cores(p, 3, 1, 1)
+    assert len(host_cores) == 1
+    for (host, count), cores in host_cores.iteritems():
+        assert host.id in host_ids1
+        assert host.id not in host_ids2
+        assert count == 3
+        assert len(cores['full']) == 3
+        assert len(cores['part']) == 3
+
+    assert g.get_max_containers(p, 2, 3) == 3
+    host_cores = g.get_free_cores(p, 3, 2, 3)
+    assert len(host_cores) == 3
+    for (host, count), cores in host_cores.iteritems():
+        assert host.id in host_ids1
+        assert host.id not in host_ids2
+        assert count == 1
+        assert len(cores['full']) == 2
+        assert len(cores['part']) == 1
 
 def test_container(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
@@ -91,7 +113,7 @@ def test_container(test_db):
     assert len(v.tasks.all()) == 0
 
     g = Group.create('group', 'group')
-    p = Pod.create('pod', 'pod')
+    p = Pod.create('pod', 'pod', 10, -1)
     assert p.assigned_to_group(g)
     hosts = [Host.create(p, random_ipv4(), random_string(prefix='host'),
         random_uuid(), 4, 4096) for i in range(6)]
@@ -101,24 +123,26 @@ def test_container(test_db):
     host_ids1 = {h.id for h in hosts[:3]}
     host_ids2 = {h.id for h in hosts[3:]}
 
-    assert g.get_max_containers(p, 3) == 3
-    host_cores = g.get_free_cores(p, 3, 3)
-    assert len(host_cores) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
 
+    #测试没有碎片核的情况
+    #获取核
     containers = []
     for (host, count), cores in host_cores.iteritems():
-        cores_per_container = len(cores) / count
+        cores_per_container = len(cores['full']) / count
         for i in range(count):
             cid = random_sha1()
-            used_cores = cores[i*cores_per_container:(i+1)*cores_per_container]
+            used_cores = {'full': cores['full'][i*cores_per_container:(i+1)*cores_per_container]}
             # not using a port
             c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
             assert c is not None
             containers.append(c)
-        host.occupy_cores(cores)
+        host.occupy_cores(cores, 0)
 
     for host in g.private_hosts.all():
-        assert len(host.get_free_cores()) == 1
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 1
+        assert len(part_cores) == 0
         assert len(host.containers.all()) == 1
         assert host.count == 1
 
@@ -131,24 +155,139 @@ def test_container(test_db):
         assert c.app.id == a.id
         assert c.version.id == v.id
         assert c.is_alive
-        assert len(c.cores.all()) == 3
+        assert len(c.full_cores.all()) == 3
+        assert len(c.part_cores.all()) == 0
         all_core_labels = sorted(['0', '1', '2', '3', ])
-        used_core_labels = [core.label for core in c.cores.all()]
-        free_core_labels = [core.label for core in c.host.get_free_cores()]
-        assert all_core_labels == sorted(used_core_labels + free_core_labels)
+        used_full_core_labels = [core.label for core in c.full_cores.all()]
+        used_part_core_labels = [core.label for core in c.part_cores.all()]
+        free_core_labels = [core.label for core in c.host.get_free_cores()[0]]
+        assert all_core_labels == sorted(used_full_core_labels + used_part_core_labels + free_core_labels)
 
+    #释放核
     for c in containers:
         c.delete()
 
     assert len(v.containers.all()) == 0
-    assert g.get_max_containers(p, 3) == 3
-    host_cores = g.get_free_cores(p, 3, 3)
+    assert g.get_max_containers(p, 3, 0) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
     assert len(host_cores) == 3
 
     for host in g.private_hosts.all():
-        assert len(host.get_free_cores()) == 4
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 4
+        assert len(part_cores) == 0
         assert len(host.containers.all()) == 0
         assert host.count == 0
+
+    #测试有碎片的情况
+    #获取核
+    host_cores = g.get_free_cores(p, 3, 3, 4)
+    containers = []
+    for (host, count), cores in host_cores.iteritems():
+        cores_per_container = len(cores['full']) / count
+        for i in range(count):
+            cid = random_sha1()
+            used_cores = {'full':  cores['full'][i*cores_per_container:(i+1)*cores_per_container],
+                    'part': cores['part']}
+            # not using a port
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
+            assert c is not None
+            containers.append(c)
+        host.occupy_cores(cores, 4)
+
+    for host in g.private_hosts.all():
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 0
+        assert len(part_cores) == 1
+        assert part_cores[0].used == 4
+        assert len(host.containers.all()) == 1
+        assert host.count == 1
+
+    assert len(containers) == 3
+    assert len(v.containers.all()) == 3
+
+    for c in containers:
+        assert c.host_id in host_ids1
+        assert c.host_id not in host_ids2
+        assert c.app.id == a.id
+        assert c.version.id == v.id
+        assert c.is_alive
+        assert len(c.full_cores.all()) == 3
+        assert len(c.part_cores.all()) == 1
+        all_core_labels = sorted(['0', '1', '2', '3', ])
+        used_full_core_labels = [core.label for core in c.full_cores.all()]
+        used_part_core_labels = [core.label for core in c.part_cores.all()]
+        free_core_labels = [core.label for core in c.host.get_free_cores()[0]]
+        assert all_core_labels == sorted(used_full_core_labels + used_part_core_labels + free_core_labels)
+
+
+    #释放核
+    for c in containers:
+        c.delete(4)
+
+    assert len(v.containers.all()) == 0
+    assert g.get_max_containers(p, 3, 0) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
+    assert len(host_cores) == 3
+
+    for host in g.private_hosts.all():
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 4
+        assert len(host.containers.all()) == 0
+        assert host.count == 0
+
+    #获取
+    host_cores = g.get_free_cores(p, 6, 1, 5)
+    containers = []
+    for (host, count), cores in host_cores.iteritems():
+        cores_per_container = len(cores['full']) / count
+        for i in range(count):
+            cid = random_sha1()
+            used_cores = {'full':  cores['full'][i*cores_per_container:(i+1)*cores_per_container],
+                    'part': cores['part'][i:i+1]}
+            # not using a port
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
+            assert c is not None
+            containers.append(c)
+            host.occupy_cores(used_cores, 5)
+
+    for host in g.private_hosts.all():
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 1
+        assert len(part_cores) == 0
+        assert len(host.containers.all()) == 2
+        assert host.count == 2
+
+    assert len(containers) == 6
+    assert len(v.containers.all()) == 6
+
+    for c in containers:
+        assert c.host_id in host_ids1
+        assert c.host_id not in host_ids2
+        assert c.app.id == a.id
+        assert c.version.id == v.id
+        assert c.is_alive
+        assert len(c.full_cores.all()) == 1
+        assert len(c.part_cores.all()) == 1
+
+    ##释放核
+    for c in containers:
+        c.delete(5)
+
+    assert len(v.containers.all()) == 0
+    assert g.get_max_containers(p, 3, 0) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
+    assert len(host_cores) == 3
+
+    for host in g.private_hosts.all():
+        full_cores, part_cores = host.get_free_cores()
+        assert len(full_cores) == 4
+        assert len(part_cores) == 0
+        assert len(host.containers.all()) == 0
+        assert host.count == 0
+
+
+
 
 def test_container_transform(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
@@ -171,8 +310,8 @@ def test_container_transform(test_db):
     for host in hosts[:3]:
         host.assigned_to_group(g)
 
-    assert g.get_max_containers(p, 3) == 3
-    host_cores = g.get_free_cores(p, 3, 3)
+    assert g.get_max_containers(p, 3, 0) == 3
+    host_cores = g.get_free_cores(p, 3, 3, 0)
     assert len(host_cores) == 3
 
     containers = []
@@ -180,14 +319,14 @@ def test_container_transform(test_db):
         cores_per_container = len(cores) / count
         for i in range(count):
             cid = random_sha1()
-            used_cores = cores[i*cores_per_container:(i+1)*cores_per_container]
+            used_cores = {'full': cores['full'][i*cores_per_container:(i+1)*cores_per_container]}
             c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
             assert c is not None
             containers.append(c)
-        host.occupy_cores(cores)
+        host.occupy_cores(cores, 0)
 
     for host in g.private_hosts.all():
-        assert len(host.get_free_cores()) == 1
+        assert len(host.get_free_cores()[0]) == 1
         assert len(host.containers.all()) == 1
         assert host.count == 1
 
