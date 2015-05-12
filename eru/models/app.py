@@ -51,6 +51,10 @@ class Version(Base):
     def short_sha(self):
         return self.sha[:7]
 
+    @property
+    def user_id(self):
+        return self.app.user_id
+
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
 
@@ -74,6 +78,7 @@ class App(Base):
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     token = db.Column(db.CHAR(32), nullable=False, unique=True)
     update = db.Column(db.DateTime, default=datetime.now)
+    _user_id = db.Column(db.Integer, nullable=False, default=0)
 
     versions = db.relationship('Version', backref='app', lazy='dynamic')
     containers = db.relationship('Container', backref='app', lazy='dynamic')
@@ -101,6 +106,11 @@ class App(Base):
     @classmethod
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
+
+    @property
+    def user_id(self):
+        """默认使用id, 如果不对可以通过_user_id手动纠正."""
+        return self._user_id or self.id
 
     def get_version(self, version):
         return self.versions.filter(Version.sha.like('{}%'.format(version))).first()

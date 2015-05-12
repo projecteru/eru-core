@@ -1,0 +1,5 @@
+#! /bin/sh
+echo 32768 > /writable-proc/sys/net/core/somaxconn
+echo 1 > /writable-proc/sys/vm/overcommit_memory
+
+exec sudo -E -u {{appname}} $@
