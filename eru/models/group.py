@@ -156,7 +156,7 @@ class Group(Base):
                 result[(host, count)] = {'full': full_cores[:count*ncore]}
                 ncontainer -= count
 
-        if ncontainer != 0:
+        if ncontainer:
             return {}
 
         return result
