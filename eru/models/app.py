@@ -121,6 +121,12 @@ class App(Base):
     def list_resource_config(self):
         return ResourceConfig.list_env(self.name)
 
+    def list_versions(self, start=0, limit=20):
+        q = self.versions.order_by(Version.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def add_version(self, sha):
         version = Version.create(sha, self.id)
         if not version:

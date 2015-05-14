@@ -86,6 +86,12 @@ class Host(Base):
         r = rds.zrange(self._cores_key, 0, -1, withscores=True, score_cast_func=int)
         return [Core(name, self.id, value) for name, value in r]
 
+    def list_containers(self, start=0, limit=20):
+        q = self.containers.offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def get_free_cores(self):
         """取可用的core, 返回一个完全可用列表, 以及部分可用列表"""
         slice_count = self.pod.core_share

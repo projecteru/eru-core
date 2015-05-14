@@ -150,6 +150,7 @@ class Container(Base):
             },
             version=self.version.short_sha,
             networks=self.ips.all(),
+            backends=self.get_backends(),
         )
         return d
 

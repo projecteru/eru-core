@@ -3,7 +3,7 @@
 import inspect
 import logging
 
-from flask import Blueprint, request
+from flask import Blueprint, request, g
 from werkzeug.utils import import_string
 
 from eru.models import App
@@ -12,10 +12,8 @@ from eru.common.settings import RESOURCES
 from eru.utils.views import (jsonify, check_request_json,
         check_request_args, EruAbortException)
 
-
 bp = Blueprint('app', __name__, url_prefix='/api/app')
 logger = logging.getLogger(__name__)
-
 
 @bp.route('/<name>', methods=['GET', ])
 @jsonify()
@@ -24,7 +22,6 @@ def get_app(name):
     if not app:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'App %s not found' % name)
     return app
-
 
 @bp.route('/<name>/<version>', methods=['GET', ])
 @jsonify()
@@ -37,7 +34,6 @@ def get_version(name, version):
     if not v:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
     return v
-
 
 @bp.route('/register/', methods=['POST', ])
 @check_request_json(['name', 'version', 'git', 'token', 'appyaml'])
@@ -63,7 +59,6 @@ def register_app_version():
     logger.info('app version successfully created')
     return {'r': 0, 'msg': 'ok'}
 
-
 @bp.route('/<name>/env/', methods=['PUT', ])
 @check_request_json('env')
 @jsonify()
@@ -80,7 +75,6 @@ def set_app_env(name):
     envconfig.save()
     return {'r': 0, 'msg': 'ok'}
 
-
 @bp.route('/<name>/env/', methods=['GET', ])
 @check_request_args('env')
 @jsonify()
@@ -93,7 +87,6 @@ def get_app_env(name):
     envconfig = app.get_resource_config(request.args['env'])
     return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
 
-
 @bp.route('/<name>/listenv', methods=['GET', ])
 @jsonify()
 def list_app_env(name):
@@ -103,7 +96,6 @@ def list_app_env(name):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
 
     return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
-
 
 @bp.route('/alloc/<name>/<env>/<res_name>/<res_alias>/', methods=['POST', ])
 @jsonify(code.HTTP_CREATED)
@@ -136,7 +128,6 @@ def alloc_resource(name, env, res_name, res_alias):
     else:
         return {'r': 0, 'msg': 'ok', 'data': envconfig.to_dict()}
 
-
 @bp.route('/<name>/containers/', methods=['GET', ])
 @jsonify()
 def list_app_containers(name):
@@ -147,6 +138,15 @@ def list_app_containers(name):
     containers = app.containers.all()
     return {'r': 0, 'msg': 'ok', 'containers': containers}
 
+@bp.route('/<name>/versions/', methods=['GET', ])
+@jsonify()
+def list_app_versions(name):
+    app = App.get_by_name(name)
+    if not app:
+        logger.error('app not found, env list ignored')
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
+    versions = app.list_versions(g.start, g.limit)
+    return {'r': 0, 'msg': 'ok', 'versions': versions}
 
 @bp.route('/<name>/<version>/containers/', methods=['GET', ])
 @jsonify()
@@ -160,7 +160,6 @@ def list_version_containers(name, version):
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
     containers = v.containers.all()
     return {'r': 0, 'msg': 'ok', 'containers': containers}
-
 
 @bp.errorhandler(EruAbortException)
 @jsonify()
