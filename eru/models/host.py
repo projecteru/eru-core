@@ -141,11 +141,19 @@ class Host(Base):
         _pipeline.execute()
 
     def kill(self):
+        """一个host上不会太多container"""
         self.is_alive = False
+        for c in self.containers.all():
+            c.is_alive = 0
+            db.session.add(c)
         db.session.add(self)
         db.session.commit()
 
     def cure(self):
+        """一个host上不会太多container"""
         self.is_alive = True
+        for c in self.containers.all():
+            c.is_alive = 1
+            db.session.add(c)
         db.session.add(self)
         db.session.commit()

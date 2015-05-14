@@ -24,7 +24,7 @@ def get_host_by_name(host_name):
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Host %s not found' % host_name)
     return host
 
-@bp.route('/<string:host_name>/kill/', methods=['PUT', 'POST'])
+@bp.route('/<string:host_name>/down/', methods=['PUT', 'POST'])
 @jsonify()
 def kill_host(host_name):
     host = Host.get_by_name(host_name)
