@@ -137,7 +137,7 @@ def build_image(group_name, pod_name, appname):
     )
     return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
 
-@bp.route('/rmcontainer/', methods=['PUT', 'POST', ])
+@bp.route('/rmcontainers/', methods=['PUT', 'POST', ])
 @check_request_json(['cids'])
 @jsonify()
 def rm_containers():
