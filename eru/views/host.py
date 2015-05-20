@@ -10,7 +10,7 @@ bp = Blueprint('host', __name__, url_prefix='/api/host')
 
 @bp.route('/<int:host_id>/', methods=['GET'])
 @jsonify()
-def get_network(host_id):
+def get_host(host_id):
     host = Host.get(host_id)
     if not host:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Host %s not found' % host_id)
@@ -18,7 +18,7 @@ def get_network(host_id):
 
 @bp.route('/<string:host_name>/', methods=['GET'])
 @jsonify()
-def get_network_by_name(host_name):
+def get_host_by_name(host_name):
     host = Host.get_by_name(host_name)
     if not host:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Host %s not found' % host_name)
