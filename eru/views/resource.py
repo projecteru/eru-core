@@ -8,6 +8,7 @@ from eru.utils.views import jsonify, EruAbortException
 
 bp = Blueprint('resource', __name__, url_prefix='/api/resource')
 
+
 @bp.route('/host/<host_id>/resource/')
 @jsonify()
 def get_host_resource(host_id):
@@ -22,6 +23,7 @@ def get_host_resource(host_id):
         'memory': host.mem,
     }
 
+
 @bp.route('/pod/<pod_id>/resource/')
 @jsonify()
 def get_pod_resource(pod_id):
@@ -34,6 +36,7 @@ def get_pod_resource(pod_id):
         'core_count': core_count,
         'free_cores': [c.label for c in free_cores],
     }
+
 
 @bp.errorhandler(EruAbortException)
 @jsonify()
