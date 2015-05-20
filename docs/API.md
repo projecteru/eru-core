@@ -15,46 +15,46 @@ API
 
 * Set app environment
 
-        PUT /api/app/:appname/env
+        PUT /api/app/:appname/env/
 
     * env: environment variables, e.g: `{"RUNENV": "PROD", "TESTING": "false"}`
 
 * Get app
 
-        GET /api/app/:name
+        GET /api/app/:name/
 
 * Get version of app
 
-        GET /api/app/:name/:version
+        GET /api/app/:name/:version/
 
 * Get environment of app
 
-        GET /api/app/:name/:env
+        GET /api/app/:name/:env/
 
 * List app environment content
 
-        GET /api/app/:appname/listenv
+        GET /api/app/:appname/listenv/
 
 * alloc app resource
 
-        POST /api/app/alloc/:name/:env/:resource_name/:resource_alias
+        POST /api/app/alloc/:name/:env/:resource_name/:resource_alias/
 
         * e.g. /api/app/alooc/app1/prod/mysql/
 
 * list containers that belongs to app
 
-        GET /api/app/:name/containers
+        GET /api/app/:name/containers/
 
 * list containers in a version
 
-        GET /api/app/:app_name/:version/containers
+        GET /api/app/:app_name/:version/containers/
 
 
 ### Deploy
 
 * Deploy app on private host
 
-        POST /api/deploy/private/:group_name/:pod_name/:app_name
+        POST /api/deploy/private/:group_name/:pod_name/:app_name/
 
     * ncore: core count for one container
     * ncontainer: how many containers to deploy
@@ -66,7 +66,7 @@ API
 
 * Deploy app on public host
 
-        POST /api/deploy/public/:group_name/:pod_name/:app_name
+        POST /api/deploy/public/:group_name/:pod_name/:app_name/
 
     * ncontainer: how many containers to deploy
     * version: version of app
@@ -77,14 +77,14 @@ API
 
 * Build image
 
-        POST /api/deploy/build/:group_name/:pod_name/:app_name
+        POST /api/deploy/build/:group_name/:pod_name/:app_name/
 
     * base: base image
     * version: version of image
 
 * Remove containers
 
-        POST /api/deploy/rmcontainer/:group_name/:pod_name/:app_name
+        POST /api/deploy/rmcontainer/:group_name/:pod_name/:app_name/
 
     * version: version of app
     * host: host name
@@ -92,7 +92,7 @@ API
 
 *  Offline a version i.e. remove a version
 
-        POST /api/deploy/rmversion/:group_name/:pod_name/:app_name
+        POST /api/deploy/rmversion/:group_name/:pod_name/:app_name/
 
     * version: version name
 
@@ -101,102 +101,102 @@ API
 
 * Get container
 
-        GET /api/container/:container_id
-        GET /api/container/:id
+        GET /api/container/:container_id/
+        GET /api/container/:id/
 
 * Remove one container
 
-        DELETE /api/container/:container_id
+        DELETE /api/container/:container_id/
 
 * Kill container
 
-        PUT /api/container/:container_id/kill
+        PUT /api/container/:container_id/kill/
 
 * Cure container
 
-        PUT /api/container/:container_id/cure
+        PUT /api/container/:container_id/cure/
 
 * Poll container
 
-        GET /api/container/:container_id/poll
+        GET /api/container/:container_id/poll/
 
 * Start container
 
-        PUT /api/container/:container_id/start
+        PUT /api/container/:container_id/start/
 
 * Stop container
 
-        PUT /api/container/:container_id/stop
+        PUT /api/container/:container_id/stop/
 
 ### Host
 
 * Get host by id
 
-        GET /api/host/:host_id
+        GET /api/host/:host_id/
 
 * Get host by name
 
-        GET /api/host/:host_name
+        GET /api/host/:host_name/
 
 * Kill host
 
-        PUT /api/host/:host_name/kill
+        PUT /api/host/:host_name/kill/
 
 * Cure host
 
-        PUT /api/host/:host_name/cure
+        PUT /api/host/:host_name/cure/
 
 
 ### Network
 
 * Create Network
 
-        POST /api/network/create
+        POST /api/network/create/
 
     * name: ip number of network
     * netspace: id of network
 
 * get network by id
 
-        GET /api/network/:network_id
+        GET /api/network/:network_id/
 
 * get network by name
 
-        GET /api/network/:network_name
+        GET /api/network/:network_name/
 
 * list networks
 
-        GET /api/network/list
+        GET /api/network/list/
 
 
 ### Resource
 
 * Get host resource
 
-        GET /api/resource/host/:host_id/resource
+        GET /api/resource/host/:host_id/resource/
 
 * GET pod resource
 
-        GET /api/resource/pod/:pod_id/resource
+        GET /api/resource/pod/:pod_id/resource/
 
 ### scale
 
 * touch version scale infomation
 
-        GET /api/scale/:name/:version/info
+        GET /api/scale/:name/:version/info/
 
 ### sys
 
 * create group
 
-        POST /api/sys/group/create
+        POST /api/sys/group/create/
 
     * name: the name of group you creating
     * description: descripe your group
 
 * create pod
 
-        POST /api/sys/pod/create
+        POST /api/sys/pod/create/
 
     * name: name of pod
     * description: descripe your pod
@@ -205,25 +205,25 @@ API
 
 * assign pod to a group
 
-        POST /api/sys/pod/:pod_name/assign
+        POST /api/sys/pod/:pod_name/assign/
     * group_name: the name of group you wanna assign
 
 * Create host
 
-        POST /api/sys/host/create
+        POST /api/sys/host/create/
 
     * addr: the address of this host
     * pod_name: the name of pod this host belongs to
 
 * Assign host to a group
 
-        POST /api/sys/host/:address/assign
+        POST /api/sys/host/:address/assign/
 
     * group_name: the name of group you wanna assign
 
 * get group max containers in a group
 
-        GET /api/sys/group/:group_name/available_container_count
+        GET /api/sys/group/:group_name/available_container_count/
 
     * pod_name: pod name
     * ncore: how many cores you reqire.
@@ -232,10 +232,11 @@ API
 
 * get a task by id
 
-        GET /api/task/:task_id
+        GET /api/task/:task_id/
 
 ### Version
 
 * Get eru version infomation
+
         GET /
 
