@@ -1,18 +1,14 @@
 #!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
+import cPickle
 import itertools
 import sqlalchemy.exc
 from datetime import datetime
 
+from eru.common.clients import rds
 from eru.models import db
 from eru.models.base import Base
-
-
-container_part_cores = db.Table('container_part_cores', db.Model.metadata,
-    db.Column('containers_id', db.Integer, db.ForeignKey('container.id')),
-    db.Column('full_core_id', db.Integer, db.ForeignKey('core.id')))
-
 
 class Container(Base):
     __tablename__ = 'container'
@@ -29,8 +25,6 @@ class Container(Base):
     created = db.Column(db.DateTime, default=datetime.now)
     is_alive = db.Column(db.Integer, default=1)
 
-    full_cores = db.relationship('Core', backref='container', lazy='dynamic')
-    part_cores = db.relationship('Core', secondary=container_part_cores, backref='containers', lazy='dynamic')
     ips = db.relationship('IP', backref='container', lazy='dynamic')
 
     def __init__(self, container_id, host, version, name, entrypoint, env):
@@ -44,7 +38,7 @@ class Container(Base):
 
     @classmethod
     def create(cls, container_id, host, version, name,
-            entrypoint, cores, env):
+            entrypoint, cores, env, nshare=0):
         """
         创建一个容器. cores 是 {'full': [core, core, ...], 'part': [core, core, ...]}
         ips是string
@@ -54,14 +48,10 @@ class Container(Base):
             db.session.add(container)
             host.count += 1
             db.session.add(host)
-
-            for core in cores.get('full', []):
-                container.full_cores.append(core)
-
-            for core in cores.get('part', []):
-                container.part_cores.append(core)
-
             db.session.commit()
+
+            cores['nshare'] = nshare
+            container.cores = cores
             return container
         except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
@@ -83,6 +73,33 @@ class Container(Base):
     def ident_id(self):
         return self.name.split('_')[-1]
 
+    @property
+    def _cores_key(self):
+        return 'eru:container:%s:cores' % self.id
+
+    @property
+    def cores(self):
+        try:
+            return cPickle.loads(rds.get(self._cores_key))
+        except (EOFError, TypeError):
+            return {}
+
+    @cores.setter
+    def cores(self, cores):
+        rds.set(self._cores_key, cPickle.dumps(cores))
+
+    @cores.deleter
+    def cores(self):
+        rds.delete(self._cores_key)
+
+    @property
+    def full_cores(self):
+        return self.cores.get('full', [])
+
+    @property
+    def part_cores(self):
+        return self.cores.get('part', [])
+
     def get_ports(self):
         appconfig = self.version.appconfig
         entry = appconfig.entrypoints[self.entrypoint]
@@ -98,31 +115,14 @@ class Container(Base):
         ports = self.get_ports()
         return ['{0}:{1}'.format(ip, port) for ip, port in itertools.product(ips, ports)]
 
-    def transform(self, version, cid, name):
-        """变身!
-        更新容器的时候需要让这个容器修改一下
-        修改这个容器, 用新的version, cid, ports, cid来替换.
-        版本, 端口, 容器的id一定会更新.
-        """
-        # 核不需要释放, 继续复用原有的
-        # 新的属性设置上去
-        self.version_id = version.id
-        self.container_id = cid
-        self.name = name
-        db.session.add(self)
-        db.session.commit()
-
-    def delete(self, nshare=0):
+    def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
         # release ip
         [ip.release() for ip in self.ips]
         # release core
         host = self.host
-        cores_to_release = {
-            'full': [core for core in self.full_cores.all()],
-            'part': [core for core in self.part_cores.all()]
-        }
-        host.release_cores(cores_to_release, nshare)
+        host.release_cores(self.cores, self.cores['nshare'])
+        del self.cores
         host.count -= 1
         db.session.add(host)
         # remove container
@@ -143,7 +143,11 @@ class Container(Base):
         d = super(Container, self).to_dict()
         d.update(
             host=self.host.addr.split(':')[0],
-            cores={'full': [c.label for c in self.full_cores.all()], 'part': [c.label for c in self.part_cores.all()]},
+            cores={
+                'full': [c.label for c in self.full_cores],
+                'part': [c.label for c in self.part_cores],
+                'nshare': self.cores['nshare'],
+            },
             version=self.version.short_sha,
             networks=self.ips.all(),
         )
