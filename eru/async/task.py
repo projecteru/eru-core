@@ -172,7 +172,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
 
         else:
             logger.info('Creating container with cid %s and ips %s' % (cid, ips))
-            c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env)
+            c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env, nshare)
             for ip in ips:
                 ip.assigned_to_container(c)
             notifier.notify_agent(cid)

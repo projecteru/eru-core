@@ -146,7 +146,7 @@ class Container(Base):
             cores={
                 'full': [c.label for c in self.full_cores],
                 'part': [c.label for c in self.part_cores],
-                'nshare': self.cores['nshare'],
+                'nshare': self.cores.get('nshare', 0),
             },
             version=self.version.short_sha,
             networks=self.ips.all(),
