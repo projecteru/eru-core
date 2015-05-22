@@ -96,8 +96,15 @@ class Host(Base):
         """取可用的core, 返回一个完全可用列表, 以及部分可用列表"""
         slice_count = self.pod.core_share
         r = rds.zrange(self._cores_key, 0, -1, withscores=True, score_cast_func=int)
-        cores = [Core(name, self.id, value) for name, value in r]
-        return [c for c in cores if c.remain == slice_count], [c for c in cores if 0 < c.remain < slice_count]
+        full = []
+        fragment = []
+        for name, value in r:
+            c = Core(name, self.id, value)
+            if value == slice_count:
+                full.append(c)
+            elif 0 < value < slice_count:
+                fragment.append(c)
+        return full, fragment
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
         q = self.containers
