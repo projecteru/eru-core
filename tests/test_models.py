@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import operator
+from more_itertools import chunked
 from eru.models import Group, Pod, Host, App, Container, Network
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
 
@@ -333,6 +335,45 @@ def test_occupy_and_release_cores(test_db):
     host.release_cores(cores, 8)
     for core in host.cores:
         assert core.remain == 10
+
+def test_container_release_cores(test_db):
+    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
+    v = a.add_version(random_sha1())
+    g = Group.create('group', 'group')
+    p = Pod.create('pod', 'pod', 10, -1)
+    host = Host.create(p, random_ipv4(), random_string(), random_uuid(), 200, 0)
+    assert p.assigned_to_group(g)
+    assert host.assigned_to_group(g)
+
+    for core in host.cores:
+        assert core.host_id == host.id
+        assert core.remain == 10
+
+    containers = []
+    
+    cores = sorted(host.cores, key=operator.attrgetter('label'))
+    for fcores, pcores in zip(chunked(cores[:100], 10), chunked(cores[100:], 10)):
+        used_cores = {'full': fcores, 'part': pcores}
+        host.occupy_cores(used_cores, 5)
+        c = Container.create(random_sha1(), host, v, random_string(), 'entrypoint', used_cores, 'env', nshare=5)
+        containers.append(c)
+
+    cores = sorted(host.cores, key=operator.attrgetter('label'))
+    for fcores, pcores in zip(chunked(cores[:100], 10), chunked(cores[100:], 10)):
+        for core in fcores:
+            assert core.remain == 0
+        for core in pcores:
+            assert core.remain == 5
+
+    for c in containers:
+        c.delete()
+
+    cores = sorted(host.cores, key=operator.attrgetter('label'))
+    for fcores, pcores in zip(chunked(cores[:100], 10), chunked(cores[100:], 10)):
+        for core in fcores:
+            assert core.remain == 10
+        for core in pcores:
+            assert core.remain == 10
 
 def test_network(test_db):
     n = Network.create('net', '10.1.0.0/16')

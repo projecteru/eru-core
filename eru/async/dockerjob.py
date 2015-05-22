@@ -74,7 +74,7 @@ def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
-def create_one_container(host, version, entrypoint, env='prod', cores=None):
+def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024):
     if cores is None:
         cores = []
 
@@ -128,6 +128,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None):
         network_disabled=settings.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
         host_config=host_config,
+        cpu_shares=cpu_shares,
     )
     container_id = container['Id']
 

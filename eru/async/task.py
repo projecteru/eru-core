@@ -2,14 +2,15 @@
 #coding:utf-8
 
 import logging
-import more_itertools
+from more_itertools import chunked
+from itertools import izip_longest
 from celery import current_app
 
 from eru.common import code
 from eru.common.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
-from eru.models import Container, Task, Core, Network
+from eru.models import Container, Task, Network
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ def remove_containers(task_id, cids, rmi):
         rds.delete(*flags.keys())
 
 @current_app.task()
-def create_containers_with_macvlan(task_id, ncontainer, nshare, full_core_ids, part_core_ids, network_ids):
+def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_ids):
     """
     执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
@@ -127,19 +128,25 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, full_core_ids, p
     version = task.version
     entrypoint = task.props['entrypoint']
     env = task.props['env']
-    used_cores = Core.get_multi(core_ids)
+    cpu_shares = int(float(nshare) / host.pod.core_share * 1024)
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
     feedback_key = 'eru:agent:%s:feedback' % task_id
 
     cids = []
 
-    for cores in more_itertools.chunked(used_cores, len(core_ids)/ncontainer):
+    full_cores, part_cores = cores.get('full', []), cores.get('part', [])
+    for fcores, pcores in izip_longest(
+        chunked(full_cores, len(full_cores)/ncontainer),
+        chunked(part_cores, len(part_cores)/ncontainer),
+        fillvalue=[]
+    ):
+        cores_for_one_container = {'full': fcores, 'part': pcores}
         try:
             cid, cname = dockerjob.create_one_container(host, version,
-                    entrypoint, env, cores)
+                entrypoint, env, fcores+pcores, cpu_shares)
         except:
-            host.release_cores(cores)
+            host.release_cores(cores_for_one_container, nshare)
             continue
 
         ips = [n.acquire_ip() for n in networks]
@@ -165,7 +172,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, full_core_ids, p
 
         else:
             logger.info('Creating container with cid %s and ips %s' % (cid, ips))
-            c = Container.create(cid, host, version, cname, entrypoint, cores, env)
+            c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env)
             for ip in ips:
                 ip.assigned_to_container(c)
             notifier.notify_agent(cid)
@@ -178,7 +185,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, full_core_ids, p
         # 清理掉失败的容器, 释放核, 释放ip
         logger.info('Cleaning failed container with cid %s' % cid)
         dockerjob.remove_container_by_cid([cid], host)
-        host.release_cores(cores)
+        host.release_cores(cores_for_one_container, nshare)
         [ip.release() for ip in ips]
         # 失败了就得清理掉这个key
         rds.delete(feedback_key)
