@@ -1,9 +1,9 @@
 # coding: utf-8
 
+import operator
+from more_itertools import chunked
 from eru.models import Group, Pod, Host, App, Container, Network
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
-import pytest
-
 
 def test_group_pod(test_db):
     g1 = Group.create('group1', 'group1')
@@ -37,7 +37,7 @@ def test_host(test_db):
         random_uuid(), 4, 4096) for i in range(6)]
     for host in hosts:
         assert host is not None
-        assert len(host.cores.all()) == 4
+        assert len(host.cores) == 4
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 4
         assert len(part_cores) == 0
@@ -50,7 +50,6 @@ def test_host(test_db):
         host.assigned_to_group(g)
     host_ids1 = {h.id for h in hosts[:3]}
     host_ids2 = {h.id for h in hosts[3:]}
-
 
     assert len(g.private_hosts.all()) == 3
     assert g.get_max_containers(p, 1, 0) == 12
@@ -129,15 +128,14 @@ def test_container(test_db):
     #获取核
     containers = []
     for (host, count), cores in host_cores.iteritems():
+        host.occupy_cores(cores, 0)
         cores_per_container = len(cores['full']) / count
         for i in range(count):
             cid = random_sha1()
             used_cores = {'full': cores['full'][i*cores_per_container:(i+1)*cores_per_container]}
-            # not using a port
-            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env', nshare=0)
             assert c is not None
             containers.append(c)
-        host.occupy_cores(cores, 0)
 
     for host in g.private_hosts.all():
         full_cores, part_cores = host.get_free_cores()
@@ -155,11 +153,11 @@ def test_container(test_db):
         assert c.app.id == a.id
         assert c.version.id == v.id
         assert c.is_alive
-        assert len(c.full_cores.all()) == 3
-        assert len(c.part_cores.all()) == 0
+        assert len(c.full_cores) == 3
+        assert len(c.part_cores) == 0
         all_core_labels = sorted(['0', '1', '2', '3', ])
-        used_full_core_labels = [core.label for core in c.full_cores.all()]
-        used_part_core_labels = [core.label for core in c.part_cores.all()]
+        used_full_core_labels = [core.label for core in c.full_cores]
+        used_part_core_labels = [core.label for core in c.part_cores]
         free_core_labels = [core.label for core in c.host.get_free_cores()[0]]
         assert all_core_labels == sorted(used_full_core_labels + used_part_core_labels + free_core_labels)
 
@@ -185,21 +183,21 @@ def test_container(test_db):
     containers = []
     for (host, count), cores in host_cores.iteritems():
         cores_per_container = len(cores['full']) / count
+        host.occupy_cores(cores, 4)
         for i in range(count):
             cid = random_sha1()
             used_cores = {'full':  cores['full'][i*cores_per_container:(i+1)*cores_per_container],
                     'part': cores['part']}
             # not using a port
-            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env', nshare=4)
             assert c is not None
             containers.append(c)
-        host.occupy_cores(cores, 4)
 
     for host in g.private_hosts.all():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 0
         assert len(part_cores) == 1
-        assert part_cores[0].used == 4
+        assert part_cores[0].remain == 6
         assert len(host.containers.all()) == 1
         assert host.count == 1
 
@@ -212,18 +210,17 @@ def test_container(test_db):
         assert c.app.id == a.id
         assert c.version.id == v.id
         assert c.is_alive
-        assert len(c.full_cores.all()) == 3
-        assert len(c.part_cores.all()) == 1
+        assert len(c.full_cores) == 3
+        assert len(c.part_cores) == 1
         all_core_labels = sorted(['0', '1', '2', '3', ])
-        used_full_core_labels = [core.label for core in c.full_cores.all()]
-        used_part_core_labels = [core.label for core in c.part_cores.all()]
+        used_full_core_labels = [core.label for core in c.full_cores]
+        used_part_core_labels = [core.label for core in c.part_cores]
         free_core_labels = [core.label for core in c.host.get_free_cores()[0]]
         assert all_core_labels == sorted(used_full_core_labels + used_part_core_labels + free_core_labels)
 
-
     #释放核
     for c in containers:
-        c.delete(4)
+        c.delete()
 
     assert len(v.containers.all()) == 0
     assert g.get_max_containers(p, 3, 0) == 3
@@ -243,13 +240,15 @@ def test_container(test_db):
         cores_per_container = len(cores['full']) / count
         for i in range(count):
             cid = random_sha1()
-            used_cores = {'full':  cores['full'][i*cores_per_container:(i+1)*cores_per_container],
-                    'part': cores['part'][i:i+1]}
+            used_cores = {
+                'full':  cores['full'][i*cores_per_container:(i+1)*cores_per_container],
+                'part': cores['part'][i:i+1],
+            }
+            host.occupy_cores(used_cores, 5)
             # not using a port
-            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
+            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env', nshare=5)
             assert c is not None
             containers.append(c)
-            host.occupy_cores(used_cores, 5)
 
     for host in g.private_hosts.all():
         full_cores, part_cores = host.get_free_cores()
@@ -267,12 +266,12 @@ def test_container(test_db):
         assert c.app.id == a.id
         assert c.version.id == v.id
         assert c.is_alive
-        assert len(c.full_cores.all()) == 1
-        assert len(c.part_cores.all()) == 1
+        assert len(c.full_cores) == 1
+        assert len(c.part_cores) == 1
 
     ##释放核
     for c in containers:
-        c.delete(5)
+        c.delete()
 
     assert len(v.containers.all()) == 0
     assert g.get_max_containers(p, 3, 0) == 3
@@ -286,62 +285,95 @@ def test_container(test_db):
         assert len(host.containers.all()) == 0
         assert host.count == 0
 
-
-
-
-def test_container_transform(test_db):
-    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
-    assert a is not None
-
-    v = a.add_version(random_sha1())
-    v2 = a.add_version(random_sha1())
-    assert v is not None
-    assert v.app.id == a.id
-    assert v.name == a.name
-    assert len(v.containers.all()) == 0
-    assert len(v.tasks.all()) == 0
-
+def test_occupy_and_release_cores(test_db):
     g = Group.create('group', 'group')
-    p = Pod.create('pod', 'pod')
+    p = Pod.create('pod', 'pod', 10, -1)
+    host = Host.create(p, random_ipv4(), random_string(), random_uuid(), 200, 0)
     assert p.assigned_to_group(g)
-    hosts = [Host.create(p, random_ipv4(), random_string(prefix='host'),
-        random_uuid(), 4, 4096) for i in range(6)]
+    assert host.assigned_to_group(g)
 
-    for host in hosts[:3]:
-        host.assigned_to_group(g)
+    for core in host.cores:
+        assert core.host_id == host.id
+        assert core.remain == 10
 
-    assert g.get_max_containers(p, 3, 0) == 3
-    host_cores = g.get_free_cores(p, 3, 3, 0)
-    assert len(host_cores) == 3
+    cores = {
+        'full': host.cores[:100],
+        'part': host.cores[100:],
+    }
+
+    host.occupy_cores(cores, 5)
+    for core in host.cores[:100]:
+        assert core.remain == 0
+    for core in host.cores[100:]:
+        assert core.remain == 5
+
+    host.release_cores(cores, 5)
+    for core in host.cores:
+        assert core.remain == 10
+
+    host.occupy_cores(cores, 8)
+    for core in host.cores[:100]:
+        assert core.remain == 0
+    for core in host.cores[100:]:
+        assert core.remain == 2
+
+    host.release_cores(cores, 8)
+    for core in host.cores:
+        assert core.remain == 10
+
+    cores = {
+        'full': host.cores[:50],
+        'part': host.cores[50:100],
+    }
+
+    host.occupy_cores(cores, 8)
+    for core in host.cores[:50]:
+        assert core.remain == 0
+    for core in host.cores[50:100]:
+        assert core.remain == 2
+
+    host.release_cores(cores, 8)
+    for core in host.cores:
+        assert core.remain == 10
+
+def test_container_release_cores(test_db):
+    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
+    v = a.add_version(random_sha1())
+    g = Group.create('group', 'group')
+    p = Pod.create('pod', 'pod', 10, -1)
+    host = Host.create(p, random_ipv4(), random_string(), random_uuid(), 200, 0)
+    assert p.assigned_to_group(g)
+    assert host.assigned_to_group(g)
+
+    for core in host.cores:
+        assert core.host_id == host.id
+        assert core.remain == 10
 
     containers = []
-    for (host, count), cores in host_cores.iteritems():
-        cores_per_container = len(cores) / count
-        for i in range(count):
-            cid = random_sha1()
-            used_cores = {'full': cores['full'][i*cores_per_container:(i+1)*cores_per_container]}
-            c = Container.create(cid, host, v, random_string(), 'entrypoint', used_cores, 'env')
-            assert c is not None
-            containers.append(c)
-        host.occupy_cores(cores, 0)
+    
+    cores = sorted(host.cores, key=operator.attrgetter('label'))
+    for fcores, pcores in zip(chunked(cores[:100], 10), chunked(cores[100:], 10)):
+        used_cores = {'full': fcores, 'part': pcores}
+        host.occupy_cores(used_cores, 5)
+        c = Container.create(random_sha1(), host, v, random_string(), 'entrypoint', used_cores, 'env', nshare=5)
+        containers.append(c)
 
-    for host in g.private_hosts.all():
-        assert len(host.get_free_cores()[0]) == 1
-        assert len(host.containers.all()) == 1
-        assert host.count == 1
+    cores = sorted(host.cores, key=operator.attrgetter('label'))
+    for fcores, pcores in zip(chunked(cores[:100], 10), chunked(cores[100:], 10)):
+        for core in fcores:
+            assert core.remain == 0
+        for core in pcores:
+            assert core.remain == 5
 
-    assert len(containers) == 3
-    assert len(v.containers.all()) == 3
-
-    cids = [c.container_id for c in containers]
     for c in containers:
-        host = c.host
-        cid = c.container_id
-        c.transform(v2, random_sha1(), random_string())
-        assert c.container_id != cid
+        c.delete()
 
-    new_cids = [c.container_id for c in containers]
-    assert new_cids != cids
+    cores = sorted(host.cores, key=operator.attrgetter('label'))
+    for fcores, pcores in zip(chunked(cores[:100], 10), chunked(cores[100:], 10)):
+        for core in fcores:
+            assert core.remain == 10
+        for core in pcores:
+            assert core.remain == 10
 
 def test_network(test_db):
     n = Network.create('net', '10.1.0.0/16')

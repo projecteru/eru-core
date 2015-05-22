@@ -15,7 +15,6 @@ from eru.common.settings import (
 from eru.storage.redis import RedisStorage
 from eru.storage.etcd import EtcdStorage
 
-
 def get_docker_client(addr):
     """
     如果设置了 DOCKER_CERT_PATH, 那么证书需要位于 $DOCKER_CERT_PATH/${ip} 目录下.
@@ -41,7 +40,6 @@ def get_docker_client(addr):
         )
     return client
 
-
 def get_etcd_client(addr):
     if isinstance(addr, tuple):
         return etcd.Client(host=addr)
@@ -50,14 +48,11 @@ def get_etcd_client(addr):
         return etcd.Client(host, int(port))
     raise ValueError('etcd addr must be tuple or string')
 
-
 def get_redis_client(host, port , max_connections):
     pool = redis.ConnectionPool(host=host, port=port, max_connections=max_connections)
     return redis.Redis(connection_pool=pool)
 
-
 rds = get_redis_client(REDIS_HOST, REDIS_PORT, REDIS_POOL_SIZE)
-
 
 if ERU_CONFIG_BACKEND == 'redis':
     config_backend = RedisStorage(rds)
@@ -65,4 +60,3 @@ elif ERU_CONFIG_BACKEND == 'etcd':
     config_backend = EtcdStorage(get_etcd_client(ETCD_MACHINES))
 else:
     raise RuntimeError('ERU_CONFIG_BACKEND must be redis/etcd')
-

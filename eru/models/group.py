@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #coding:utf-8
 
+import operator
 import sqlalchemy.exc
 
 from eru.models import db
@@ -48,15 +49,16 @@ class Group(Base):
         那么这个 group 在这个 pod 能部署多少这样的容器呢?
         ncore 可为 0
         """
+        # 考虑 Pod 并没有设置分享核
+        if nshare and not pod.max_share_core:
+            return 0
+
+        # TODO add order by
         hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
         if not hosts:
             return 0
 
         total = 0
-
-        # 考虑 Pod 并没有设置分享核
-        if nshare and not pod.max_share_core:
-            return 0
 
         for host in hosts:
             full_cores, part_cores = host.get_free_cores()
@@ -64,7 +66,7 @@ class Group(Base):
             part_total = 0
             max_share_core = full_cores_num if pod.max_share_core == -1 else pod.max_share_core
             if nshare:
-                part_total = sum((pod.core_share - fragment.used) / nshare for fragment in part_cores)
+                part_total = sum(fragment.remain / nshare for fragment in part_cores)
                 # 考虑1个核以下的需求
                 if ncore == 0:
                     total += part_total + (max_share_core - len(part_cores)) * pod.core_share / nshare
@@ -89,12 +91,12 @@ class Group(Base):
         需要 ncontainer 个容器, 每个需要 ncore 这么多独占核和 nshare 个比重倍率.
         尽可能先用完 host 上的核.
         """
-        hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
-        result = {}
-
         # 考虑 Pod 并没有设置分享核
         if nshare and not pod.max_share_core:
-            return result
+            return {}
+
+        hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
+        result = {}
 
         for host in hosts:
             full_cores, part_cores = host.get_free_cores()
@@ -102,16 +104,16 @@ class Group(Base):
             full_cores_num = len(full_cores)
             max_share_core = full_cores_num if pod.max_share_core == -1 else pod.max_share_core
             if nshare:
-                part_result.extend(p for p in part_cores if (pod.core_share - p.used) / nshare > 0)
+                part_result.extend(p for p in part_cores if p.remain / nshare > 0)
                 # 计算碎片核能部署几个
                 for fragment in part_cores:
-                    part_result.extend(fragment for _ in range((pod.core_share - fragment.used) / nshare))
+                    part_result.extend(fragment for _ in range(fragment.remain / nshare))
                 if ncore == 0:
                     # 考虑1个核以下的需求
                     for fragment in full_cores[:max_share_core - len(part_cores)]:
                         part_result.extend(fragment for _ in range(pod.core_share / nshare))
                     # 尽量使用空闲份数少的核
-                    part_result.sort(cmp=lambda x, y: cmp(pod.core_share - x.used, pod.core_share - y.used))
+                    sorted(part_result, key=operator.attrgetter('remain'))
                     # ncontainer 超过 part_result 不会影响
                     if ncontainer <= len(part_result):
                         result[(host, ncontainer)] = {'part': part_result[:ncontainer]}
@@ -137,7 +139,7 @@ class Group(Base):
                     full_result, part_result = can_deploy
                     count = min(len(full_result) / ncore, len(part_result))
                     # 尽量使用空闲份数少的核
-                    part_result.sort(cmp=lambda x, y: cmp(pod.core_share - x.used, pod.core_share - y.used))
+                    sorted(part_result, key=operator.attrgetter('remain'))
                     if ncontainer <= count:
                         result[(host, ncontainer)] = {'full':full_result[:ncontainer*ncore],'part': part_result[:ncontainer]}
                         ncontainer = 0

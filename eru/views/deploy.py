@@ -101,7 +101,7 @@ def create_public(group_name, pod_name, appname):
             hosts = pod.get_free_public_hosts(ncontainer)
             for host in itertools.islice(itertools.cycle(hosts), ncontainer):
                 tasks_info.append(
-                    (version, host, 1, [], networks, data['entrypoint'], data['env'])
+                    (version, host, 1, {}, networks, data['entrypoint'], data['env'])
                 )
         except Exception, e:
             logger.exception(e)
@@ -213,21 +213,19 @@ def validate_instance(group_name, pod_name, appname, version):
 
 def _create_task(type_, version, host, ncontainer, cores, nshare, networks, entrypoint, env):
     try:
-        full_core_ids = [c.id for c in cores.get('full', [])]
-        part_core_ids = [c.id for c in cores.get('part', [])]
         network_ids = [n.id for n in networks]
         task_props = {
             'ncontainer': ncontainer,
             'entrypoint': entrypoint,
             'env': env,
-            'full_cores': full_core_ids,
-            'part_cores': part_core_ids,
+            'full_cores': [c.label for c in cores.get('full', [])],
+            'part_cores': [c.label for c in cores.get('part', [])],
             'nshare': nshare,
             'networks': network_ids,
         }
         task = Task.create(type_, version, host, task_props)
         create_containers_with_macvlan.apply_async(
-            args=(task.id, ncontainer, nshare, full_core_ids, part_core_ids, network_ids),
+            args=(task.id, ncontainer, nshare, cores, network_ids),
             task_id='task:%d' % task.id
         )
         return task

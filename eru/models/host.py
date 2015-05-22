@@ -1,26 +1,30 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
+from eru.common.clients import rds
 
+_pipeline = rds.pipeline()
 
-class Core(Base):
-    __tablename__ = 'core'
+class Core(object):
 
-    host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
-    label = db.Column(db.CHAR(10))
-    used = db.Column(db.Integer, default=0)
-    container_id = db.Column(db.Integer, db.ForeignKey('container.id'))
-
-    def __init__(self, label):
+    def __init__(self, label, host_id, remain=10):
         self.label = label
+        self.host_id = host_id
+        self.remain = remain
+
+    def __repr__(self):
+        return '<Core(label={0}, host_id={1}, remain={2})>'.format(
+            self.label, self.host_id, self.remain)
 
     def is_free(self):
-        return self.used < self.host.pod.core_share
+        return self.remain == 0
 
+def _create_cores_on_host(host, count):
+    data = {str(i): host.pod.core_share for i in xrange(count)}
+    rds.zadd(host._cores_key, **data)
 
 class Host(Base):
     __tablename__ = 'host'
@@ -35,7 +39,6 @@ class Host(Base):
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
     is_alive = db.Column(db.Boolean, default=True)
 
-    cores = db.relationship('Core', backref='host', lazy='dynamic')
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
 
@@ -54,10 +57,9 @@ class Host(Base):
             return None
         try:
             host = cls(addr, name, uid, ncore, mem, pod.id)
-            for i in xrange(ncore):
-                host.cores.append(Core(str(i)))
             db.session.add(host)
             db.session.commit()
+            _create_cores_on_host(host, ncore)
             return host
         except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
@@ -75,15 +77,21 @@ class Host(Base):
     def ip(self):
         return self.addr.split(':', 1)[0]
 
+    @property
+    def _cores_key(self):
+        return 'eru:host:%s:cores' % self.id
+
+    @property
+    def cores(self):
+        r = rds.zrange(self._cores_key, 0, -1, withscores=True, score_cast_func=int)
+        return [Core(name, self.id, value) for name, value in r]
+
     def get_free_cores(self):
-        #TODO 用 SQL 查询解决啊
-        full_cores, part_cores = [], []
-        for c in self.cores.all():
-            if not c.used:
-                full_cores.append(c)
-            elif c.used < self.pod.core_share:
-                part_cores.append(c)
-        return full_cores, part_cores
+        """取可用的core, 返回一个完全可用列表, 以及部分可用列表"""
+        slice_count = self.pod.core_share
+        r = rds.zrange(self._cores_key, 0, -1, withscores=True, score_cast_func=int)
+        cores = [Core(name, self.id, value) for name, value in r]
+        return [c for c in cores if c.remain == slice_count], [c for c in cores if 0 < c.remain < slice_count]
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
         q = self.containers
@@ -111,25 +119,20 @@ class Host(Base):
         return True
 
     def occupy_cores(self, cores, nshare):
+        slice_count = self.pod.core_share
         for core in cores.get('full', []):
-            core.used = self.pod.core_share
-            db.session.add(core)
-
+            _pipeline.zincrby(self._cores_key, core.label, -slice_count)
         for core in cores.get('part', []):
-            core.used = core.used + nshare
-            db.session.add(core)
-
-        db.session.commit()
+            _pipeline.zincrby(self._cores_key, core.label, -nshare)
+        _pipeline.execute()
 
     def release_cores(self, cores, nshare):
+        slice_count = self.pod.core_share
         for core in cores.get('full', []):
-            core.used = 0
-            db.session.add(core)
+            _pipeline.zincrby(self._cores_key, core.label, slice_count)
         for core in cores.get('part', []):
-            # 控制原子性
-            core.used = Core.used - nshare
-            db.session.add(core)
-        db.session.commit()
+            _pipeline.zincrby(self._cores_key, core.label, nshare)
+        _pipeline.execute()
 
     def kill(self):
         self.is_alive = False
