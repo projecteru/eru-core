@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#coding:utf-8
+# coding: utf-8
 
 import operator
 import sqlalchemy.exc
@@ -7,12 +7,10 @@ import sqlalchemy.exc
 from eru.models import db
 from eru.models.base import Base
 
-
 class GroupPod(db.Model):
 
     group_id = db.Column(db.ForeignKey('group.id'), primary_key=True)
     pod_id = db.Column(db.ForeignKey('pod.id'), primary_key=True)
-
 
 class Group(Base):
     __tablename__ = 'group'
@@ -95,7 +93,9 @@ class Group(Base):
         if nshare and not pod.max_share_core:
             return {}
 
-        hosts = self.private_hosts.filter_by(pod_id=pod.id).all()
+        from .host import Host
+        hosts = self.private_hosts.filter_by(pod_id=pod.id)\
+                .order_by(Host.count.desc()).all()
         result = {}
 
         for host in hosts:
@@ -162,4 +162,3 @@ class Group(Base):
             return {}
 
         return result
-

@@ -9,7 +9,7 @@ from flask import Blueprint, request
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
-from eru.models import App, Group, Pod, Task, Host, Network
+from eru.models import App, Group, Pod, Task, Network, Container
 from eru.utils.views import check_request_json, jsonify, EruAbortException
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
@@ -130,29 +130,26 @@ def build_image(group_name, pod_name, appname):
     # 这个group可以build这个version不?
     base = data['base']
     host = pod.get_random_host()
-    try:
-        task_props = {'base': base}
-        task = Task.create(code.TASK_BUILD, version, host, task_props)
-        build_docker_image.apply_async(
-            args=(task.id, base),
-            task_id='task:%d' % task.id
-        )
-        return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
-    except Exception, e:
-        logger.exception(e)
-        return {'r': 1, 'msg': str(e), 'task': None, 'watch_key': None}
+    task = Task.create(code.TASK_BUILD, version, host, {'base': base})
+    build_docker_image.apply_async(
+        args=(task.id, base),
+        task_id='task:%d' % task.id
+    )
+    return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
 
-@bp.route('/rmcontainer/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
-@check_request_json(['version', 'host', 'ncontainer'])
+@bp.route('/rmcontainers/', methods=['PUT', 'POST', ])
+@check_request_json(['cids'])
 @jsonify()
-def rm_containers(group_name, pod_name, appname):
-    data = request.get_json()
-    group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
-    host = Host.get_by_name(data['host'])
-    # 直接拿前ncontainer个吧, 反正他们都等价的
-    containers = host.get_containers_by_version(version)[:int(data['ncontainer'])]
-    try:
+def rm_containers():
+    cids = request.get_json()['cids']
+    version_dict = {}
+    ts, watch_keys = [], []
+    for cid in cids:
+        container = Container.get_by_container_id(cid)
+        if not container:
+            continue
+        version_dict.setdefault((container.version, container.host), []).append(container)
+    for (version, host), containers in version_dict.iteritems():
         cids = [c.id for c in containers]
         task_props = {'container_ids': cids}
         task = Task.create(code.TASK_REMOVE, version, host, task_props)
@@ -160,10 +157,9 @@ def rm_containers(group_name, pod_name, appname):
             args=(task.id, cids, False),
             task_id='task:%d' % task.id
         )
-        return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
-    except Exception, e:
-        logger.exception(e)
-        return {'r': 1, 'msg': str(e), 'task': None, 'watch_key': None}
+        ts.append(task.id)
+        watch_keys.append(task.result_key)
+    return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': watch_keys}
 
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version'])
@@ -172,25 +168,21 @@ def offline_version(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, data['version'])
-    try:
-        d = {}
-        ts, keys = [], []
-        for container in version.containers.all():
-            d.setdefault(container.host, []).append(container)
-        for host, containers in d.iteritems():
-            cids = [c.id for c in containers]
-            task_props = {'container_ids': cids}
-            task = Task.create(code.TASK_REMOVE, version, host, task_props)
-            remove_containers.apply_async(
-                args=(task.id, cids, True),
-                task_id='task:%d' % task.id
-            )
-            ts.append(task.id)
-            keys.append(task.result_key)
-        return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
-    except Exception, e:
-        logger.exception(e)
-        return {'r': 1, 'msg': str(e), 'tasks': [], 'watch_keys': []}
+    d = {}
+    ts, keys = [], []
+    for container in version.containers.all():
+        d.setdefault(container.host, []).append(container)
+    for host, containers in d.iteritems():
+        cids = [c.id for c in containers]
+        task_props = {'container_ids': cids}
+        task = Task.create(code.TASK_REMOVE, version, host, task_props)
+        remove_containers.apply_async(
+            args=(task.id, cids, True),
+            task_id='task:%d' % task.id
+        )
+        ts.append(task.id)
+        keys.append(task.result_key)
+    return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
 def validate_instance(group_name, pod_name, appname, version):
     group = Group.get_by_name(group_name)
@@ -238,4 +230,3 @@ def _create_task(type_, version, host, ncontainer, cores, nshare, networks, entr
 @jsonify()
 def eru_abort_handler(exception):
     return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}
-

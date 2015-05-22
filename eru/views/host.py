@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from flask import Blueprint
+from flask import Blueprint, g
 
 from eru.models import Host
 from eru.common import code
@@ -24,7 +24,7 @@ def get_host_by_name(host_name):
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Host %s not found' % host_name)
     return host
 
-@bp.route('/<string:host_name>/kill/', methods=['PUT', 'POST'])
+@bp.route('/<string:host_name>/down/', methods=['PUT', 'POST'])
 @jsonify()
 def kill_host(host_name):
     host = Host.get_by_name(host_name)
@@ -39,6 +39,15 @@ def cure_host(host_name):
     if host:
         host.cure()
     return {'r': 0, 'msg': code.OK}
+
+@bp.route('/<string:host_name>/containers/', methods=['GET'])
+@jsonify()
+def list_host_containers(host_name):
+    host = Host.get_by_name(host_name)
+    if not host:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Host %s not found' % host_name)
+    containers = host.list_containers(g.start, g.limit)
+    return {'r': 0, 'msg': code.OK, 'containers': containers}
 
 @bp.errorhandler(EruAbortException)
 @jsonify()

@@ -2,7 +2,7 @@
 #coding:utf-8
 
 import logging
-from flask import Flask
+from flask import Flask, request, g
 from gunicorn.app.wsgiapp import WSGIApplication
 from werkzeug.utils import import_string
 
@@ -48,6 +48,11 @@ def create_app_with_celery(static_url_path=None):
     for bp in blueprints:
         import_name = '%s.views.%s:bp' % (__package__, bp)
         app.register_blueprint(import_string(import_name))
+
+    @app.before_request
+    def init_global_vars():
+        g.start = request.args.get('start', type=int, default=0)
+        g.limit = request.args.get('limit', type=int, default=20)
 
     return app, celery
 

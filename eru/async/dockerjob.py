@@ -2,10 +2,12 @@
 #coding:utf-8
 
 import os
+import logging
 import tempfile
 import pygit2
 import contextlib
 
+import docker
 from docker.utils import create_host_config, LogConfig
 
 from res.ext.common import random_string
@@ -14,6 +16,8 @@ from eru.common import settings
 from eru.common.clients import get_docker_client
 from eru.templates import template
 from eru.utils.ensure import ensure_dir_absent, ensure_file
+
+logger = logging.getLogger(__name__)
 
 @contextlib.contextmanager
 def build_image_environment(version, base, rev):
@@ -156,15 +160,26 @@ def remove_host_containers(containers, host):
     """删除这个host上的这些容器"""
     client = get_docker_client(host.addr)
     for c in containers:
-        if c.is_alive:
+        try:
             client.stop(c.container_id)
-        client.remove_container(c.container_id)
+            client.remove_container(c.container_id)
+        except docker.errors.APIError as e:
+            if 'no such id' in str(e).lower():
+                logger.info('%s not found, just delete it' % c.container_id)
+                continue
+            raise
 
 def remove_container_by_cid(cids, host):
     client = get_docker_client(host.addr)
     for cid in cids:
-        client.stop(cid)
-        client.remove_container(cid)
+        try:
+            client.stop(cid)
+            client.remove_container(cid)
+        except docker.errors.APIError as e:
+            if 'no such id' in str(e).lower():
+                logger.info('%s not found, just delete it' % cid)
+                continue
+            raise
 
 def remove_image(version, host):
     """在host上删除掉version的镜像"""
@@ -172,5 +187,11 @@ def remove_image(version, host):
     appconfig = version.appconfig
     appname = appconfig.appname
     image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
-    client.remove_image(image)
+    try:
+        client.remove_image(image)
+    except docker.errors.APIError as e:
+        if 'no such image' in str(e).lower():
+            logger.info('%s not found, just delete it' % image)
+        else:
+            raise
 
