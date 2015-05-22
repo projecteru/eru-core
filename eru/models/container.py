@@ -121,7 +121,7 @@ class Container(Base):
         [ip.release() for ip in self.ips]
         # release core
         host = self.host
-        host.release_cores(self.cores, self.cores['nshare'])
+        host.release_cores(self.cores, self.cores.get('nshare', 0))
         del self.cores
         host.count -= 1
         db.session.add(host)
