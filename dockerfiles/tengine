@@ -1,0 +1,13 @@
+FROM ubuntu:binary-2015.05.13
+
+MAINTAINER CMGS <ilskdw@gmail.com>
+
+RUN apt-get install -y libpcre3 libpcre3-dev libssl-dev wget zlib1g-dev libjemalloc1 libjemalloc-dev luajit libluajit-5.1-dev
+RUN wget http://tengine.taobao.org/download/tengine-2.1.0.tar.gz && \
+    tar xvf tengine-2.1.0.tar.gz && \
+    cd tengine-2.1.0 && \
+    ./configure --with-http_realip_module --with-jemalloc --with-http_lua_module --with-http_gzip_static_module --with-http_degradation_module --with-http_stub_status_module && \
+    make && \
+    make install
+RUN ln -s /usr/local/nginx/sbin/nginx /usr/bin/nginx && rm -rf tengine-2.1.*
+
