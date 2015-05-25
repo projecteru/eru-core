@@ -63,3 +63,10 @@ class Pod(Base):
     def get_random_host(self):
         return self.hosts.limit(1).all()[0]
 
+    def host_count(self):
+        return self.hosts.count()
+
+    def to_dict(self):
+        d = super(Pod, self).to_dict()
+        d['host_count'] = self.host_count()
+        return d
