@@ -17,6 +17,7 @@ blueprints = (
     'deploy',
     'host',
     'network',
+    'pod',
     'version',
     'resource',
     'sys',
