@@ -34,6 +34,7 @@ class Host(Base):
     uid = db.Column(db.CHAR(60), nullable=False)
     ncore= db.Column(db.Integer, nullable=False, default=0)
     mem = db.Column(db.BigInteger, nullable=False, default=0)
+    # 现在这个count是指free的core数
     count = db.Column(db.Integer, nullable=False, default=0)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
@@ -42,13 +43,14 @@ class Host(Base):
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
 
-    def __init__(self, addr, name, uid, ncore, mem, pod_id):
+    def __init__(self, addr, name, uid, ncore, mem, pod_id, count):
         self.addr = addr
         self.name = name
         self.uid = uid
         self.ncore = ncore
         self.mem = mem
         self.pod_id = pod_id
+        self.count = count
 
     @classmethod
     def create(cls, pod, addr, name, uid, ncore, mem):
@@ -56,7 +58,7 @@ class Host(Base):
         if not pod:
             return None
         try:
-            host = cls(addr, name, uid, ncore, mem, pod.id)
+            host = cls(addr, name, uid, ncore, mem, pod.id, ncore)
             db.session.add(host)
             db.session.commit()
             _create_cores_on_host(host, ncore)

@@ -43,10 +43,11 @@ class Container(Base):
         创建一个容器. cores 是 {'full': [core, core, ...], 'part': [core, core, ...]}
         ips是string
         """
+        from .host import Host
         try:
             container = cls(container_id, host, version, name, entrypoint, env)
             db.session.add(container)
-            host.count += 1
+            host.count = Host.count - len(cores.get('full', [])) - len(cores.get('part', []))
             db.session.add(host)
             db.session.commit()
 
@@ -117,13 +118,16 @@ class Container(Base):
 
     def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
+        from .host import Host
         # release ip
         [ip.release() for ip in self.ips]
-        # release core
+        # release core and increase core count
         host = self.host
-        host.release_cores(self.cores, self.cores.get('nshare', 0))
+        cores = self.cores
+        cores_count = len(cores.get('full', [])) + len(cores.get('part', []))
+        host.release_cores(cores, cores.get('nshare', 0))
         del self.cores
-        host.count -= 1
+        host.count = Host.count + cores_count
         db.session.add(host)
         # remove container
         db.session.delete(self)
