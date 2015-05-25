@@ -128,7 +128,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     version = task.version
     entrypoint = task.props['entrypoint']
     env = task.props['env']
-    cpu_shares = int(float(nshare) / host.pod.core_share * 1024)
+    cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
     feedback_key = 'eru:agent:%s:feedback' % task_id
