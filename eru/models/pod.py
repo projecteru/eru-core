@@ -35,6 +35,13 @@ class Pod(Base):
             return None
 
     @classmethod
+    def list_all(cls, start=0, limit=20):
+        q = cls.query.offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
+    @classmethod
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
