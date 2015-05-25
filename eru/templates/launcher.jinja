@@ -1,5 +1,7 @@
 #! /bin/sh
 echo 32768 > /writable-proc/sys/net/core/somaxconn
 echo 1 > /writable-proc/sys/vm/overcommit_memory
+chmod 777 /dev/stdout
+chmod 777 /dev/stderr
 
 exec sudo -E -u {{appname}} $@
