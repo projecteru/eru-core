@@ -8,7 +8,7 @@ import pygit2
 import contextlib
 
 import docker
-from docker.utils import create_host_config, LogConfig
+from docker.utils import create_host_config, LogConfig, Ulimit
 
 from res.ext.common import random_string
 
@@ -120,7 +120,10 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     # cpuset: '0,1,2,3'
     cpuset = ','.join([c.label for c in cores])
     # host_config, include log_config
-    host_config = create_host_config(log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER))
+    host_config = create_host_config(
+        log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER),
+        ulimits=[Ulimit(name='*', soft=65535, hard=65535)],
+    )
     container = client.create_container(
         image=image,
         command=entry['cmd'],
