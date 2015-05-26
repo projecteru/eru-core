@@ -83,19 +83,22 @@ class Group(Base):
                 total += full_cores_num / ncore
         return total
 
-    def get_free_cores(self, pod, ncontainer, ncore, nshare):
+    def get_free_cores(self, pod, ncontainer, ncore, nshare, spec_host=None):
         """
-        从这个 group 拥有的 pod 中取核.
-        需要 ncontainer 个容器, 每个需要 ncore 这么多独占核和 nshare 个比重倍率.
-        尽可能先用完 host 上的核.
+        * 从这个group的pod的所有服务器取core的信息. 需要ncontainer个容器,
+          每个需要ncore这么多独占核和nshare个比重倍率.
+          尽可能先用完 host 上的核.
+        * 如果spec_host设置了, 那么会在这个指定的服务器上获取core的信息
         """
         # 考虑 Pod 并没有设置分享核
         if nshare and not pod.max_share_core:
             return {}
 
-        from .host import Host
-        hosts = self.private_hosts.filter_by(pod_id=pod.id)\
-                .order_by(Host.count.desc()).all()
+        if spec_host is None:
+            from .host import Host
+            hosts = self.private_hosts.filter_by(pod_id=pod.id)\
+                    .order_by(Host.count.desc()).all()
+        host = [spec_host]
         result = {}
 
         for host in hosts:

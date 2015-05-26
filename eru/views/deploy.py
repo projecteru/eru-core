@@ -9,7 +9,7 @@ from flask import Blueprint, request
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
 from eru.common.clients import rds
-from eru.models import App, Group, Pod, Task, Network, Container
+from eru.models import App, Group, Pod, Task, Network, Container, Host
 from eru.utils.views import check_request_json, jsonify, EruAbortException
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
@@ -117,6 +117,58 @@ def create_public(group_name, pod_name, appname):
         keys.append(t.result_key)
 
     return {'r':0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
+
+@bp.route('/onhost/', methods=['POST'])
+@check_request_json(['ncontainer', 'version',
+    'entrypoint', 'env', 'hostname', 'appname', 'ncore'])
+@jsonify()
+def create_container_on_host():
+    data = request.get_json()
+    host = Host.get_by_name(data['hostname'])
+    if not host:
+        raise EruAbortException(code.HTTP_BAD_REQUEST,
+                'Host not found')
+    if not host.group:
+        raise EruAbortException(code.HTTP_BAD_REQUEST,
+                'Host must be private')
+    app = App.get_by_name(data['appname'])
+    if not app:
+        raise EruAbortException(code.HTTP_BAD_REQUEST,
+                'App `%s` not found' % data['appname'])
+    version = app.get_version(data['version'])
+    if not version:
+        raise EruAbortException(code.HTTP_BAD_REQUEST,
+                'Version `%s` not found' % data['version'])
+
+    group, pod = host.group, host.pod
+
+    # TODO
+    # 这个 host 可以给当前的 user 玩不?
+
+    core_require = int(float(data['ncore']) * pod.core_share) # 是说一个容器要几个核...
+    ncore = core_require / pod.core_share
+    nshare = core_require % pod.core_share
+
+    ncontainer = int(data['ncontainer'])
+    networks = Network.get_multi(data.get('networks', []))
+    appconfig = version.appconfig
+
+    if not data['entrypoint'] in appconfig.entrypoints:
+        raise EruAbortException(code.HTTP_BAD_REQUEST,
+                'Entrypoint %s not in app.yaml' % data['entrypoint'])
+
+    ts, keys = [], []
+    with rds.lock('{0}:{1}'.format(group.name, pod.name)):
+        host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare, spec_host=host)
+        if not host_cores:
+            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
+        for (host, container_count), cores in host_cores.iteritems():
+            host.occupy_cores(cores, nshare)
+            t = _create_task(code.TASK_CREATE, version, host, container_count, cores,
+                    nshare, networks, data['entrypoint'], data['env'])
+            ts.append(t.id)
+            keys.append(t.result_key)
+    return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['base', 'version'])
