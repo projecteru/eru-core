@@ -98,7 +98,8 @@ class Group(Base):
             from .host import Host
             hosts = self.private_hosts.filter_by(pod_id=pod.id)\
                     .order_by(Host.count.desc()).all()
-        host = [spec_host]
+        else:
+            hosts = [spec_host]
         result = {}
 
         for host in hosts:
