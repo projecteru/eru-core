@@ -122,6 +122,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     cpuset = ','.join([c.label for c in cores])
     # host_config, include log_config
     host_config = create_host_config(
+        binds=binds,
+        network_mode=settings.DOCKER_NETWORK_MODE,
         log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER),
         ulimits=[Ulimit(name='*', soft=65535, hard=65535)],
     )
@@ -140,7 +142,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     )
     container_id = container['Id']
 
-    client.start(container=container_id, network_mode=settings.DOCKER_NETWORK_MODE, binds=binds)
+    client.start(container=container_id)
     return container_id, container_name
 
 def execute_container(host, container_id, cmd):
