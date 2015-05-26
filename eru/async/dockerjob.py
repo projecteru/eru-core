@@ -9,6 +9,7 @@ import contextlib
 
 import docker
 from docker.utils import create_host_config, LogConfig, Ulimit
+from retrying import retry
 
 from res.ext.common import random_string
 
@@ -153,18 +154,26 @@ def start_containers(containers, host):
     for c in containers:
         client.start(c.container_id)
 
+def __retry_on_api_error(e):
+    return isinstance(e, docker.errors.APIError) and '500 Server Error' in str(e)
+
+@retry(retry_on_exception=__retry_on_api_error)
+def __stop_container(client, cid):
+    """为什么要包一层, 因为 https://github.com/docker/docker/issues/13088 """
+    client.stop(cid)
+
 def stop_containers(containers, host):
     """停止这个host上的这些容器"""
     client = get_docker_client(host.addr)
     for c in containers:
-        client.stop(c.container_id)
+        __stop_container(client, c.container_id)
 
 def remove_host_containers(containers, host):
     """删除这个host上的这些容器"""
     client = get_docker_client(host.addr)
     for c in containers:
         try:
-            client.stop(c.container_id)
+            __stop_container(client, c.container_id)
             client.remove_container(c.container_id)
         except docker.errors.APIError as e:
             if 'no such id' in str(e).lower():
@@ -176,7 +185,7 @@ def remove_container_by_cid(cids, host):
     client = get_docker_client(host.addr)
     for cid in cids:
         try:
-            client.stop(cid)
+            __stop_container(client, cid)
             client.remove_container(cid)
         except docker.errors.APIError as e:
             if 'no such id' in str(e).lower():
