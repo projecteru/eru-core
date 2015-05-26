@@ -159,7 +159,7 @@ def __retry_on_api_error(e):
 
 @retry(retry_on_exception=__retry_on_api_error)
 def __stop_container(client, cid):
-    """为什么要包一层, 因为 https://github.com/docker/docker/issues/13088 """
+    """为什么要包一层, 因为 https://github.com/docker/docker/issues/12738 """
     client.stop(cid)
 
 def stop_containers(containers, host):
