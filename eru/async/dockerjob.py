@@ -125,7 +125,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
         binds=binds,
         network_mode=settings.DOCKER_NETWORK_MODE,
         log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER),
-        ulimits=[Ulimit(name='*', soft=65535, hard=65535)],
+        ulimits=[Ulimit(name='nofile', soft=65535, hard=65535)],
     )
     container = client.create_container(
         image=image,
