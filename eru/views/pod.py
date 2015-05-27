@@ -8,21 +8,27 @@ from eru.utils.views import jsonify, EruAbortException
 
 bp = Blueprint('pod', __name__, url_prefix='/api/pod')
 
-@bp.route('/<int:pod_id>/', methods=['GET'])
+@bp.route('/<id_or_name>/', methods=['GET'])
 @jsonify()
-def get_pod(pod_id):
-    pod = Pod.get(pod_id)
+def get_pod(id_or_name):
+    if id_or_name.isdigit():
+        pod = Pod.get(int(id_or_name))
+    else:
+        pod = Pod.get_by_name(id_or_name)
     if not pod:
-        raise EruAbortException(code.HTTP_NOT_FOUND, 'Pod %s not found' % pod_id)
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Pod %s not found' % id_or_name)
     return pod
 
-@bp.route('/<string:pod_name>/', methods=['GET'])
+@bp.route('/<id_or_name>/hosts/', methods=['GET'])
 @jsonify()
-def get_pod_by_name(pod_name):
-    pod = Pod.get_by_name(pod_name)
+def list_pod_hosts(id_or_name):
+    if id_or_name.isdigit():
+        pod = Pod.get(int(id_or_name))
+    else:
+        pod = Pod.get_by_name(id_or_name)
     if not pod:
-        raise EruAbortException(code.HTTP_NOT_FOUND, 'Pod %s not found' % pod_name)
-    return pod
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Pod %s not found' % id_or_name)
+    return pod.list_hosts(g.start, g.limit)
 
 @bp.route('/list/', methods=['GET'])
 @jsonify()
