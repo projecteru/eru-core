@@ -4,7 +4,6 @@ from sqlalchemy.ext.declarative import declared_attr
 
 from eru.models import db
 
-
 class Base(db.Model):
 
     __abstract__ = True
@@ -19,7 +18,6 @@ class Base(db.Model):
 
     @classmethod
     def get_multi(cls, ids):
-        #return cls.query.filter(cls.id._in(tuple(ids))).all()
         return [cls.get(i) for i in ids]
 
     def to_dict(self):
@@ -29,4 +27,3 @@ class Base(db.Model):
     def __repr__(self):
         attrs = ', '.join('{0}={1}'.format(k, v) for k, v in self.to_dict().iteritems())
         return '{0}({1})'.format(self.__class__.__name__, attrs)
-

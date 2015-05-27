@@ -2,7 +2,6 @@
 
 from eru.storage.base import BaseConfigStorage
 
-
 class RedisStorage(BaseConfigStorage):
 
     def __init__(self, redis):
@@ -21,4 +20,3 @@ class RedisStorage(BaseConfigStorage):
 
     def list(self, key):
         return self._client.hkeys(key)
-

@@ -1,6 +1,5 @@
 # coding: utf-8
 
-
 class BaseConfigStorage(object):
 
     def set(self, key, value, ttl=None):

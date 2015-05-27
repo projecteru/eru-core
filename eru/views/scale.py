@@ -6,9 +6,7 @@ from eru.models import App
 from eru.common import code
 from eru.utils.views import jsonify, EruAbortException
 
-
 bp = Blueprint('scale', __name__, url_prefix='/api/scale')
-
 
 @bp.route('/<name>/<version>/info')
 @jsonify()
@@ -28,7 +26,6 @@ def touch_version_scale_info(name, version):
         'pod': container.host.pod.name,
         'ncore': len(container.cores.all())
     }
-
 
 @bp.errorhandler(EruAbortException)
 @jsonify()

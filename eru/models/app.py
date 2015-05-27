@@ -55,6 +55,13 @@ class Version(Base):
     def user_id(self):
         return self.app.user_id
 
+    def list_containers(self, start=0, limit=20):
+        from .container import Container
+        q = self.containers.order_by(Container.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
 
@@ -123,6 +130,13 @@ class App(Base):
 
     def list_versions(self, start=0, limit=20):
         q = self.versions.order_by(Version.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
+    def list_containers(self, start=0, limit=20):
+        from .container import Container
+        q = self.containers.order_by(Container.id.desc()).offset(start)
         if limit is not None:
             q = q.limit(limit)
         return q.all()

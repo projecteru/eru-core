@@ -60,16 +60,16 @@ def dont_report_these(container_ids):
 @current_app.task()
 def build_docker_image(task_id, base):
     task = Task.get(task_id)
+    if not task:
+        return
+
     notifier = TaskNotifier(task)
     try:
         repo, tag = base.split(':', 1)
         notifier.store_and_broadcast(dockerjob.pull_image(task.host, repo, tag))
         notifier.store_and_broadcast(dockerjob.build_image(task.host, task.version, base))
         notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
-        try:
-            dockerjob.remove_image(task.version, task.host)
-        except Exception:
-            pass
+        dockerjob.remove_image(task.version, task.host)
     except Exception, e:
         logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
@@ -81,8 +81,11 @@ def build_docker_image(task_id, base):
         notifier.pub_build_finish()
 
 @current_app.task()
-def remove_containers(task_id, cids, rmi):
+def remove_containers(task_id, cids, rmi=False):
     task = Task.get(task_id)
+    if not task:
+        return
+
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
     container_ids = [c.container_id for c in containers]
