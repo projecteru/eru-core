@@ -76,4 +76,3 @@ def container_log(cid):
         except:
             pass
     return ''
-

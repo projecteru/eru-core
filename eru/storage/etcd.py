@@ -2,7 +2,6 @@
 
 from eru.storage.base import BaseConfigStorage
 
-
 class EtcdStorage(BaseConfigStorage):
 
     def __init__(self, etcd):
@@ -23,4 +22,3 @@ class EtcdStorage(BaseConfigStorage):
 
     def list(self, key):
         return [sub.key.strip('/') for sub in self._client.get(key).children]
-

@@ -39,10 +39,7 @@ class Container(Base):
     @classmethod
     def create(cls, container_id, host, version, name,
             entrypoint, cores, env, nshare=0):
-        """
-        创建一个容器. cores 是 {'full': [core, core, ...], 'part': [core, core, ...]}
-        ips是string
-        """
+        """创建一个容器. cores 是 {'full': [core, ...], 'part': [core, ...]}"""
         from .host import Host
         try:
             container = cls(container_id, host, version, name, entrypoint, env)
@@ -157,4 +154,3 @@ class Container(Base):
             backends=self.get_backends(),
         )
         return d
-

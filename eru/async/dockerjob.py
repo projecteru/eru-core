@@ -145,9 +145,10 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     client.start(container=container_id)
     return container_id, container_name
 
-def execute_container(host, container_id, cmd):
+def execute_container(host, container_id, cmd, stream=False):
+    """在容器里跑一个命令, stream的话返回一个generator"""
     client = get_docker_client(host.addr)
-    exec_id = client.exec_create(container_id, cmd)
+    exec_id = client.exec_create(container_id, cmd, stream=stream)
     return client.exec_start(exec_id)
 
 def start_containers(containers, host):
@@ -208,4 +209,3 @@ def remove_image(version, host):
             logger.info('%s not found, just delete it' % image)
         else:
             raise
-

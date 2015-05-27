@@ -94,7 +94,6 @@ def list_app_env(name):
     if not app:
         logger.error('app not found, env set ignored')
         raise EruAbortException(code.HTTP_BAD_REQUEST)
-
     return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
 
 @bp.route('/alloc/<name>/<env>/<res_name>/<res_alias>/', methods=['POST', ])
@@ -135,8 +134,7 @@ def list_app_containers(name):
     if not app:
         logger.error('app not found, env list ignored')
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
-    containers = app.containers.all()
-    return {'r': 0, 'msg': 'ok', 'containers': containers}
+    return {'r': 0, 'msg': 'ok', 'containers': app.list_containers(g.start, g.limit)}
 
 @bp.route('/<name>/versions/', methods=['GET', ])
 @jsonify()
@@ -144,9 +142,8 @@ def list_app_versions(name):
     app = App.get_by_name(name)
     if not app:
         logger.error('app not found, env list ignored')
-        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
-    versions = app.list_versions(g.start, g.limit)
-    return {'r': 0, 'msg': 'ok', 'versions': versions}
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, version list ignored' % name)
+    return {'r': 0, 'msg': 'ok', 'versions': app.list_versions(g.start, g.limit)}
 
 @bp.route('/<name>/<version>/containers/', methods=['GET', ])
 @jsonify()
@@ -158,8 +155,7 @@ def list_version_containers(name, version):
     v = app.get_version(version)
     if not v:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
-    containers = v.containers.all()
-    return {'r': 0, 'msg': 'ok', 'containers': containers}
+    return {'r': 0, 'msg': 'ok', 'containers': v.list_containers(g.start, g.limit)}
 
 @bp.errorhandler(EruAbortException)
 @jsonify()

@@ -11,15 +11,12 @@ from eru.common.settings import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 from eru.models import Group, Pod, Host
 from eru.utils.views import jsonify, check_request_json, EruAbortException
 
-
 bp = Blueprint('sys', __name__, url_prefix='/api/sys')
 logger = logging.getLogger(__name__)
-
 
 @bp.route('/')
 def index():
     return 'sys control'
-
 
 @bp.route('/group/create', methods=['POST', ])
 @check_request_json('name', code.HTTP_BAD_REQUEST)
@@ -29,7 +26,6 @@ def create_group():
     if not Group.create(data['name'], data.get('description', '')):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
-
 
 @bp.route('/pod/create', methods=['POST', ])
 @check_request_json('name', code.HTTP_BAD_REQUEST)
@@ -44,7 +40,6 @@ def create_pod():
     ):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
-
 
 @bp.route('/pod/<pod_name>/assign', methods=['POST', ])
 @check_request_json('group_name', code.HTTP_BAD_REQUEST)
@@ -61,7 +56,6 @@ def assign_pod_to_group(pod_name):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
-
 @bp.route('/host/create', methods=['POST', ])
 @check_request_json(['addr', 'pod_name'], code.HTTP_BAD_REQUEST)
 @jsonify(code.HTTP_CREATED)
@@ -73,12 +67,15 @@ def create_host():
     if not pod:
         raise EruAbortException(code.HTTP_BAD_REQUEST)
 
-    client = get_docker_client(addr)
-    info = client.info()
+    try:
+        client = get_docker_client(addr)
+        info = client.info()
+    except Exception:
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Docker daemon error on host %s' % addr)
+
     if not Host.create(pod, addr, info['Name'], info['ID'], info['NCPU'], info['MemTotal']):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
-
 
 @bp.route('/host/<addr>/assign', methods=['POST', ])
 @check_request_json('group_name', code.HTTP_BAD_REQUEST)
@@ -98,7 +95,6 @@ def assign_host_to_group(addr):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r':0, 'msg': code.OK}
 
-
 @bp.route('/group/<group_name>/available_container_count', methods=['GET', ])
 @jsonify()
 def group_max_containers(group_name):
@@ -117,7 +113,6 @@ def group_max_containers(group_name):
     nshare = core_require % pod.core_share
 
     return {'r':0, 'msg': code.OK, 'data': group.get_max_containers(pod, ncore, nshare)}
-
 
 @bp.errorhandler(EruAbortException)
 @jsonify()
