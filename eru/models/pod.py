@@ -45,6 +45,13 @@ class Pod(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
+    def list_hosts(self, start=0, limit=20):
+        from .host import Host
+        q = self.hosts.order_by(Host.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def assigned_to_group(self, group):
         """这个 pod 就归这个 group 啦."""
         if not group:
