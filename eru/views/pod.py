@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from flask import Blueprint, g
+from flask import Blueprint, g, request
 
 from eru.models import Pod 
 from eru.common import code
@@ -28,7 +28,8 @@ def list_pod_hosts(id_or_name):
         pod = Pod.get_by_name(id_or_name)
     if not pod:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Pod %s not found' % id_or_name)
-    return pod.list_hosts(g.start, g.limit)
+    show_all = request.args.get('all', type=bool, default=False)
+    return pod.list_hosts(g.start, g.limit, show_all=show_all)
 
 @bp.route('/list/', methods=['GET'])
 @jsonify()

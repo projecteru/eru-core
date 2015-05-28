@@ -45,9 +45,12 @@ class Pod(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
-    def list_hosts(self, start=0, limit=20):
+    def list_hosts(self, start=0, limit=20, show_all=False):
         from .host import Host
-        q = self.hosts.order_by(Host.id.desc()).offset(start)
+        q = self.hosts
+        if not show_all:
+            q = q.filter_by(is_alive=True)
+        q = q.order_by(Host.id.desc()).offset(start)
         if limit is not None:
             q = q.limit(limit)
         return q.all()
