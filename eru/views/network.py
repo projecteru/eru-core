@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 
 from eru.models import Network
 from eru.common import code
@@ -15,7 +15,11 @@ def create_network():
     data = request.get_json()
     n = Network.create(data['name'], data['netspace'])
     if not n:
+        current_app.logger.info('Network create failed (name=%s, net=%s)',
+                data['name'], data['netspace'])
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Network create failed')
+    current_app.logger.info('Network create succeeded (name=%s, net=%s)',
+            data['name'], data['netspace'])
     return {'r': 0, 'msg': code.OK}
 
 @bp.route('/<int:network_id>/', methods=['GET'])

@@ -4,7 +4,7 @@
 import logging
 import itertools
 
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
@@ -42,15 +42,21 @@ def create_private(group_name, pod_name, appname):
     hostname = data.get('hostname', '')
     host = hostname and Host.get_by_name(hostname) or None
     if host and not (host.group_id == group.id and host.pod_id == pod.id):
+        current_app.logger.error('Host must belong to pod/group (hostname=%s, pod=%s, group=%s)',
+                host, pod_name, group_name)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Host must belong to this pod and group')
 
     if not data['entrypoint'] in appconfig.entrypoints:
+        current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
+                data['entrypoint'], appname, version.short_sha)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
         host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare, spec_host=host)
         if not host_cores:
+            current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
+                    appname, version.short_sha, data['ncore'])
             raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         for (host, container_count), cores in host_cores.iteritems():
@@ -79,6 +85,8 @@ def create_public(group_name, pod_name, appname):
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
     if not data['entrypoint'] in appconfig.entrypoints:
+        current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
+                data['entrypoint'], appname, version.short_sha)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
 
     ts, keys = [], []

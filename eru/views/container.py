@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from flask import Blueprint
+from flask import Blueprint, current_app
 
 from eru.common import code
 from eru.models import Container
@@ -41,6 +41,7 @@ def kill_container(cid):
     c = Container.get_by_container_id(cid)
     if c:
         c.kill()
+        current_app.logger.info('Kill container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': code.OK}
 
 @bp.route('/<cid>/cure', methods=['PUT', ])
@@ -50,6 +51,7 @@ def cure_container(cid):
     if c and not c.is_alive:
         rebind_container_ip(c)
         c.cure()
+        current_app.logger.info('Cure container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': code.OK}
 
 @bp.route('/<cid>/poll', methods=['GET', ])
@@ -68,6 +70,7 @@ def start_container(cid):
         c.cure()
         dockerjob.start_containers([c, ], c.host)
         rebind_container_ip(c)
+        current_app.logger.info('Start container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': code.OK}
 
 @bp.route('/<cid>/stop', methods=['PUT', ])
@@ -77,6 +80,7 @@ def stop_container(cid):
     if c:
         c.kill()
         dockerjob.stop_containers([c,], c.host)
+        current_app.logger.info('Stop container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': code.OK}
 
 @bp.errorhandler(EruAbortException)
