@@ -3,7 +3,7 @@
 
 import logging
 
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 
 from eru.common import code
 from eru.common.clients import get_docker_client
@@ -25,6 +25,8 @@ def create_group():
     data = request.get_json()
     if not Group.create(data['name'], data.get('description', '')):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
+    current_app.logger.info('Group create succeeded (name=%s, desc=%s)',
+            data['name'], data.get('description', ''))
     return {'r':0, 'msg': code.OK}
 
 @bp.route('/pod/create', methods=['POST', ])
@@ -39,6 +41,8 @@ def create_pod():
             data.get('max_share_core', DEFAULT_MAX_SHARE_CORE),
     ):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
+    current_app.logger.info('Pod create succeeded (name=%s, desc=%s)',
+            data['name'], data.get('description', ''))
     return {'r':0, 'msg': code.OK}
 
 @bp.route('/pod/<pod_name>/assign', methods=['POST', ])
@@ -54,6 +58,8 @@ def assign_pod_to_group(pod_name):
 
     if not pod.assigned_to_group(group):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
+    current_app.logger.info('Pod (name=%s) assigned to group (name=%s)',
+            pod_name, data['group_name'])
     return {'r':0, 'msg': code.OK}
 
 @bp.route('/host/create', methods=['POST', ])
@@ -93,6 +99,8 @@ def assign_host_to_group(addr):
 
     if not host.assigned_to_group(group):
         raise EruAbortException(code.HTTP_BAD_REQUEST)
+    current_app.logger.info('Host (addr=%s) assigned to group (name=%s)',
+            addr, data['group_name'])
     return {'r':0, 'msg': code.OK}
 
 @bp.route('/group/<group_name>/available_container_count', methods=['GET', ])
