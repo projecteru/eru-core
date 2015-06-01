@@ -57,7 +57,7 @@ def dont_report_these(container_ids):
 
 @current_app.task()
 def build_docker_image(task_id, base):
-    current_flask.logger.info('Task<id=%s>: Stard', task_id)
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
@@ -86,7 +86,7 @@ def build_docker_image(task_id, base):
 
 @current_app.task()
 def remove_containers(task_id, cids, rmi=False):
-    current_flask.logger.info('Task<id=%s>: Stard', task_id)
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
@@ -130,7 +130,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
     #TODO support part core
-    current_flask.logger.info('Task<id=%s>: Stard', task_id)
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
