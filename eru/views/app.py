@@ -56,7 +56,7 @@ def register_app_version():
     appconfig = v.appconfig
     appconfig.update(**data['appyaml'])
     appconfig.save()
-    current_app.logger.error('App-Version created. (name=%s, version=%s)', name, version[:7])
+    current_app.logger.info('App-Version created. (name=%s, version=%s)', name, version[:7])
     return {'r': 0, 'msg': 'ok'}
 
 @bp.route('/<name>/env/', methods=['PUT', ])
