@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import os
 import logging
@@ -79,7 +78,7 @@ def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
-def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024):
+def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024, image=''):
     if cores is None:
         cores = []
 
@@ -91,11 +90,13 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
 
-    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+    if not image:
+        image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+
     if image not in local_images:
-        repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
-        for line in client.pull(repo, tag=version.short_sha, stream=True,
-                                insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
+        repo, tag = image.split(':', 1)
+        for line in client.pull(repo, tag, stream=True,
+                insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
             print line
 
     env_dict = {
