@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 HTTP_OK = 200
 HTTP_CREATED = 201
