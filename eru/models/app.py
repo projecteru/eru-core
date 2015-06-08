@@ -64,7 +64,7 @@ class Version(Base):
 
     def list_tasks(self, start=0, limit=20):
         from .task import Task
-        q = self.containers.order_by(Task.id.desc()).offset(start)
+        q = self.tasks.order_by(Task.id.desc()).offset(start)
         if limit is not None:
             q = q.limit(limit)
         return q.all()
@@ -150,7 +150,7 @@ class App(Base):
 
     def list_tasks(self, start=0, limit=20):
         from .task import Task
-        q = self.containers.order_by(Task.id.desc()).offset(start)
+        q = self.tasks.order_by(Task.id.desc()).offset(start)
         if limit is not None:
             q = q.limit(limit)
         return q.all()
