@@ -134,6 +134,14 @@ def list_app_containers(name):
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, container list ignored' % name)
     return {'r': 0, 'msg': 'ok', 'containers': app.list_containers(g.start, g.limit)}
 
+@bp.route('/<name>/tasks/', methods=['GET', ])
+@jsonify()
+def list_app_tasks(name):
+    app = App.get_by_name(name)
+    if not app:
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, container list ignored' % name)
+    return {'r': 0, 'msg': 'ok', 'tasks': app.list_tasks(g.start, g.limit)}
+
 @bp.route('/<name>/versions/', methods=['GET', ])
 @jsonify()
 def list_app_versions(name):
@@ -153,8 +161,18 @@ def list_version_containers(name, version):
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
     return {'r': 0, 'msg': 'ok', 'containers': v.list_containers(g.start, g.limit)}
 
+@bp.route('/<name>/<version>/tasks/', methods=['GET', ])
+@jsonify()
+def list_version_tasks(name, version):
+    app = App.get_by_name(name)
+    if not app:
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
+    v = app.get_version(version)
+    if not v:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
+    return {'r': 0, 'msg': 'ok', 'tasks': v.list_tasks(g.start, g.limit)}
+
 @bp.errorhandler(EruAbortException)
 @jsonify()
 def eru_abort_handler(exception):
     return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}
-
