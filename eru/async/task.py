@@ -143,6 +143,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     version = task.version
     entrypoint = task.props['entrypoint']
     env = task.props['env']
+    # use raw
+    image = task.props['image']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
@@ -159,7 +161,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         cores_for_one_container = {'full': fcores, 'part': pcores}
         try:
             cid, cname = dockerjob.create_one_container(host, version,
-                entrypoint, env, fcores+pcores, cpu_shares)
+                entrypoint, env, fcores+pcores, cpu_shares, image=image)
         except:
             host.release_cores(cores_for_one_container, nshare)
             continue

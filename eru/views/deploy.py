@@ -25,8 +25,14 @@ def index():
 def create_private(group_name, pod_name, appname):
     """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
     data = request.get_json()
+
+    if data.get('raw', ''):
+        vstr = code.RAW_VERSION_PLACEHOLDER
+    else:
+        vstr = data['version']
+
     group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
+            pod_name, appname, vstr)
 
     # TODO check if group has this pod
 
@@ -61,7 +67,8 @@ def create_private(group_name, pod_name, appname):
 
         for (host, container_count), cores in host_cores.iteritems():
             t = _create_task(code.TASK_CREATE, version, host, container_count,
-                    cores, nshare, networks, data['entrypoint'], data['env'])
+                    cores, nshare, networks, data['entrypoint'], data['env'],
+                    image=data.get('image', ''))
             if not t:
                 continue
 
@@ -78,8 +85,13 @@ def create_public(group_name, pod_name, appname):
     """参数同private, 只是不能指定需要的核心数量"""
     data = request.get_json()
 
+    if data.get('raw', ''):
+        vstr = code.RAW_VERSION_PLACEHOLDER
+    else:
+        vstr = data['version']
+
     group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
+            pod_name, appname, vstr)
 
     networks = Network.get_multi(data.get('networks', []))
     ncontainer = int(data['ncontainer'])
@@ -94,7 +106,8 @@ def create_public(group_name, pod_name, appname):
         hosts = pod.get_free_public_hosts(ncontainer)
         for host in itertools.islice(itertools.cycle(hosts), ncontainer):
             t = _create_task(code.TASK_CREATE, version, host, 1,
-                    {}, 0, networks, data['entrypoint'], data['env'])
+                    {}, 0, networks, data['entrypoint'], data['env'],
+                    image=data.get('image', ''))
             if not t:
                 continue
             ts.append(t.id)
@@ -192,7 +205,7 @@ def validate_instance(group_name, pod_name, appname, version):
     return group, pod, application, version
 
 def _create_task(type_, version, host, ncontainer,
-    cores, nshare, networks, entrypoint, env):
+    cores, nshare, networks, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
     task_props = {
         'ncontainer': ncontainer,
@@ -202,6 +215,7 @@ def _create_task(type_, version, host, ncontainer,
         'part_cores': [c.label for c in cores.get('part', [])],
         'nshare': nshare,
         'networks': network_ids,
+        'image': image,
     }
     task = Task.create(type_, version, host, task_props)
     if not task:

@@ -18,7 +18,16 @@ Example of app.yaml:
         service:
             cmd: "python service.py"
     build: "pip install -r ./req.txt"
-
+    volumes:
+        - "/container/data1"
+        - "/container/data2"
+    binds:
+        /host/data1:
+            bind: "/container/data1"
+            ro: false
+        /host/data2:
+            bind: "/container/data2"
+            ro: true
 """
 
 
