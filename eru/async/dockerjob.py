@@ -134,7 +134,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
         image=image,
         command=entry['cmd'],
         environment=env_dict,
-        entrypoint='launch',
+        entrypoint=None if image else 'launch',
         name=container_name,
         cpuset=cpuset,
         working_dir='/%s' % appname,
