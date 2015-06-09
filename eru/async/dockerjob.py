@@ -107,10 +107,12 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     }
     env_dict.update(envconfig.to_env_dict())
 
-    # TODO use settings!!!
-    # This modification for applying sysctl params
     volumes = ['/writable-proc/sys']
+    volumes.extend(appconfig.get('volumes', []))
+
     binds = {'/proc/sys': {'bind': '/writable-proc/sys', 'ro': False}}
+    binds.update(appconfig.get('binds', {}))
+
     if settings.ERU_CONTAINER_PERMDIR:
         permdir = settings.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
