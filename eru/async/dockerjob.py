@@ -137,7 +137,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
         entrypoint=None if image else 'launch',
         name=container_name,
         cpuset=cpuset,
-        working_dir='/%s' % appname,
+        working_dir=None if image else '/%s' % appname,
         network_disabled=settings.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
         host_config=host_config,
