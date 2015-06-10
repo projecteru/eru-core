@@ -179,13 +179,13 @@ API
 
         GET /api/resource/pod/:pod_id/resource/
 
-### scale
+### Scale
 
 * touch version scale infomation
 
         GET /api/scale/:name/:version/info/
 
-### sys
+### Sys
 
 * create group
 
@@ -228,7 +228,7 @@ API
     * pod_name: pod name
     * ncore: how many cores you reqire.
 
-### task
+### Task
 
 * get a task by id
 
