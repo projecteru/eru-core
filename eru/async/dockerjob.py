@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import os
 import logging
@@ -79,7 +78,7 @@ def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
 
-def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024):
+def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024, image=''):
     if cores is None:
         cores = []
 
@@ -91,11 +90,13 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
 
-    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+    if not image:
+        image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+
     if image not in local_images:
-        repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
-        for line in client.pull(repo, tag=version.short_sha, stream=True,
-                                insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
+        repo, tag = image.split(':', 1)
+        for line in client.pull(repo, tag, stream=True,
+                insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
             print line
 
     env_dict = {
@@ -106,10 +107,12 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     }
     env_dict.update(envconfig.to_env_dict())
 
-    # TODO use settings!!!
-    # This modification for applying sysctl params
     volumes = ['/writable-proc/sys']
+    volumes.extend(appconfig.get('volumes', []))
+
     binds = {'/proc/sys': {'bind': '/writable-proc/sys', 'ro': False}}
+    binds.update(appconfig.get('binds', {}))
+
     if settings.ERU_CONTAINER_PERMDIR:
         permdir = settings.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
@@ -131,10 +134,10 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
         image=image,
         command=entry['cmd'],
         environment=env_dict,
-        entrypoint='launch',
+        entrypoint=None if image else 'launch',
         name=container_name,
         cpuset=cpuset,
-        working_dir='/%s' % appname,
+        working_dir=None if image else '/%s' % appname,
         network_disabled=settings.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
         host_config=host_config,

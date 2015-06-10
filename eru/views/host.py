@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from flask import Blueprint, g
+from flask import Blueprint, g, current_app
 
 from eru.models import Host
 from eru.common import code
@@ -30,6 +30,7 @@ def kill_host(host_name):
     host = Host.get_by_name(host_name)
     if host:
         host.kill()
+        current_app.logger.info('Kill host (hostname=%s)', host_name)
     return {'r': 0, 'msg': code.OK}
 
 @bp.route('/<string:host_name>/cure/', methods=['PUT', 'POST'])
@@ -38,6 +39,7 @@ def cure_host(host_name):
     host = Host.get_by_name(host_name)
     if host:
         host.cure()
+        current_app.logger.info('Cure host (hostname=%s)', host_name)
     return {'r': 0, 'msg': code.OK}
 
 @bp.route('/<string:host_name>/containers/', methods=['GET'])

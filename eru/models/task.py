@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding: utf-8
 
 import json
 import sqlalchemy.exc
@@ -7,14 +6,21 @@ from datetime import datetime
 
 from eru.models import db
 from eru.models.base import Base
+from eru.common import code
 from eru.common.settings import ERU_TASK_RESULTKEY, ERU_TASK_LOGKEY, ERU_TASK_PUBKEY
+
+type_mapping = {
+    code.TASK_CREATE: 'create',
+    code.TASK_REMOVE: 'remove',
+    code.TASK_BUILD: 'build',
+}
 
 class Task(Base):
     __tablename__ = 'task'
 
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
-    app_id = db.Column(db.Integer, db.ForeignKey('app.id'))
-    version_id = db.Column(db.Integer, db.ForeignKey('version.id'))
+    app_id = db.Column(db.Integer, db.ForeignKey('app.id'), index=True)
+    version_id = db.Column(db.Integer, db.ForeignKey('version.id'), index=True)
     type = db.Column(db.Integer, nullable=False)
     result = db.Column(db.Integer, nullable=True)
     finished = db.Column(db.DateTime, nullable=True)
@@ -84,7 +90,13 @@ class Task(Base):
 
     def to_dict(self):
         d = super(Task, self).to_dict()
-        d.update(props=self.props)
+        d.update(
+            props=self.props,
+            action=type_mapping.get(self.type, 'unkown'),
+            name=self.app.name,
+            version=self.version.short_sha,
+            host=self.host.ip,
+        )
         d.pop('properties', '')
         return d
 

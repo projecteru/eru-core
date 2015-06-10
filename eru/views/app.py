@@ -1,19 +1,19 @@
 # coding: utf-8
 
 import inspect
-import logging
 
-from flask import Blueprint, request, g
+from flask import Blueprint, request, g, current_app
 from werkzeug.utils import import_string
 
 from eru.models import App
 from eru.common import code
 from eru.common.settings import RESOURCES
-from eru.utils.views import (jsonify, check_request_json,
-        check_request_args, EruAbortException)
+from eru.utils.views import (
+    jsonify, check_request_json,
+    check_request_args, EruAbortException,
+)
 
 bp = Blueprint('app', __name__, url_prefix='/api/app')
-logger = logging.getLogger(__name__)
 
 @bp.route('/<name>', methods=['GET', ])
 @jsonify()
@@ -41,38 +41,44 @@ def get_version(name, version):
 def register_app_version():
     data = request.get_json()
     name = data['name']
-    version = data['version']
+
+    if data.get('raw', ''):
+        version = code.RAW_VERSION_PLACEHOLDER
+    else:
+        version = data['version']
 
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
-        logger.error('app create failed')
+        current_app.logger.error('App create failed. (name=%s, version=%s)', name, version[:7])
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s create failed' % name)
 
     v = app.add_version(version)
     if not v:
-        logger.error('version create failed')
+        current_app.logger.error('Version create failed. (name=%s, version=%s)', name, version[:7])
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Version %s create failed' % version[:7])
 
     appconfig = v.appconfig
     appconfig.update(**data['appyaml'])
     appconfig.save()
-    logger.info('app version successfully created')
+    current_app.logger.info('App-Version created. (name=%s, version=%s)', name, version[:7])
     return {'r': 0, 'msg': 'ok'}
 
 @bp.route('/<name>/env/', methods=['PUT', ])
 @check_request_json('env')
 @jsonify()
 def set_app_env(name):
-    app = App.get_by_name(name)
-    if not app:
-        logger.error('app not found, env set ignored')
-        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env set ignored' % name)
-
     data = request.get_json()
     env = data.pop('env')
+
+    app = App.get_by_name(name)
+    if not app:
+        current_app.logger.error('App (name=%s) not found, env (env=%s) set ignored.', name, env)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env set ignored' % name)
+
     envconfig = app.get_resource_config(env)
     envconfig.update(**data)
     envconfig.save()
+    current_app.logger.error('App (name=%s) set env (env=%s) values done', name, env)
     return {'r': 0, 'msg': 'ok'}
 
 @bp.route('/<name>/env/', methods=['GET', ])
@@ -81,7 +87,6 @@ def set_app_env(name):
 def get_app_env(name):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env list ignored')
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
 
     envconfig = app.get_resource_config(request.args['env'])
@@ -92,7 +97,6 @@ def get_app_env(name):
 def list_app_env(name):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env set ignored')
         raise EruAbortException(code.HTTP_BAD_REQUEST)
     return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
 
@@ -101,7 +105,6 @@ def list_app_env(name):
 def alloc_resource(name, env, res_name, res_alias):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, allocation ignored')
         raise EruAbortException(code.HTTP_NOT_FOUND)
 
     r = RESOURCES.get(res_name)
@@ -122,7 +125,7 @@ def alloc_resource(name, env, res_name, res_alias):
         envconfig[res_alias] = result
         envconfig.save()
     except Exception, e:
-        logger.exception(e)
+        current_app.logger.exception(e)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Error in creating %s' % res_name)
     else:
         return {'r': 0, 'msg': 'ok', 'data': envconfig.to_dict()}
@@ -132,16 +135,22 @@ def alloc_resource(name, env, res_name, res_alias):
 def list_app_containers(name):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env list ignored')
-        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, container list ignored' % name)
     return {'r': 0, 'msg': 'ok', 'containers': app.list_containers(g.start, g.limit)}
+
+@bp.route('/<name>/tasks/', methods=['GET', ])
+@jsonify()
+def list_app_tasks(name):
+    app = App.get_by_name(name)
+    if not app:
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, container list ignored' % name)
+    return {'r': 0, 'msg': 'ok', 'tasks': app.list_tasks(g.start, g.limit)}
 
 @bp.route('/<name>/versions/', methods=['GET', ])
 @jsonify()
 def list_app_versions(name):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env list ignored')
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, version list ignored' % name)
     return {'r': 0, 'msg': 'ok', 'versions': app.list_versions(g.start, g.limit)}
 
@@ -150,15 +159,24 @@ def list_app_versions(name):
 def list_version_containers(name, version):
     app = App.get_by_name(name)
     if not app:
-        logger.error('app not found, env list ignored')
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
     v = app.get_version(version)
     if not v:
         raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
     return {'r': 0, 'msg': 'ok', 'containers': v.list_containers(g.start, g.limit)}
 
+@bp.route('/<name>/<version>/tasks/', methods=['GET', ])
+@jsonify()
+def list_version_tasks(name, version):
+    app = App.get_by_name(name)
+    if not app:
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'App %s not found, env list ignored' % name)
+    v = app.get_version(version)
+    if not v:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Version %s not found' % version)
+    return {'r': 0, 'msg': 'ok', 'tasks': v.list_tasks(g.start, g.limit)}
+
 @bp.errorhandler(EruAbortException)
 @jsonify()
 def eru_abort_handler(exception):
     return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}
-

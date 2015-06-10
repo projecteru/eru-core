@@ -1,15 +1,15 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import logging
 from flask import Flask, request, g
-from gunicorn.app.wsgiapp import WSGIApplication
 from werkzeug.utils import import_string
+from gunicorn.app.wsgiapp import WSGIApplication
 
 from eru.common.settings import (ERU_BIND, ERU_WORKERS,
         ERU_TIMEOUT, ERU_WORKER_CLASS, ERU_DAEMON)
 from eru.async import make_celery
 from eru.models import db
+from eru.log import init_logging
 
 blueprints = (
     'app',
@@ -26,13 +26,6 @@ blueprints = (
     'websockets',
 )
 exts = (db, )
-
-def init_logging(app):
-    args = {
-        'level': logging.DEBUG if app.debug else logging.INFO,
-        'format': '%(levelname)s:%(asctime)s:%(message)s',
-    }
-    logging.basicConfig(**args)
 
 def create_app_with_celery(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
@@ -81,4 +74,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

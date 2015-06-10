@@ -1,18 +1,16 @@
 #!/usr/bin/python
 #coding:utf-8
 
-import logging
 from more_itertools import chunked
 from itertools import izip_longest
 from celery import current_app
+from flask import current_app as current_flask
 
 from eru.common import code
 from eru.common.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network
-
-logger = logging.getLogger(__name__)
 
 def add_container_backends(container):
     """单个container所拥有的后端服务
@@ -59,31 +57,39 @@ def dont_report_these(container_ids):
 
 @current_app.task()
 def build_docker_image(task_id, base):
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
+        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
     notifier = TaskNotifier(task)
     try:
         repo, tag = base.split(':', 1)
+        current_flask.logger.info('Task<id=%s>: Pull base image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.pull_image(task.host, repo, tag))
+        current_flask.logger.info('Task<id=%s>: Build image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.build_image(task.host, task.version, base))
+        current_flask.logger.info('Task<id=%s>: Push image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
         dockerjob.remove_image(task.version, task.host)
     except Exception, e:
-        logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
         notifier.pub_fail()
+        current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         task.finish_with_result(code.TASK_SUCCESS)
         notifier.pub_success()
+        current_flask.logger.info('Task<id=%s>: Done', task_id)
     finally:
         notifier.pub_build_finish()
 
 @current_app.task()
 def remove_containers(task_id, cids, rmi=False):
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
+        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
     notifier = TaskNotifier(task)
@@ -95,16 +101,19 @@ def remove_containers(task_id, cids, rmi=False):
         rds.mset(**flags)
         for c in containers:
             remove_container_backends(c)
+            current_flask.logger.info('Task<id=%s>: Container (cid=%s) backends removed',
+                    task_id, c.container_id[:7])
         appnames = {c.appname for c in containers}
         publish_to_service_discovery(*appnames)
 
         dockerjob.remove_host_containers(containers, host)
+        current_flask.logger.info('Task<id=%s>: Containers (cids=%s) removed', task_id, cids)
         if rmi:
             dockerjob.remove_image(task.version, host)
     except Exception, e:
-        logger.exception(e)
         task.finish_with_result(code.TASK_FAILED)
         notifier.pub_fail()
+        current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         for c in containers:
             c.delete()
@@ -113,6 +122,7 @@ def remove_containers(task_id, cids, rmi=False):
         if container_ids:
             rds.srem('eru:agent:%s:containers' % host.name, *container_ids)
         rds.delete(*flags.keys())
+        current_flask.logger.info('Task<id=%s>: Done', task_id)
 
 @current_app.task()
 def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_ids):
@@ -120,8 +130,10 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
     #TODO support part core
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
+        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
     networks = Network.get_multi(network_ids)
@@ -131,6 +143,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     version = task.version
     entrypoint = task.props['entrypoint']
     env = task.props['env']
+    # use raw
+    image = task.props['image']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
@@ -147,7 +161,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         cores_for_one_container = {'full': fcores, 'part': pcores}
         try:
             cid, cname = dockerjob.create_one_container(host, version,
-                entrypoint, env, fcores+pcores, cpu_shares)
+                entrypoint, env, fcores+pcores, cpu_shares, image=image)
         except:
             host.release_cores(cores_for_one_container, nshare)
             continue
@@ -174,7 +188,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
                 ip.set_vethname(vethname)
 
         else:
-            logger.info('Creating container with cid %s and ips %s' % (cid, ips))
+            current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
             c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env, nshare)
             for ip in ips:
                 ip.assigned_to_container(c)
@@ -186,7 +200,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             continue
 
         # 清理掉失败的容器, 释放核, 释放ip
-        logger.info('Cleaning failed container with cid %s' % cid)
+        current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
         dockerjob.remove_container_by_cid([cid], host)
         host.release_cores(cores_for_one_container, nshare)
         [ip.release() for ip in ips]
@@ -196,3 +210,4 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     publish_to_service_discovery(version.name)
     task.finish_with_result(code.TASK_SUCCESS, container_ids=cids)
     notifier.pub_success()
+    current_flask.logger.info('Task<id=%s>: Done', task_id)

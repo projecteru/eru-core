@@ -4,7 +4,7 @@
 import logging
 import itertools
 
-from flask import Blueprint, request
+from flask import Blueprint, request, current_app
 
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 from eru.common import code
@@ -25,8 +25,14 @@ def index():
 def create_private(group_name, pod_name, appname):
     """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
     data = request.get_json()
+
+    if data.get('raw', ''):
+        vstr = code.RAW_VERSION_PLACEHOLDER
+    else:
+        vstr = data['version']
+
     group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
+            pod_name, appname, vstr)
 
     # TODO check if group has this pod
 
@@ -42,20 +48,27 @@ def create_private(group_name, pod_name, appname):
     hostname = data.get('hostname', '')
     host = hostname and Host.get_by_name(hostname) or None
     if host and not (host.group_id == group.id and host.pod_id == pod.id):
+        current_app.logger.error('Host must belong to pod/group (hostname=%s, pod=%s, group=%s)',
+                host, pod_name, group_name)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Host must belong to this pod and group')
 
     if not data['entrypoint'] in appconfig.entrypoints:
+        current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
+                data['entrypoint'], appname, version.short_sha)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
         host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare, spec_host=host)
         if not host_cores:
+            current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
+                    appname, version.short_sha, data['ncore'])
             raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         for (host, container_count), cores in host_cores.iteritems():
             t = _create_task(code.TASK_CREATE, version, host, container_count,
-                    cores, nshare, networks, data['entrypoint'], data['env'])
+                    cores, nshare, networks, data['entrypoint'], data['env'],
+                    image=data.get('image', ''))
             if not t:
                 continue
 
@@ -72,13 +85,20 @@ def create_public(group_name, pod_name, appname):
     """参数同private, 只是不能指定需要的核心数量"""
     data = request.get_json()
 
+    if data.get('raw', ''):
+        vstr = code.RAW_VERSION_PLACEHOLDER
+    else:
+        vstr = data['version']
+
     group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
+            pod_name, appname, vstr)
 
     networks = Network.get_multi(data.get('networks', []))
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
     if not data['entrypoint'] in appconfig.entrypoints:
+        current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
+                data['entrypoint'], appname, version.short_sha)
         raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
 
     ts, keys = [], []
@@ -86,7 +106,8 @@ def create_public(group_name, pod_name, appname):
         hosts = pod.get_free_public_hosts(ncontainer)
         for host in itertools.islice(itertools.cycle(hosts), ncontainer):
             t = _create_task(code.TASK_CREATE, version, host, 1,
-                    {}, 0, networks, data['entrypoint'], data['env'])
+                    {}, 0, networks, data['entrypoint'], data['env'],
+                    image=data.get('image', ''))
             if not t:
                 continue
             ts.append(t.id)
@@ -184,7 +205,7 @@ def validate_instance(group_name, pod_name, appname, version):
     return group, pod, application, version
 
 def _create_task(type_, version, host, ncontainer,
-    cores, nshare, networks, entrypoint, env):
+    cores, nshare, networks, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
     task_props = {
         'ncontainer': ncontainer,
@@ -194,6 +215,7 @@ def _create_task(type_, version, host, ncontainer,
         'part_cores': [c.label for c in cores.get('part', [])],
         'nshare': nshare,
         'networks': network_ids,
+        'image': image,
     }
     task = Task.create(type_, version, host, task_props)
     if not task:

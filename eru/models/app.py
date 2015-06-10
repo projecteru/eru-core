@@ -62,6 +62,13 @@ class Version(Base):
             q = q.limit(limit)
         return q.all()
 
+    def list_tasks(self, start=0, limit=20):
+        from .task import Task
+        q = self.tasks.order_by(Task.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def get_resource_config(self, env='prod'):
         return ResourceConfig.get_by_name_and_env(self.name, env)
 
@@ -137,6 +144,13 @@ class App(Base):
     def list_containers(self, start=0, limit=20):
         from .container import Container
         q = self.containers.order_by(Container.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
+    def list_tasks(self, start=0, limit=20):
+        from .task import Task
+        q = self.tasks.order_by(Task.id.desc()).offset(start)
         if limit is not None:
             q = q.limit(limit)
         return q.all()

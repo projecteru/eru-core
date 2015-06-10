@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 HTTP_OK = 200
 HTTP_CREATED = 201
@@ -20,3 +19,5 @@ PUB_END_MESSAGE = 'ERU_END_PUB'
 
 TASK_RESULT_SUCCESS = 'SUCCESS'
 TASK_RESULT_FAILED = 'FAILED'
+
+RAW_VERSION_PLACEHOLDER = 'this_is_just_a_default_version'
