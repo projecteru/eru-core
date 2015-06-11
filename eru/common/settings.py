@@ -25,10 +25,6 @@ DEFAULT_CORE_SHARE = 1
 DEFAULT_CORE_WEIGHT = 512
 DEFAULT_MAX_SHARE_CORE = 0 # -1 for all, 0 for disable
 
-LOGSTASH = [
-    'udp://10.100.1.154:50433',
-]
-
 ETCD_SYNC = True
 ETCD_MACHINES = (
     ('10.1.201.110', 4001),
