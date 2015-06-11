@@ -47,7 +47,7 @@ def jsonify(code=code.HTTP_OK):
         @wraps(f)
         def _(*args, **kwargs):
             r = f(*args, **kwargs)
-            return r and Response(json.dumps(r, cls=EruJSONEncoder), status=code, mimetype='application/json')
+            return Response(json.dumps(r, cls=EruJSONEncoder), status=code, mimetype='application/json')
         return _
     return _jsonify
 
