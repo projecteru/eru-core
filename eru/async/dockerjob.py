@@ -90,6 +90,8 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
 
+    network_mode = appconfig.get('network_mode', settings.DOCKER_NETWORK_MODE)
+
     if not image:
         image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
 
@@ -126,7 +128,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     # host_config, include log_config
     host_config = create_host_config(
         binds=binds,
-        network_mode=settings.DOCKER_NETWORK_MODE,
+        network_mode=network_mode,
         log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER),
         ulimits=[Ulimit(name='nofile', soft=65535, hard=65535)],
     )
