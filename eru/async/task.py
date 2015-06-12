@@ -125,7 +125,7 @@ def remove_containers(task_id, cids, rmi=False):
         current_flask.logger.info('Task<id=%s>: Done', task_id)
 
 @current_app.task()
-def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_ids):
+def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_ids, spec_ips=None):
     """
     执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
@@ -135,6 +135,9 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     if not task:
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
+
+    if spec_ips is None:
+        spec_ips = []
 
     networks = Network.get_multi(network_ids)
 
@@ -166,7 +169,10 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             host.release_cores(cores_for_one_container, nshare)
             continue
 
-        ips = [n.acquire_ip() for n in networks]
+        if spec_ips:
+            ips = [n.acquire_ip(ip) for n, ip in zip(networks, spec_ips)]
+        else:
+            ips = [n.acquire_ip() for n in networks]
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
