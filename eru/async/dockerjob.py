@@ -90,7 +90,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
 
-    network_mode = appconfig.get('network_mode', settings.DOCKER_NETWORK_MODE)
+    network_mode = entry.get('network_mode', settings.DOCKER_NETWORK_MODE)
 
     if not image:
         image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
