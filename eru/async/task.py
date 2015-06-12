@@ -170,7 +170,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             continue
 
         if spec_ips:
-            ips = [n.acquire_ip(ip) for n, ip in zip(networks, spec_ips)]
+            ips = [n.acquire_specific_ip(ip) for n, ip in zip(networks, spec_ips)]
         else:
             ips = [n.acquire_ip() for n in networks]
         ip_dict = {ip.vlan_address: ip for ip in ips}
