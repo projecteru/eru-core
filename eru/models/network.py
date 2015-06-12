@@ -2,7 +2,7 @@
 
 import more_itertools
 import sqlalchemy.exc
-from ipaddress import IPv4Network, IPv4Address
+from ipaddress import IPv4Network, IPv4Address, ip_address
 
 from eru.common.clients import rds
 from eru.models import db
@@ -153,6 +153,17 @@ class Network(Base):
         """take an IP from network, return an IP object"""
         ipnum = rds.spop(self.storekey)
         return ipnum and IP.create(ipnum, self) or None
+
+    def acquire_specific_ip(self, ip_str):
+        """take a specific IP from network"""
+        try:
+            ip = ip_address(ip_str)
+        except ValueError:
+            return None
+        with rds.lock('net:acquire_ip:%s' % self.id):
+            if rds.sismember(self.storekey, ip._ip):
+                rds.srem(self.storekey, ip._ip)
+                return IP.create(ip._ip, self)
 
     def release_ip(self, ip):
         """return this IP, which is an IP object"""

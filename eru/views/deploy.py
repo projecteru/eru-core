@@ -42,6 +42,7 @@ def create_private(group_name, pod_name, appname):
 
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
+    spec_ips = data.get('spec_ips', [])
     appconfig = version.appconfig
 
     # 指定的host, 如果没有则按照编排分配host
@@ -67,7 +68,7 @@ def create_private(group_name, pod_name, appname):
 
         for (host, container_count), cores in host_cores.iteritems():
             t = _create_task(code.TASK_CREATE, version, host, container_count,
-                    cores, nshare, networks, data['entrypoint'], data['env'],
+                    cores, nshare, networks, spec_ips, data['entrypoint'], data['env'],
                     image=data.get('image', ''))
             if not t:
                 continue
@@ -94,6 +95,7 @@ def create_public(group_name, pod_name, appname):
             pod_name, appname, vstr)
 
     networks = Network.get_multi(data.get('networks', []))
+    spec_ips = data.get('spec_ips', [])
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
     if not data['entrypoint'] in appconfig.entrypoints:
@@ -106,7 +108,7 @@ def create_public(group_name, pod_name, appname):
         hosts = pod.get_free_public_hosts(ncontainer)
         for host in itertools.islice(itertools.cycle(hosts), ncontainer):
             t = _create_task(code.TASK_CREATE, version, host, 1,
-                    {}, 0, networks, data['entrypoint'], data['env'],
+                    {}, 0, networks, spec_ips, data['entrypoint'], data['env'],
                     image=data.get('image', ''))
             if not t:
                 continue
@@ -205,7 +207,7 @@ def validate_instance(group_name, pod_name, appname, version):
     return group, pod, application, version
 
 def _create_task(type_, version, host, ncontainer,
-    cores, nshare, networks, entrypoint, env, image=''):
+    cores, nshare, networks, spec_ips, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
     task_props = {
         'ncontainer': ncontainer,
@@ -223,7 +225,7 @@ def _create_task(type_, version, host, ncontainer,
 
     try:
         create_containers_with_macvlan.apply_async(
-            args=(task.id, ncontainer, nshare, cores, network_ids),
+            args=(task.id, ncontainer, nshare, cores, network_ids, spec_ips),
             task_id='task:%d' % task.id
         )
     except Exception as e:
