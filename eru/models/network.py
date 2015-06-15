@@ -2,7 +2,7 @@
 
 import more_itertools
 import sqlalchemy.exc
-from ipaddress import IPv4Network, IPv4Address, ip_address
+from ipaddress import IPv4Network, IPv4Address, AddressValueError, ip_address
 
 from eru.common.clients import rds
 from eru.models import db
@@ -87,7 +87,7 @@ class Network(Base):
     __tablename__ = 'network'
 
     name = db.Column(db.CHAR(40), unique=True, nullable=False)
-    netspace = db.Column(db.CHAR(40), nullable=False, default='')
+    netspace = db.Column(db.CHAR(40), nullable=False, default='', index=True)
 
     ips = db.relationship('IP', backref='network', lazy='dynamic')
 
@@ -127,6 +127,10 @@ class Network(Base):
     def get_by_name(cls, name):
         return cls.query.filter_by(name=name).first()
 
+    @classmethod
+    def get_by_netspace(cls, netspace):
+        return cls.query.filter_by(netspace=netspace).first()
+
     @property
     def storekey(self):
         return 'eru:network:%s:ips' % self.name
@@ -148,6 +152,15 @@ class Network(Base):
         # 网关就不要给别人了, 留了100个
         n = self.network
         return (n.num_addresses - 100) - self.pool_size
+
+    def __contains__(self, ip):
+        """ip is unicode or IPv4Address object"""
+        if isinstance(ip, basestring):
+            try:
+                ip = IPv4Address(ip)
+            except AddressValueError:
+                return False
+        return rds.sismember(self.storekey, int(ip))
 
     def acquire_ip(self):
         """take an IP from network, return an IP object"""
