@@ -44,7 +44,7 @@ def get_network_by_name(network_name):
 def list_networks():
     return Network.list_networks()
 
-@bp.route('/addr/<string:addr>/available/', methods=['GET'])
+@bp.route('/addr/<path:addr>/available/', methods=['GET'])
 @jsonify()
 def check_addr(addr):
     """addr is like 10.20.0.1/16 or 10.100.3.12/24"""
