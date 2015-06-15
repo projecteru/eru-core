@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from flask import Blueprint, request, current_app
+from ipaddress import IPv4Interface, AddressValueError
 
 from eru.models import Network
 from eru.common import code
@@ -42,6 +43,19 @@ def get_network_by_name(network_name):
 @jsonify()
 def list_networks():
     return Network.list_networks()
+
+@bp.route('/addr/<string:addr>/available/', methods=['GET'])
+@jsonify()
+def check_addr(addr):
+    """addr is like 10.20.0.1/16 or 10.100.3.12/24"""
+    try:
+        interface = IPv4Interface(addr)
+    except AddressValueError:
+        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not valid interface')
+    net = Network.get_by_netspace(interface.network.compressed)
+    if not net:
+        raise EruAbortException(code.HTTP_NOT_FOUND, 'Interface not found')
+    return {'r': 0, 'msg': code.OK, 'result': interface.ip in net}
 
 @bp.errorhandler(EruAbortException)
 @jsonify()
