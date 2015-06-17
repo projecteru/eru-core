@@ -4,11 +4,10 @@ import logging
 import geventwebsocket
 from flask import Blueprint, request
 
+from eru import consts
+from eru.clients import rds, get_docker_client
 from eru.models import Task, Container
 from eru.utils.notify import TaskNotifier
-
-from eru.common import code
-from eru.common.clients import rds, get_docker_client
 
 bp = Blueprint('websockets', __name__, url_prefix='/websockets')
 logger = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ def task_log(task_id):
             return ''
 
         for line in pub.listen():
-            if line['data'] == code.PUB_END_MESSAGE:
+            if line['data'] == consts.PUB_END_MESSAGE:
                 break
             if line['type'] != 'message':
                 continue

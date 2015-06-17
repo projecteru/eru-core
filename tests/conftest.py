@@ -3,7 +3,7 @@
 import pytest
 
 from eru.app import create_app_with_celery
-from eru.common.clients import rds
+from eru.clients import rds
 from eru.models import db
 
 

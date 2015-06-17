@@ -175,7 +175,7 @@ def test_container(test_db):
         assert len(full_cores) == 4
         assert len(part_cores) == 0
         assert len(host.containers.all()) == 0
-        assert host.count == 0
+        assert host.count == 4
 
     #测试有碎片的情况
     #获取核
@@ -199,7 +199,7 @@ def test_container(test_db):
         assert len(part_cores) == 1
         assert part_cores[0].remain == 6
         assert len(host.containers.all()) == 1
-        assert host.count == 1
+        assert host.count == 0
 
     assert len(containers) == 3
     assert len(v.containers.all()) == 3
@@ -231,7 +231,7 @@ def test_container(test_db):
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 4
         assert len(host.containers.all()) == 0
-        assert host.count == 0
+        assert host.count == 4
 
     #获取
     host_cores = g.get_free_cores(p, 6, 1, 5)
@@ -255,7 +255,7 @@ def test_container(test_db):
         assert len(full_cores) == 1
         assert len(part_cores) == 0
         assert len(host.containers.all()) == 2
-        assert host.count == 2
+        assert host.count == 0
 
     assert len(containers) == 6
     assert len(v.containers.all()) == 6
@@ -283,7 +283,7 @@ def test_container(test_db):
         assert len(full_cores) == 4
         assert len(part_cores) == 0
         assert len(host.containers.all()) == 0
-        assert host.count == 0
+        assert host.count == 4
 
 def test_occupy_and_release_cores(test_db):
     g = Group.create('group', 'group')

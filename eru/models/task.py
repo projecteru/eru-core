@@ -6,14 +6,12 @@ from datetime import datetime
 
 from eru.models import db
 from eru.models.base import Base
-from eru.common import code
-from eru.common.settings import ERU_TASK_RESULTKEY, ERU_TASK_LOGKEY, ERU_TASK_PUBKEY
-
-type_mapping = {
-    code.TASK_CREATE: 'create',
-    code.TASK_REMOVE: 'remove',
-    code.TASK_BUILD: 'build',
-}
+from eru.consts import (
+    ERU_TASK_RESULTKEY,
+    ERU_TASK_LOGKEY,
+    ERU_TASK_PUBKEY,
+    TASK_ACTIONS,
+)
 
 class Task(Base):
     __tablename__ = 'task'
@@ -92,7 +90,7 @@ class Task(Base):
         d = super(Task, self).to_dict()
         d.update(
             props=self.props,
-            action=type_mapping.get(self.type, 'unkown'),
+            action=TASK_ACTIONS.get(self.type, 'unkown'),
             name=self.app.name,
             version=self.version.short_sha,
             host=self.host.ip,

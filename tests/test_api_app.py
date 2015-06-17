@@ -35,7 +35,7 @@ build: "pip install -r ./req.txt"
     assert r[u'r'] == 0
     assert r[u'msg'] == u'ok'
     
-    rv = client.get('/api/app/test_app')
+    rv = client.get('/api/app/test_app/')
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
@@ -43,13 +43,13 @@ build: "pip install -r ./req.txt"
     assert r[u'token'] == data['token']
     assert r[u'group_id'] is None
 
-    rv = client.get('/api/app/random_app_name')
+    rv = client.get('/api/app/random_app_name/')
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'r'] == 1
     assert r[u'status_code'] == 404
 
-    rv = client.get('/api/app/{0}/{1}'.format(data['name'], data['version']))
+    rv = client.get('/api/app/{0}/{1}/'.format(data['name'], data['version']))
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
@@ -63,7 +63,7 @@ build: "pip install -r ./req.txt"
     assert r[u'appconfig']['build'] == u'pip install -r ./req.txt'
 
     # 短 version 试试
-    rv = client.get('/api/app/{0}/{1}'.format(data['name'], data['version'][:7]))
+    rv = client.get('/api/app/{0}/{1}/'.format(data['name'], data['version'][:7]))
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
@@ -93,7 +93,7 @@ build: "pip install -r ./req.txt"
         'appyaml': yaml.load(appyaml),
     }
     client.post('/api/app/register/', data=json.dumps(data), content_type='application/json')
-    rv = client.get('/api/app/test_app')
+    rv = client.get('/api/app/test_app/')
     assert rv.status_code == 200
 
     url = '/api/app/{0}/env/'.format(data['name'])

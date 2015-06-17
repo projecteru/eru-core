@@ -4,7 +4,7 @@ import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
-from eru.common.clients import rds
+from eru.clients import rds
 
 _pipeline = rds.pipeline()
 

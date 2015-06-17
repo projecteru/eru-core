@@ -1,7 +1,6 @@
 # coding: utf-8
 
 import docker
-import requests
 from docker.utils import kwargs_from_env
 from eru.models import App, Group, Pod, Host, Container
 from tests.utils import random_sha1, random_string, random_uuid, random_ipv4
@@ -44,7 +43,7 @@ def create_test_suite():
         cores_per_container = len(cores) / count
         for i in range(count):
             cid = random_sha1()
-            used_cores = cores['full'][i*cores_per_container:(i+1)*cores_per_container]
+            used_cores = {'full': cores['full'][i*cores_per_container:(i+1)*cores_per_container]}
             c = Container.create(cid, host, version, random_string(), 'entrypoint', used_cores, 'env')
             containers.append(c)
         host.occupy_cores(cores, 0)

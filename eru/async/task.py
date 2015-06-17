@@ -6,8 +6,8 @@ from itertools import izip_longest
 from celery import current_app
 from flask import current_app as current_flask
 
-from eru.common import code
-from eru.common.clients import rds
+from eru import consts
+from eru.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network
@@ -74,11 +74,11 @@ def build_docker_image(task_id, base):
         notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
         dockerjob.remove_image(task.version, task.host)
     except Exception, e:
-        task.finish_with_result(code.TASK_FAILED)
+        task.finish_with_result(consts.TASK_FAILED)
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
-        task.finish_with_result(code.TASK_SUCCESS)
+        task.finish_with_result(consts.TASK_SUCCESS)
         notifier.pub_success()
         current_flask.logger.info('Task<id=%s>: Done', task_id)
     finally:
@@ -111,13 +111,13 @@ def remove_containers(task_id, cids, rmi=False):
         if rmi:
             dockerjob.remove_image(task.version, host)
     except Exception, e:
-        task.finish_with_result(code.TASK_FAILED)
+        task.finish_with_result(consts.TASK_FAILED)
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         for c in containers:
             c.delete()
-        task.finish_with_result(code.TASK_SUCCESS)
+        task.finish_with_result(consts.TASK_SUCCESS)
         notifier.pub_success()
         if container_ids:
             rds.srem('eru:agent:%s:containers' % host.name, *container_ids)
@@ -215,6 +215,6 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         rds.delete(feedback_key)
 
     publish_to_service_discovery(version.name)
-    task.finish_with_result(code.TASK_SUCCESS, container_ids=cids)
+    task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
     notifier.pub_success()
     current_flask.logger.info('Task<id=%s>: Done', task_id)

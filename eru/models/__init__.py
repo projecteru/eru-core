@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # encoding: UTF-8
 
 from flask.ext.sqlalchemy import SQLAlchemy

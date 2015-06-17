@@ -6,7 +6,7 @@ import itertools
 import sqlalchemy.exc
 from datetime import datetime
 
-from eru.common.clients import rds
+from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base
 

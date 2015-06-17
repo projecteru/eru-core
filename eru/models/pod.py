@@ -5,7 +5,7 @@ import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
-from eru.common.settings import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
+from eru.config import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 
 class Pod(Base):
     __tablename__ = 'pod'
