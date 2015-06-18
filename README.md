@@ -13,11 +13,11 @@ Core of Project Eru, for those reasons:
 
 ![Image of Architecture](http://ww3.sinaimg.cn/large/74cb2da7gw1epp7df19a8j21kw16o10v.jpg)
 
-## Start Web
+## Start Service
 
     eru
 
-## Start async worker
+## Start Worker
 
     celery -A eru.app.celery worker -n 'c1' -E -P gevent
 
