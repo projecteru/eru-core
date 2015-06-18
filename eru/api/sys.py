@@ -26,7 +26,7 @@ def index():
 def create_group():
     data = request.get_json()
     if not Group.create(data['name'], data.get('description', '')):
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Group create failed')
     current_app.logger.info('Group create succeeded (name=%s, desc=%s)',
             data['name'], data.get('description', ''))
     return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
@@ -42,7 +42,7 @@ def create_pod():
             data.get('core_share', DEFAULT_CORE_SHARE),
             data.get('max_share_core', DEFAULT_MAX_SHARE_CORE),
     ):
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Pod create failed')
     current_app.logger.info('Pod create succeeded (name=%s, desc=%s)',
             data['name'], data.get('description', ''))
     return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
@@ -56,13 +56,13 @@ def assign_pod_to_group(pod_name):
     group = Group.get_by_name(data['group_name'])
     pod = Pod.get_by_name(pod_name)
     if not group or not pod:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No group/pod found')
 
     if not pod.assigned_to_group(group):
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Assign failed')
     current_app.logger.info('Pod (name=%s) assigned to group (name=%s)',
             pod_name, data['group_name'])
-    return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
+    return {'r':0, 'msg': consts.OK}
 
 @bp.route('/host/create', methods=['POST', ])
 @check_request_json(['addr', 'pod_name'], consts.HTTP_BAD_REQUEST)
@@ -73,7 +73,7 @@ def create_host():
 
     pod = Pod.get_by_name(data['pod_name'])
     if not pod:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No pod found')
 
     try:
         client = get_docker_client(addr)
@@ -93,17 +93,17 @@ def assign_host_to_group(addr):
 
     group = Group.get_by_name(data['group_name'])
     if not group:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No group found')
 
     host = Host.get_by_addr(addr)
     if not host:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No host found')
 
     if not host.assigned_to_group(group):
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Assign failed')
     current_app.logger.info('Host (addr=%s) assigned to group (name=%s)',
             addr, data['group_name'])
-    return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
+    return {'r':0, 'msg': consts.OK}
 
 @bp.route('/group/<group_name>/available_container_count', methods=['GET', ])
 @jsonify
@@ -113,10 +113,10 @@ def group_max_containers(group_name):
 
     group = Group.get_by_name(group_name)
     if not group:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No group found')
     pod = Pod.get_by_name(pod_name)
     if not pod:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No pod found')
 
     core_require = int(core_require * pod.core_share) # 是说一个容器要几个核...
     ncore = core_require / pod.core_share

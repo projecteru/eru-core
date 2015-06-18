@@ -86,7 +86,7 @@ def get_app_env(name):
     envconfig = app.get_resource_config(request.args['env'])
     return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
 
-@bp.route('/<name>/listenv', methods=['GET', ])
+@bp.route('/<name>/listenv/', methods=['GET', ])
 @jsonify
 def list_app_env(name):
     app = App.get_by_name(name)
