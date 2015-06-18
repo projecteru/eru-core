@@ -5,8 +5,13 @@ from flask import Flask, request, g
 from werkzeug.utils import import_string
 from gunicorn.app.wsgiapp import WSGIApplication
 
-from eru.common.settings import (ERU_BIND, ERU_WORKERS,
-        ERU_TIMEOUT, ERU_WORKER_CLASS, ERU_DAEMON)
+from eru.config import (
+    ERU_BIND,
+    ERU_DAEMON,
+    ERU_TIMEOUT,
+    ERU_WORKERS,
+    ERU_WORKER_CLASS,
+)
 from eru.async import make_celery
 from eru.models import db
 from eru.log import init_logging
@@ -29,7 +34,7 @@ exts = (db, )
 
 def create_app_with_celery(static_url_path=None):
     app = Flask('eru', static_url_path=static_url_path)
-    app.config.from_object('eru.common.settings')
+    app.config.from_object('eru.config')
 
     # should be initialized before other imports
     celery = make_celery(app)
@@ -40,7 +45,7 @@ def create_app_with_celery(static_url_path=None):
         ext.init_app(app)
 
     for bp in blueprints:
-        import_name = '%s.views.%s:bp' % (__package__, bp)
+        import_name = '%s.api.%s:bp' % (__package__, bp)
         app.register_blueprint(import_string(import_name))
 
     @app.before_request

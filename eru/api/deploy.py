@@ -6,28 +6,30 @@ import itertools
 
 from flask import Blueprint, request, current_app
 
-from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
-from eru.common import code
-from eru.common.clients import rds
+from eru import consts
+from eru.clients import rds
 from eru.models import App, Group, Pod, Task, Network, Container, Host
-from eru.utils.views import check_request_json, jsonify, EruAbortException
+from eru.utils.decorator import check_request_json, jsonify
+from eru.utils.exception import EruAbortException
+from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
 
 @bp.route('/')
+@jsonify
 def index():
-    return 'deploy control'
+    return {'r': 0, 'msg': 'ok', 'data': 'deploy control'}
 
 @bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['POST', ])
 @check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
-@jsonify()
+@jsonify
 def create_private(group_name, pod_name, appname):
     """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
     data = request.get_json()
 
     if data.get('raw', ''):
-        vstr = code.RAW_VERSION_PLACEHOLDER
+        vstr = consts.RAW_VERSION_PLACEHOLDER
     else:
         vstr = data['version']
 
@@ -51,12 +53,12 @@ def create_private(group_name, pod_name, appname):
     if host and not (host.group_id == group.id and host.pod_id == pod.id):
         current_app.logger.error('Host must belong to pod/group (hostname=%s, pod=%s, group=%s)',
                 host, pod_name, group_name)
-        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Host must belong to this pod and group')
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Host must belong to this pod and group')
 
     if not data['entrypoint'] in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
                 data['entrypoint'], appname, version.short_sha)
-        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
@@ -64,10 +66,10 @@ def create_private(group_name, pod_name, appname):
         if not host_cores:
             current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
                     appname, version.short_sha, data['ncore'])
-            raise EruAbortException(code.HTTP_BAD_REQUEST, 'Not enough core resources')
+            raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         for (host, container_count), cores in host_cores.iteritems():
-            t = _create_task(code.TASK_CREATE, version, host, container_count,
+            t = _create_task(consts.TASK_CREATE, version, host, container_count,
                     cores, nshare, networks, spec_ips, data['entrypoint'], data['env'],
                     image=data.get('image', ''))
             if not t:
@@ -81,13 +83,13 @@ def create_private(group_name, pod_name, appname):
 
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['POST', ])
 @check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
-@jsonify()
+@jsonify
 def create_public(group_name, pod_name, appname):
     """参数同private, 只是不能指定需要的核心数量"""
     data = request.get_json()
 
     if data.get('raw', ''):
-        vstr = code.RAW_VERSION_PLACEHOLDER
+        vstr = consts.RAW_VERSION_PLACEHOLDER
     else:
         vstr = data['version']
 
@@ -101,13 +103,13 @@ def create_public(group_name, pod_name, appname):
     if not data['entrypoint'] in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
                 data['entrypoint'], appname, version.short_sha)
-        raise EruAbortException(code.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
         hosts = pod.get_free_public_hosts(ncontainer)
         for host in itertools.islice(itertools.cycle(hosts), ncontainer):
-            t = _create_task(code.TASK_CREATE, version, host, 1,
+            t = _create_task(consts.TASK_CREATE, version, host, 1,
                     {}, 0, networks, spec_ips, data['entrypoint'], data['env'],
                     image=data.get('image', ''))
             if not t:
@@ -119,7 +121,7 @@ def create_public(group_name, pod_name, appname):
 
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['base', 'version'])
-@jsonify()
+@jsonify
 def build_image(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
@@ -129,7 +131,7 @@ def build_image(group_name, pod_name, appname):
     # 这个group可以build这个version不?
     base = data['base']
     host = pod.get_random_host()
-    task = Task.create(code.TASK_BUILD, version, host, {'base': base})
+    task = Task.create(consts.TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
         args=(task.id, base),
         task_id='task:%d' % task.id
@@ -138,7 +140,7 @@ def build_image(group_name, pod_name, appname):
 
 @bp.route('/rmcontainers/', methods=['PUT', 'POST', ])
 @check_request_json(['cids'])
-@jsonify()
+@jsonify
 def rm_containers():
     cids = request.get_json()['cids']
     version_dict = {}
@@ -151,7 +153,7 @@ def rm_containers():
     for (version, host), containers in version_dict.iteritems():
         cids = [c.id for c in containers]
         task_props = {'container_ids': cids}
-        task = Task.create(code.TASK_REMOVE, version, host, task_props)
+        task = Task.create(consts.TASK_REMOVE, version, host, task_props)
         remove_containers.apply_async(
             args=(task.id, cids, False),
             task_id='task:%d' % task.id
@@ -162,7 +164,7 @@ def rm_containers():
 
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version'])
-@jsonify()
+@jsonify
 def offline_version(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
@@ -174,7 +176,7 @@ def offline_version(group_name, pod_name, appname):
     for host, containers in d.iteritems():
         cids = [c.id for c in containers]
         task_props = {'container_ids': cids}
-        task = Task.create(code.TASK_REMOVE, version, host, task_props)
+        task = Task.create(consts.TASK_REMOVE, version, host, task_props)
         remove_containers.apply_async(
             args=(task.id, cids, True),
             task_id='task:%d' % task.id
@@ -186,22 +188,22 @@ def offline_version(group_name, pod_name, appname):
 def validate_instance(group_name, pod_name, appname, version):
     group = Group.get_by_name(group_name)
     if not group:
-        raise EruAbortException(code.HTTP_BAD_REQUEST,
+        raise EruAbortException(consts.HTTP_BAD_REQUEST,
                 'Group `%s` not found' % group_name)
 
     pod = Pod.get_by_name(pod_name)
     if not pod:
-        raise EruAbortException(code.HTTP_BAD_REQUEST,
+        raise EruAbortException(consts.HTTP_BAD_REQUEST,
                 'Pod `%s` not found' % pod_name)
 
     application = App.get_by_name(appname)
     if not application:
-        raise EruAbortException(code.HTTP_BAD_REQUEST,
+        raise EruAbortException(consts.HTTP_BAD_REQUEST,
                 'App `%s` not found' % appname)
 
     version = application.get_version(version)
     if not version:
-        raise EruAbortException(code.HTTP_BAD_REQUEST,
+        raise EruAbortException(consts.HTTP_BAD_REQUEST,
                 'Version `%s` not found' % version)
 
     return group, pod, application, version
@@ -233,8 +235,3 @@ def _create_task(type_, version, host, ncontainer,
         host.release_cores(cores)
 
     return task
-
-@bp.errorhandler(EruAbortException)
-@jsonify()
-def eru_abort_handler(exception):
-    return {'r': 1, 'msg': exception.msg, 'status_code': exception.code}

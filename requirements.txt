@@ -14,7 +14,6 @@ Flask-SQLAlchemy==2.0
 gevent==1.0.1
 greenlet==0.4.5
 gunicorn==19.2.0
-influxdb==0.2.0
 itsdangerous==0.24
 Jinja2==2.7.3
 kombu==3.0.24
@@ -25,7 +24,6 @@ pyasn1==0.1.7
 pycparser==2.10
 pycrypto==2.6.1
 pyOpenSSL==0.14
-python-etcd==0.3.2
 pytz==2014.10
 PyYAML==3.11
 redis==2.10.3

@@ -1,26 +1,13 @@
 # coding: utf-8
 
-import functools
-import inspect
 import more_itertools
 import sqlalchemy.exc
 from ipaddress import IPv4Network, IPv4Address, AddressValueError, ip_address
 
-from eru.common.clients import rds
+from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base
-
-def _with_redis_lock(fmt):
-    def __with_redis_lock(f):
-        @functools.wraps(f)
-        def _(*args, **kwargs):
-            ags = inspect.getargspec(f)
-            kw = dict(zip(ags.args, args))
-            kw.update(kwargs)
-            with rds.lock(fmt.format(**kw)):
-                return f(*args, **kwargs)
-        return _
-    return __with_redis_lock
+from eru.utils.decorator import redis_lock
 
 class IP(Base):
 
@@ -170,7 +157,7 @@ class Network(Base):
     def __contains__(self, ip):
         return self.containers_ip(ip)
 
-    @_with_redis_lock('net:acquire_ip:{self.id}')
+    @redis_lock('net:acquire_ip:{self.id}')
     def containers_ip(self, ip):
         """ip is unicode or IPv4Address object"""
         if isinstance(ip, basestring):
@@ -180,13 +167,13 @@ class Network(Base):
                 return False
         return rds.sismember(self.storekey, int(ip))
 
-    @_with_redis_lock('net:acquire_ip:{self.id}')
+    @redis_lock('net:acquire_ip:{self.id}')
     def acquire_ip(self):
         """take an IP from network, return an IP object"""
         ipnum = rds.spop(self.storekey)
         return ipnum and IP.create(ipnum, self) or None
 
-    @_with_redis_lock('net:acquire_ip:{self.id}')
+    @redis_lock('net:acquire_ip:{self.id}')
     def acquire_specific_ip(self, ip_str):
         """take a specific IP from network"""
         try:
@@ -197,7 +184,7 @@ class Network(Base):
             rds.srem(self.storekey, ip._ip)
             return IP.create(ip._ip, self)
 
-    @_with_redis_lock('net:acquire_ip:{self.id}')
+    @redis_lock('net:acquire_ip:{self.id}')
     def release_ip(self, ip):
         """return this IP, which is an IP object"""
         rds.sadd(self.storekey, int(ip))

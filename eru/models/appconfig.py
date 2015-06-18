@@ -2,7 +2,7 @@
 
 import yaml
 
-from eru.common.clients import config_backend
+from eru.clients import config_backend
 
 __all__ = ['AppConfig', 'ResourceConfig', ]
 

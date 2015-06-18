@@ -12,8 +12,8 @@ from retrying import retry
 
 from res.ext.common import random_string
 
-from eru.common import settings
-from eru.common.clients import get_docker_client
+from eru import config
+from eru.clients import get_docker_client
 from eru.templates import template
 from eru.utils.ensure import ensure_dir_absent, ensure_file
 
@@ -60,7 +60,7 @@ def build_image(host, version, base):
     """
     client = get_docker_client(host.addr)
     appname = version.app.name
-    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
+    repo = '{0}/{1}'.format(config.DOCKER_REGISTRY, appname)
     rev = version.short_sha
     tag = '{0}:{1}'.format(repo, rev)
 
@@ -70,13 +70,13 @@ def build_image(host, version, base):
 def push_image(host, version):
     client = get_docker_client(host.addr)
     appname = version.app.name
-    repo = '{0}/{1}'.format(settings.DOCKER_REGISTRY, appname)
+    repo = '{0}/{1}'.format(config.DOCKER_REGISTRY, appname)
     rev = version.short_sha
-    return client.push(repo, tag=rev, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
+    return client.push(repo, tag=rev, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
 def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
-    return client.pull(repo, tag=tag, stream=True, insecure_registry=settings.DOCKER_REGISTRY_INSECURE)
+    return client.pull(repo, tag=tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
 def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024, image=''):
     if cores is None:
@@ -90,15 +90,15 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
 
-    network_mode = entry.get('network_mode', settings.DOCKER_NETWORK_MODE)
+    network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
 
     if not image:
-        image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+        image = '{0}/{1}:{2}'.format(config.DOCKER_REGISTRY, appname, version.short_sha)
 
     if image not in local_images:
         repo, tag = image.split(':', 1)
         for line in client.pull(repo, tag, stream=True,
-                insecure_registry=settings.DOCKER_REGISTRY_INSECURE):
+                insecure_registry=config.DOCKER_REGISTRY_INSECURE):
             print line
 
     env_dict = {
@@ -115,11 +115,11 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     binds = {'/proc/sys': {'bind': '/writable-proc/sys', 'ro': False}}
     binds.update(appconfig.get('binds', {}))
 
-    if settings.ERU_CONTAINER_PERMDIR:
-        permdir = settings.ERU_CONTAINER_PERMDIR % appname
+    if config.ERU_CONTAINER_PERMDIR:
+        permdir = config.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
         volumes.append(permdir)
-        binds[settings.ERU_HOST_PERMDIR % appname] =  {'bind': permdir, 'ro': False}
+        binds[config.ERU_HOST_PERMDIR % appname] =  {'bind': permdir, 'ro': False}
 
     # container name: {appname}_{entrypoint}_{ident_id}
     container_name = '_'.join([appname, entrypoint, random_string(6)])
@@ -129,7 +129,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     host_config = create_host_config(
         binds=binds,
         network_mode=network_mode,
-        log_config=LogConfig(type=settings.DOCKER_LOG_DRIVER),
+        log_config=LogConfig(type=config.DOCKER_LOG_DRIVER),
         ulimits=[Ulimit(name='nofile', soft=65535, hard=65535)],
     )
     container = client.create_container(
@@ -140,7 +140,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
         name=container_name,
         cpuset=cpuset,
         working_dir=None if image else '/%s' % appname,
-        network_disabled=settings.DOCKER_NETWORK_DISABLED,
+        network_disabled=config.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
         host_config=host_config,
         cpu_shares=cpu_shares,
@@ -206,7 +206,7 @@ def remove_image(version, host):
     client = get_docker_client(host.addr)
     appconfig = version.appconfig
     appname = appconfig.appname
-    image = '{0}/{1}:{2}'.format(settings.DOCKER_REGISTRY, appname, version.short_sha)
+    image = '{0}/{1}:{2}'.format(config.DOCKER_REGISTRY, appname, version.short_sha)
     try:
         client.remove_image(image)
     except docker.errors.APIError as e:
