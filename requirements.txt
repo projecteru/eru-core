@@ -11,8 +11,8 @@ ecdsa==0.11
 enum34==1.0.4
 Flask==0.10.1
 Flask-SQLAlchemy==2.0
-gevent==1.0.1
-greenlet==0.4.5
+gevent==1.0.2
+greenlet==0.4.7
 gunicorn==19.2.0
 itsdangerous==0.24
 Jinja2==2.7.3
@@ -27,7 +27,7 @@ pyOpenSSL==0.14
 pytz==2014.10
 PyYAML==3.11
 redis==2.10.3
-requests==2.5.1
+requests==2.4.3
 six==1.9.0
 SQLAlchemy==0.9.8
 urllib3==1.10
