@@ -5,6 +5,7 @@ import sqlalchemy.exc
 from eru.models import db
 from eru.models.base import Base
 from eru.clients import rds
+from eru.utils.decorator import redis_lock
 
 _pipeline = rds.pipeline()
 
@@ -21,6 +22,9 @@ class Core(object):
 
     def is_free(self):
         return self.remain == 0
+
+    def __hash__(self):
+        return hash('%s:%s' % (self.label, self.host_id))
 
 def _create_cores_on_host(host, count):
     data = {str(i): host.pod.core_share for i in xrange(count)}
@@ -88,6 +92,14 @@ class Host(Base):
         r = rds.zrange(self._cores_key, 0, -1, withscores=True, score_cast_func=int)
         return [Core(name, self.id, value) for name, value in r]
 
+    @property
+    def max_share_core(self):
+        return self.pod.max_share_core
+
+    @property
+    def core_share(self):
+        return self.pod.core_share
+
     def list_containers(self, start=0, limit=20):
         q = self.containers.offset(start)
         if limit is not None:
@@ -108,6 +120,52 @@ class Host(Base):
             elif 0 < value < slice_count:
                 fragment.append(c)
         return full, fragment
+
+    def get_max_container_count(self, ncore, nshare=0):
+        if nshare and not self.max_share_core:
+            return 0
+        exclusive_cores, shared_cores = self.get_free_cores()
+        exclusive_count, shared_count = len(exclusive_cores), len(shared_cores)
+        max_share_core = exclusive_count if self.max_share_core == -1 else self.max_share_core
+        if nshare:
+            shared_total = sum(fragment.remain / nshare for fragment in shared_cores)
+            if ncore == 0:
+                return shared_total + (max_share_core - shared_count) * self.core_share / nshare
+            else:
+                return max(
+                    min(
+                        (exclusive_count -i) / ncore,
+                        shared_total + self.core_share / nshare * i
+                    )
+                    for i in range(max_share_core - shared_count + 1)
+                )
+        return exclusive_count / ncore
+
+    @redis_lock('host:alloc_cores:{self.id}')
+    def get_container_cores(self, ncontainer, ncore, nshare=0):
+        """get as much as possible."""
+        max_count = self.get_max_container_count(ncore, nshare)
+        total = min(ncontainer, max_count)
+
+        exclusive_cores, shared_cores = self.get_free_cores()
+        exclusive_result, shared_result = [], []
+
+        if ncore:
+            exclusive_result = exclusive_cores[:total*ncore]
+
+        if nshare:
+            for fragment in shared_cores:
+                shared_result.extend(fragment for _ in range(fragment.remain / nshare))
+
+            offset = total*ncore if ncore else 0
+            still_need = total - len(shared_result)
+            while len(shared_result) < total:
+                c = self.core_share / nshare
+                shared_result.extend(exclusive_cores[offset] for _ in range(min(c, still_need)))
+                offset += 1
+                still_need -= c
+
+        return total, {'full': exclusive_result, 'part': shared_result}
 
     def get_filtered_containers(self, version=None, entrypoint=None, app=None, start=0, limit=20):
         q = self.containers
@@ -151,7 +209,6 @@ class Host(Base):
         _pipeline.execute()
 
     def kill(self):
-        """一个host上不会太多container"""
         self.is_alive = False
         for c in self.containers.all():
             c.is_alive = 0
@@ -160,7 +217,6 @@ class Host(Base):
         db.session.commit()
 
     def cure(self):
-        """一个host上不会太多container"""
         self.is_alive = True
         for c in self.containers.all():
             c.is_alive = 1
