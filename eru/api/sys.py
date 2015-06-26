@@ -11,6 +11,7 @@ from eru.config import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 from eru.models import Group, Pod, Host
 from eru.utils.decorator import jsonify, check_request_json
 from eru.utils.exception import EruAbortException
+from eru.helpers.docker import save_docker_certs
 
 bp = Blueprint('sys', __name__, url_prefix='/api/sys')
 logger = logging.getLogger(__name__)
@@ -74,6 +75,15 @@ def create_host():
     pod = Pod.get_by_name(data['pod_name'])
     if not pod:
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No pod found')
+
+    # 存证书, 没有就算了
+    try:
+        ca, cert, key = request.files['ca'], request.files['cert'], request.files['key']
+        save_docker_certs(addr.split(':', 1)[0], ca.read(), cert.read(), key.read())
+    finally:
+        ca.close()
+        cert.close()
+        key.close()
 
     try:
         client = get_docker_client(addr)
