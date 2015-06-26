@@ -41,6 +41,14 @@ class Group(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
+    def get_private_hosts(self, pod=None, start=0, limit=20):
+        q = self.private_hosts
+        if pod:
+            q = q.filter_by(pod_id=pod.id).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def get_max_containers(self, pod, ncore, nshare):
         """
         如果你一个容器需要 ncore 个核和 nshare 份碎片

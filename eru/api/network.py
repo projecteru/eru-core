@@ -11,8 +11,8 @@ from eru.utils.exception import EruAbortException
 bp = Blueprint('network', __name__, url_prefix='/api/network')
 
 @bp.route('/create/', methods=['POST'])
-@check_request_json(['name', 'netspace'], consts.HTTP_BAD_REQUEST)
 @jsonify
+@check_request_json(['name', 'netspace'], consts.HTTP_BAD_REQUEST)
 def create_network():
     data = request.get_json()
     n = Network.create(data['name'], data['netspace'])
