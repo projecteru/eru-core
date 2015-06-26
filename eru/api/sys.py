@@ -11,6 +11,7 @@ from eru.config import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 from eru.models import Group, Pod, Host
 from eru.utils.decorator import jsonify, check_request_json
 from eru.utils.exception import EruAbortException
+from eru.helpers.docker import save_docker_certs
 
 bp = Blueprint('sys', __name__, url_prefix='/api/sys')
 logger = logging.getLogger(__name__)
@@ -21,8 +22,8 @@ def index():
     return {'r': 0, 'msg': consts.OK, 'data': 'sys control'}
 
 @bp.route('/group/create', methods=['POST', ])
-@check_request_json('name', consts.HTTP_BAD_REQUEST)
 @jsonify
+@check_request_json('name', consts.HTTP_BAD_REQUEST)
 def create_group():
     data = request.get_json()
     if not Group.create(data['name'], data.get('description', '')):
@@ -32,8 +33,8 @@ def create_group():
     return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
 
 @bp.route('/pod/create', methods=['POST', ])
-@check_request_json('name', consts.HTTP_BAD_REQUEST)
 @jsonify
+@check_request_json('name', consts.HTTP_BAD_REQUEST)
 def create_pod():
     data = request.get_json()
     if not Pod.create(
@@ -48,8 +49,8 @@ def create_pod():
     return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
 
 @bp.route('/pod/<pod_name>/assign', methods=['POST', ])
-@check_request_json('group_name', consts.HTTP_BAD_REQUEST)
 @jsonify
+@check_request_json('group_name', consts.HTTP_BAD_REQUEST)
 def assign_pod_to_group(pod_name):
     data = request.get_json()
 
@@ -65,15 +66,26 @@ def assign_pod_to_group(pod_name):
     return {'r':0, 'msg': consts.OK}
 
 @bp.route('/host/create', methods=['POST', ])
-@check_request_json(['addr', 'pod_name'], consts.HTTP_BAD_REQUEST)
 @jsonify
 def create_host():
-    data = request.get_json()
-    addr = data['addr']
+    """为了文件, 只好不用json了"""
+    addr = request.form.get('addr', type=str, default='')
+    pod_name = request.form.get('pod_name', type=str, default='')
+    if not (addr and pod_name):
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'need addr and pod_name')
 
-    pod = Pod.get_by_name(data['pod_name'])
+    pod = Pod.get_by_name(pod_name)
     if not pod:
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'No pod found')
+
+    # 存证书, 没有就算了
+    try:
+        ca, cert, key = request.files['ca'], request.files['cert'], request.files['key']
+        save_docker_certs(addr.split(':', 1)[0], ca.read(), cert.read(), key.read())
+    finally:
+        ca.close()
+        cert.close()
+        key.close()
 
     try:
         client = get_docker_client(addr)
@@ -86,8 +98,8 @@ def create_host():
     return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
 
 @bp.route('/host/<addr>/assign', methods=['POST', ])
-@check_request_json('group_name', consts.HTTP_BAD_REQUEST)
 @jsonify
+@check_request_json('group_name', consts.HTTP_BAD_REQUEST)
 def assign_host_to_group(addr):
     data = request.get_json()
 
