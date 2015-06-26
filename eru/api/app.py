@@ -30,8 +30,8 @@ def get_version(name, version):
     return v
 
 @bp.route('/register/', methods=['POST', ])
-@check_request_json(['name', 'version', 'git', 'token', 'appyaml'])
 @jsonify
+@check_request_json(['name', 'version', 'git', 'token', 'appyaml'])
 def register_app_version():
     data = request.get_json()
     name = data['name']
@@ -58,8 +58,8 @@ def register_app_version():
     return {'r': 0, 'msg': 'ok'}
 
 @bp.route('/<name>/env/', methods=['PUT', ])
-@check_request_json('env')
 @jsonify
+@check_request_json('env')
 def set_app_env(name):
     data = request.get_json()
     env = data.pop('env')
@@ -76,8 +76,8 @@ def set_app_env(name):
     return {'r': 0, 'msg': 'ok'}
 
 @bp.route('/<name>/env/', methods=['GET', ])
-@check_request_args('env')
 @jsonify
+@check_request_args('env')
 def get_app_env(name):
     app = App.get_by_name(name)
     if not app:

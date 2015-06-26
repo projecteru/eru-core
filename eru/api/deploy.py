@@ -22,8 +22,8 @@ def index():
     return {'r': 0, 'msg': 'ok', 'data': 'deploy control'}
 
 @bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['POST', ])
-@check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
 @jsonify
+@check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
 def create_private(group_name, pod_name, appname):
     """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
     data = request.get_json()
@@ -82,8 +82,8 @@ def create_private(group_name, pod_name, appname):
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['POST', ])
-@check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
 @jsonify
+@check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
 def create_public(group_name, pod_name, appname):
     """参数同private, 只是不能指定需要的核心数量"""
     data = request.get_json()
@@ -120,8 +120,8 @@ def create_public(group_name, pod_name, appname):
     return {'r':0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
-@check_request_json(['base', 'version'])
 @jsonify
+@check_request_json(['base', 'version'])
 def build_image(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
@@ -139,8 +139,8 @@ def build_image(group_name, pod_name, appname):
     return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
 
 @bp.route('/rmcontainers/', methods=['PUT', 'POST', ])
-@check_request_json(['cids'])
 @jsonify
+@check_request_json(['cids'])
 def rm_containers():
     cids = request.get_json()['cids']
     version_dict = {}
@@ -163,8 +163,8 @@ def rm_containers():
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': watch_keys}
 
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
-@check_request_json(['version'])
 @jsonify
+@check_request_json(['version'])
 def offline_version(group_name, pod_name, appname):
     data = request.get_json()
     group, pod, application, version = validate_instance(group_name,
