@@ -3,7 +3,7 @@
 import os
 import redis
 import docker
-from docker.utils import kwargs_from_env
+from docker.tls import TLSConfig
 
 from eru.config import (
     DOCKER_CERT_PATH,
@@ -17,20 +17,34 @@ from eru.config import (
 )
 from eru.storage.redis import RedisStorage
 
+_docker_clients = {}
+
 def get_docker_client(addr):
     """
     如果设置了 DOCKER_CERT_PATH, 那么证书需要位于 $DOCKER_CERT_PATH/${ip} 目录下.
     没有设置 DOCKER_CERT_PATH, 那么就简单连接就可以了.
     """
+    client = _docker_clients.get(addr, None)
+    if client:
+        return client
+
     host = 'tcp://%s' % addr
-    ip = addr.split(':', 1)[0]
+    tls = None
 
-    os.environ['DOCKER_HOST'] = host
     if DOCKER_CERT_PATH:
-        os.environ['DOCKER_TLS_VERIFY'] = '1'
-        os.environ['DOCKER_CERT_PATH'] = os.path.join(DOCKER_CERT_PATH, ip)
-
-    client = docker.Client(**kwargs_from_env(assert_hostname=False))
+        cert_path = os.path.join(DOCKER_CERT_PATH, addr.split(':', 1)[0])
+        host = 'https://%s' % addr
+        tls = TLSConfig(
+            client_cert=(
+                os.path.join(cert_path, 'cert.pem'),
+                os.path.join(cert_path, 'key.pem')
+            ),
+            ca_cert=os.path.join(cert_path, 'ca.pem'),
+            verify=True,
+            ssl_version=None,
+            assert_hostname=False,
+        )
+    client = docker.Client(base_url=host, tls=tls)
 
     if DOCKER_REGISTRY_USERNAME:
         client.login(
@@ -39,6 +53,7 @@ def get_docker_client(addr):
             email=DOCKER_REGISTRY_EMAIL,
             registry=DOCKER_REGISTRY_URL,
         )
+    _docker_clients[addr] = client
     return client
 
 def get_redis_client(host, port , max_connections):
