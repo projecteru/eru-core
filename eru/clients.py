@@ -19,13 +19,13 @@ from eru.storage.redis import RedisStorage
 
 _docker_clients = {}
 
-def get_docker_client(addr):
+def get_docker_client(addr, force_flush=False):
     """
     如果设置了 DOCKER_CERT_PATH, 那么证书需要位于 $DOCKER_CERT_PATH/${ip} 目录下.
     没有设置 DOCKER_CERT_PATH, 那么就简单连接就可以了.
     """
     client = _docker_clients.get(addr, None)
-    if client:
+    if client and not force_flush:
         return client
 
     host = 'tcp://%s' % addr

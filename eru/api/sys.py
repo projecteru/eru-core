@@ -88,7 +88,7 @@ def create_host():
         key.close()
 
     try:
-        client = get_docker_client(addr)
+        client = get_docker_client(addr, force_flush=True)
         info = client.info()
     except Exception:
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Docker daemon error on host %s' % addr)
