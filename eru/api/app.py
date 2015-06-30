@@ -36,7 +36,7 @@ def register_app_version():
     data = request.get_json()
     name = data['name']
 
-    if data.get('raw', ''):
+    if data.get('raw', '') and 'version' not in data['appyaml']:
         version = consts.RAW_VERSION_PLACEHOLDER
     else:
         version = data['version']
