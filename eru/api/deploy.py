@@ -28,10 +28,7 @@ def create_private(group_name, pod_name, appname):
     """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
     data = request.get_json()
 
-    if data.get('raw', ''):
-        vstr = consts.RAW_VERSION_PLACEHOLDER
-    else:
-        vstr = data['version']
+    vstr = data['version']
 
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, vstr)
@@ -88,10 +85,7 @@ def create_public(group_name, pod_name, appname):
     """参数同private, 只是不能指定需要的核心数量"""
     data = request.get_json()
 
-    if data.get('raw', ''):
-        vstr = consts.RAW_VERSION_PLACEHOLDER
-    else:
-        vstr = data['version']
+    vstr = data['version']
 
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, vstr)
