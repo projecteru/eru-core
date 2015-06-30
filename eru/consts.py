@@ -1,4 +1,3 @@
-
 # pubsub keys
 ERU_TASK_PUBKEY = 'eru:task:pub:%s'
 ERU_TASK_LOGKEY = 'eru:task:log:%s'
@@ -34,6 +33,3 @@ TASK_ACTIONS = {
 
 TASK_RESULT_SUCCESS = 'SUCCESS'
 TASK_RESULT_FAILED = 'FAILED'
-
-# raw version
-RAW_VERSION_PLACEHOLDER = 'this_is_just_a_default_version'
