@@ -36,10 +36,7 @@ def register_app_version():
     data = request.get_json()
     name = data['name']
 
-    if data.get('raw', ''):
-        version = consts.RAW_VERSION_PLACEHOLDER
-    else:
-        version = data['version']
+    version = data['version']
 
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
