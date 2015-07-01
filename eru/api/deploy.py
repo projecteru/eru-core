@@ -12,6 +12,7 @@ from eru.models import App, Group, Pod, Task, Network, Container, Host
 from eru.utils.decorator import check_request_json, jsonify
 from eru.utils.exception import EruAbortException
 from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
+from eru.helpers.scheduler import average_schedule, centralized_schedule
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ def create_private(group_name, pod_name, appname):
     spec_ips = data.get('spec_ips', [])
     appconfig = version.appconfig
 
+    strategy = data.get('strategy', 'average')
+
     # 指定的host, 如果没有则按照编排分配host
     hostname = data.get('hostname', '')
     host = hostname and Host.get_by_name(hostname) or None
@@ -59,7 +62,13 @@ def create_private(group_name, pod_name, appname):
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
-        host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare, spec_host=host)
+        if strategy == 'average':
+            host_cores = average_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
+        elif strategy == 'centralized':
+            host_cores = centralized_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
+        else:
+            raise EruAbortException(consts.HTTP_BAD_REQUEST, 'strategy %s not supported' % strategy)
+
         if not host_cores:
             current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
                     appname, version.short_sha, data['ncore'])
