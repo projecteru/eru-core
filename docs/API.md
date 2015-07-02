@@ -228,6 +228,14 @@ API
     * pod_name: pod name
     * ncore: how many cores you reqire.
 
+*list group pod
+
+        GET /api/sys/group/:id_or_name/pods/list
+
+*list all the groups
+
+        GET /api/sys/group/list
+
 ### Task
 
 * get a task by id
