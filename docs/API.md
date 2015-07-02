@@ -54,7 +54,7 @@ API
 
 * Deploy app on private host
 
-        POST /api/deploy/private/:group_name/:pod_name/:app_name/
+        POST /api/deploy/private/:group_name/:pod_name/:app_name
 
     * ncore: core count for one container
     * ncontainer: how many containers to deploy
@@ -66,7 +66,7 @@ API
 
 * Deploy app on public host
 
-        POST /api/deploy/public/:group_name/:pod_name/:app_name/
+        POST /api/deploy/public/:group_name/:pod_name/:app_name
 
     * ncontainer: how many containers to deploy
     * version: version of app
@@ -77,14 +77,14 @@ API
 
 * Build image
 
-        POST /api/deploy/build/:group_name/:pod_name/:app_name/
+        POST /api/deploy/build/:group_name/:pod_name/:app_name
 
     * base: base image
     * version: version of image
 
 * Remove containers
 
-        POST /api/deploy/rmcontainer/:group_name/:pod_name/:app_name/
+        POST /api/deploy/rmcontainer/
 
     * version: version of app
     * host: host name
@@ -92,7 +92,7 @@ API
 
 *  Offline a version i.e. remove a version
 
-        POST /api/deploy/rmversion/:group_name/:pod_name/:app_name/
+        POST /api/deploy/rmversion/:group_name/:pod_name/:appname
 
     * version: version name
 
@@ -110,23 +110,23 @@ API
 
 * Kill container
 
-        PUT /api/container/:container_id/kill/
+        PUT /api/container/:container_id/kill
 
 * Cure container
 
-        PUT /api/container/:container_id/cure/
+        PUT /api/container/:container_id/cure
 
 * Poll container
 
-        GET /api/container/:container_id/poll/
+        GET /api/container/:container_id/poll
 
 * Start container
 
-        PUT /api/container/:container_id/start/
+        PUT /api/container/:container_id/start
 
 * Stop container
 
-        PUT /api/container/:container_id/stop/
+        PUT /api/container/:container_id/stop
 
 ### Host
 
@@ -183,20 +183,32 @@ API
 
 * touch version scale infomation
 
-        GET /api/scale/:name/:version/info/
+        GET /api/scale/:name/:version/info
 
 ### Sys
 
 * create group
 
-        POST /api/sys/group/create/
+        POST /api/sys/group/create
 
     * name: the name of group you creating
     * description: descripe your group
 
+*group list
+
+        GET /api/sys/group/list
+
+*group id pods list
+
+        GET /api/sys/group/:id/pods/list
+
+*group name pods list
+
+        GET /api/sys/group/:name/pods/list
+
 * create pod
 
-        POST /api/sys/pod/create/
+        POST /api/sys/pod/create
 
     * name: name of pod
     * description: descripe your pod
@@ -210,20 +222,20 @@ API
 
 * Create host
 
-        POST /api/sys/host/create/
+        POST /api/sys/host/create
 
     * addr: the address of this host
     * pod_name: the name of pod this host belongs to
 
 * Assign host to a group
 
-        POST /api/sys/host/:address/assign/
+        POST /api/sys/host/:address/assign
 
     * group_name: the name of group you wanna assign
 
 * get group max containers in a group
 
-        GET /api/sys/group/:group_name/available_container_count/
+        GET /api/sys/group/:group_name/available_container_count
 
     * pod_name: pod name
     * ncore: how many cores you reqire.
