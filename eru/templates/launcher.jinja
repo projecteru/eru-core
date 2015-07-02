@@ -4,4 +4,10 @@ echo 1 > /writable-proc/sys/vm/overcommit_memory
 chmod 777 /dev/stdout
 chmod 777 /dev/stderr
 
+# wait for macvlan
+while ( ! ip addr show | grep 'UP' | grep 'vnbe'); do
+    echo -n o
+    sleep .5
+done
+
 exec sudo -E -u {{appname}} $@
