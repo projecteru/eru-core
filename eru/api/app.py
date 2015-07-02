@@ -4,6 +4,7 @@ from flask import Blueprint, request, g, current_app
 
 from eru import consts
 from eru.models import App
+from eru.models.appconfig import verify_appconfig
 from eru.utils.decorator import jsonify, check_request_json, check_request_args
 from eru.utils.exception import EruAbortException
 
@@ -41,15 +42,22 @@ def register_app_version():
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
         current_app.logger.error('App create failed. (name=%s, version=%s)', name, version[:7])
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'App %s create failed' % name)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST,
+                'App %s create failed, maybe token duplicated' % name)
 
     v = app.add_version(version)
     if not v:
         current_app.logger.error('Version create failed. (name=%s, version=%s)', name, version[:7])
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Version %s create failed' % version[:7])
 
+    appyaml = data['appyaml']
+    try:
+        verify_appconfig(appyaml)
+    except (ValueError, KeyError) as e:
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, e.message)
+
     appconfig = v.appconfig
-    appconfig.update(**data['appyaml'])
+    appconfig.update(**appyaml)
     appconfig.save()
     current_app.logger.info('App-Version created. (name=%s, version=%s)', name, version[:7])
     return {'r': 0, 'msg': 'ok'}
