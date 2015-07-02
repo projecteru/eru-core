@@ -44,7 +44,7 @@ def verify_appconfig(appconfig):
             raise KeyError('need %s set' % key)
     # check entrypoints
     entrypoints = appconfig['entrypoints']
-    for entry, content in entrypoints.values():
+    for entry, content in entrypoints.iteritems():
         if not isinstance(content, dict):
             raise ValueError('entrypoint %s must be dictionary' % entry)
         if 'cmd' not in content:
