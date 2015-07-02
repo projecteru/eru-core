@@ -50,7 +50,7 @@ class Group(Base):
 
     def list_pods(self, start=0, limit=20):
         q = self.pods
-        return q[start-1:start+limit-1]
+        return q[start:start+limit]
 
     def get_private_hosts(self, pod=None, start=0, limit=20):
         q = self.private_hosts
