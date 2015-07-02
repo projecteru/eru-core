@@ -165,7 +165,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         try:
             cid, cname = dockerjob.create_one_container(host, version,
                 entrypoint, env, fcores+pcores, cpu_shares, image=image)
-        except:
+        except Exception as e:
+            print e # 写给celery日志看
             host.release_cores(cores_for_one_container, nshare)
             continue
 
@@ -210,6 +211,94 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
         dockerjob.remove_container_by_cid([cid], host)
         host.release_cores(cores_for_one_container, nshare)
+        [ip.release() for ip in ips]
+        # 失败了就得清理掉这个key
+        rds.delete(feedback_key)
+
+    publish_to_service_discovery(version.name)
+    task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
+    notifier.pub_success()
+    current_flask.logger.info('Task<id=%s>: Done', task_id)
+
+# FIXME copy一份得了... 没时间重构什么鬼的 ¬ ¬
+@current_app.task()
+def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_ids, spec_ips=None):
+    """
+    执行task_id的任务. 部署ncontainer个容器, 绑定到networks这些子网
+    """
+    current_flask.logger.info('Task<id=%s>: Started', task_id)
+    task = Task.get(task_id)
+    if not task:
+        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
+        return
+
+    if spec_ips is None:
+        spec_ips = []
+
+    networks = Network.get_multi(network_ids)
+
+    notifier = TaskNotifier(task)
+    host = task.host
+    version = task.version
+    entrypoint = task.props['entrypoint']
+    env = task.props['env']
+    # use raw
+    image = task.props['image']
+    cpu_shares = 1024
+
+    pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
+    feedback_key = 'eru:agent:%s:feedback' % task_id
+
+    cids = []
+
+    for _ in range(ncontainer):
+        try:
+            cid, cname = dockerjob.create_one_container(host, version,
+                entrypoint, env, cores=None, cpu_shares=cpu_shares, image=image)
+        except Exception as e:
+            print e # 同上
+            continue
+
+        if spec_ips:
+            ips = [n.acquire_specific_ip(ip) for n, ip in zip(networks, spec_ips)]
+        else:
+            ips = [n.acquire_ip() for n in networks]
+        ips = [i for i in ips if i]
+        ip_dict = {ip.vlan_address: ip for ip in ips}
+
+        if ips:
+            ident_id = cname.split('_')[-1]
+            values = [str(task_id), cid, ident_id] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+            rds.publish(pub_agent_vlan_key, '|'.join(values))
+
+        for _ in ips:
+            # timeout 15s
+            rv = rds.blpop(feedback_key, 15)
+            if rv is None:
+                break
+            # rv is like (feedback_key, 'succ|container_id|vethname|ip')
+            succ, _, vethname, vlan_address = rv[1].split('|')
+            if succ == '0':
+                break
+            ip = ip_dict.get(vlan_address, None)
+            if ip:
+                ip.set_vethname(vethname)
+
+        else:
+            current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
+            c = Container.create(cid, host, version, cname, entrypoint, {}, env, nshare)
+            for ip in ips:
+                ip.assigned_to_container(c)
+            notifier.notify_agent(cid)
+            add_container_for_agent(c)
+            add_container_backends(c)
+            cids.append(cid)
+            # 略过清理工作
+            continue
+
+        # 清理掉失败的容器, 释放核, 释放ip
+        current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
+        dockerjob.remove_container_by_cid([cid], host)
         [ip.release() for ip in ips]
         # 失败了就得清理掉这个key
         rds.delete(feedback_key)

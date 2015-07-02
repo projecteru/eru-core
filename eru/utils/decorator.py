@@ -23,27 +23,37 @@ def redis_lock(fmt):
         return _
     return _redis_lock
 
-def check_request_json(keys, abort_code=consts.HTTP_BAD_REQUEST, abort_msg=''):
+def check_request_json(keys, abort_code=consts.HTTP_BAD_REQUEST):
     if not isinstance(keys, list):
         keys = [keys, ]
     def deco(function):
         @functools.wraps(function)
         def _(*args, **kwargs):
             data = request.get_json()
-            if not (data and all((k in data) for k in keys)):
-                raise EruAbortException(abort_code, abort_msg)
+            if not data:
+                raise EruAbortException(abort_code,
+                        'did you set content-type to application/json '
+                        'and request body is json serializable?')
+
+            for k in keys:
+                if k not in data:
+                    raise EruAbortException(abort_code,
+                        '%s must be in request body after jsonize' % k)
+
             return function(*args, **kwargs)
         return _
     return deco
 
-def check_request_args(keys, abort_code=consts.HTTP_BAD_REQUEST, abort_msg=''):
+def check_request_args(keys, abort_code=consts.HTTP_BAD_REQUEST):
     if not isinstance(keys, list):
         keys = [keys, ]
     def deco(function):
         @functools.wraps(function)
         def _(*args, **kwargs):
-            if not all((k in request.args) for k in keys):
-                raise EruAbortException(abort_code, abort_msg)
+            for k in keys:
+                if k not in request.args:
+                    raise EruAbortException(abort_code,
+                        '%s must be in request.args' % k)
             return function(*args, **kwargs)
         return _
     return deco

@@ -4,7 +4,7 @@ import yaml
 
 from eru.clients import config_backend
 
-__all__ = ['AppConfig', 'ResourceConfig', ]
+__all__ = ['AppConfig', 'ResourceConfig', 'verify_appconfig', ]
 
 """
 Example of app.yaml:
@@ -13,8 +13,13 @@ Example of app.yaml:
     entrypoints:
         web:
             cmd: "python app.py --port 5000"
+            ports:
+                - "5000/tcp"
+                - "5001/udp"
+            netword_mode = "bridge"
         daemon:
             cmd: "python daemon.py --interval 5"
+            netword_mode = "host"
         service:
             cmd: "python service.py"
     build: "pip install -r ./req.txt"
@@ -30,6 +35,49 @@ Example of app.yaml:
             ro: true
 """
 
+REQUIRED_KEYS = ['appname', 'entrypoints', 'build']
+OPTIONAL_KEYS = ['volumes', 'binds']
+
+def verify_appconfig(appconfig):
+    for key in REQUIRED_KEYS:
+        if key not in appconfig:
+            raise KeyError('need %s set' % key)
+    # check entrypoints
+    entrypoints = appconfig['entrypoints']
+    for entry, content in entrypoints.values():
+        if not isinstance(content, dict):
+            raise ValueError('entrypoint %s must be dictionary' % entry)
+        if 'cmd' not in content:
+            raise KeyError('need cmd set in entrypoint %s' % entry)
+
+        ports = content.get('ports', [])
+        if not isinstance(ports, list):
+            raise ValueError('ports must be a list')
+
+        for port in ports:
+            if '/' not in port:
+                raise ValueError('port must be formatted as port/protocol like 5000/tcp')
+            po, proto = port.split('/', 1)
+            if not po.isdigit():
+                raise ValueError('port must be formatted as port/protocol like 5000/tcp')
+
+    # check build
+    build = appconfig['build']
+    if not isinstance(build, (basestring, list)):
+        raise ValueError('build must be string or list')
+
+    volumes = appconfig.get('volumes', [])
+    if not isinstance(volumes, list):
+        raise ValueError('volumes must be list')
+
+    binds = appconfig.get('binds', {})
+    if not isinstance(binds, dict):
+        raise ValueError('volumes must be dictionary')
+
+    if len(volumes) != len(binds):
+        raise ValueError('volumes and binds must be 1 to 1 mapping')
+
+    return True
 
 class BaseConfig(object):
 
@@ -80,7 +128,6 @@ class BaseConfig(object):
     def to_dict(self):
         return self._data
 
-
 class AppConfig(BaseConfig):
 
     dict_names = ['entrypoints', ]
@@ -89,7 +136,6 @@ class AppConfig(BaseConfig):
     def get_by_name_and_version(cls, name, version):
         path = '/ERU/{0}/{1}/app.yaml'.format(name, version)
         return cls._get_by_path(path)
-
 
 class ResourceConfig(BaseConfig):
 
@@ -105,4 +151,3 @@ class ResourceConfig(BaseConfig):
 
     def to_env_dict(self):
         return {key.upper(): str(value) for key, value in self._data.iteritems()}
-
