@@ -3,7 +3,7 @@
 
 import logging
 
-from flask import Blueprint, request, current_app
+from flask import Blueprint, request, current_app, g
 
 from eru import consts
 from eru.clients import get_docker_client
@@ -31,6 +31,11 @@ def create_group():
     current_app.logger.info('Group create succeeded (name=%s, desc=%s)',
             data['name'], data.get('description', ''))
     return consts.HTTP_CREATED, {'r':0, 'msg': consts.OK}
+
+@bp.route('/group/list', methods=['GET', ])
+@jsonify
+def list_groups():
+    return Group.list_all(g.start, g.limit)
 
 @bp.route('/pod/create', methods=['POST', ])
 @jsonify
