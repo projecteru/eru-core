@@ -11,7 +11,13 @@ from eru.clients import rds
 from eru.models import App, Group, Pod, Task, Network, Container, Host
 from eru.utils.decorator import check_request_json, jsonify
 from eru.utils.exception import EruAbortException
-from eru.async.task import create_containers_with_macvlan, build_docker_image, remove_containers
+from eru.async.task import (
+    create_containers_with_macvlan,
+    create_containers_with_macvlan_public,
+    build_docker_image,
+    remove_containers,
+)
+from eru.helpers.scheduler import average_schedule, centralized_schedule
 
 bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
@@ -44,6 +50,8 @@ def create_private(group_name, pod_name, appname):
     spec_ips = data.get('spec_ips', [])
     appconfig = version.appconfig
 
+    strategy = data.get('strategy', 'average')
+
     # 指定的host, 如果没有则按照编排分配host
     hostname = data.get('hostname', '')
     host = hostname and Host.get_by_name(hostname) or None
@@ -59,16 +67,31 @@ def create_private(group_name, pod_name, appname):
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
-        host_cores = group.get_free_cores(pod, ncontainer, ncore, nshare, spec_host=host)
+        if strategy == 'average':
+            host_cores = average_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
+        elif strategy == 'centralized':
+            host_cores = centralized_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
+        else:
+            raise EruAbortException(consts.HTTP_BAD_REQUEST, 'strategy %s not supported' % strategy)
+
         if not host_cores:
             current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
                     appname, version.short_sha, data['ncore'])
             raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Not enough core resources')
 
         for (host, container_count), cores in host_cores.iteritems():
-            t = _create_task(consts.TASK_CREATE, version, host, container_count,
-                    cores, nshare, networks, spec_ips, data['entrypoint'], data['env'],
-                    image=data.get('image', ''))
+            t = _create_task(
+                version,
+                host,
+                container_count,
+                cores,
+                nshare,
+                networks,
+                spec_ips,
+                data['entrypoint'],
+                data['env'],
+                image=data.get('image', ''),
+            )
             if not t:
                 continue
 
@@ -103,9 +126,18 @@ def create_public(group_name, pod_name, appname):
     with rds.lock('%s:%s' % (group_name, pod_name)):
         hosts = pod.get_free_public_hosts(ncontainer)
         for host in itertools.islice(itertools.cycle(hosts), ncontainer):
-            t = _create_task(consts.TASK_CREATE, version, host, 1,
-                    {}, 0, networks, spec_ips, data['entrypoint'], data['env'],
-                    image=data.get('image', ''))
+            t = _create_task(
+                version,
+                host,
+                1,
+                {},
+                0,
+                networks,
+                spec_ips,
+                data['entrypoint'],
+                data['env'],
+                image=data.get('image', ''),
+            )
             if not t:
                 continue
             ts.append(t.id)
@@ -202,7 +234,7 @@ def validate_instance(group_name, pod_name, appname, version):
 
     return group, pod, application, version
 
-def _create_task(type_, version, host, ncontainer,
+def _create_task(version, host, ncontainer,
     cores, nshare, networks, spec_ips, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
     task_props = {
@@ -215,17 +247,26 @@ def _create_task(type_, version, host, ncontainer,
         'networks': network_ids,
         'image': image,
     }
-    task = Task.create(type_, version, host, task_props)
+    task = Task.create(consts.TASK_CREATE, version, host, task_props)
     if not task:
         return None
 
-    try:
-        create_containers_with_macvlan.apply_async(
-            args=(task.id, ncontainer, nshare, cores, network_ids, spec_ips),
-            task_id='task:%d' % task.id
-        )
-    except Exception as e:
-        logger.exception(e)
-        host.release_cores(cores)
+    if cores:
+        try:
+            create_containers_with_macvlan.apply_async(
+                args=(task.id, ncontainer, nshare, cores, network_ids, spec_ips),
+                task_id='task:%d' % task.id
+            )
+        except Exception as e:
+            logger.exception(e)
+            host.release_cores(cores)
+    else:
+        try:
+            create_containers_with_macvlan_public.apply_async(
+                args=(task.id, ncontainer, nshare, network_ids, spec_ips),
+                task_id='task:%d' % task.id
+            )
+        except Exception as e:
+            logger.exception(e)
 
     return task
