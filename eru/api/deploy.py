@@ -237,6 +237,12 @@ def validate_instance(group_name, pod_name, appname, version):
 def _create_task(version, host, ncontainer,
     cores, nshare, networks, spec_ips, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
+
+    # host 模式不允许绑定 vlan
+    entry = version.appconfig['entrypoints'][entrypoint]
+    if entry.get('network_mode') == 'host':
+        network_ids = []
+
     task_props = {
         'ncontainer': ncontainer,
         'entrypoint': entrypoint,

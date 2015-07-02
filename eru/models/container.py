@@ -44,7 +44,7 @@ class Container(Base):
         try:
             container = cls(container_id, host, version, name, entrypoint, env)
             db.session.add(container)
-            host.count = Host.count - len(cores.get('full', [])) - len(cores.get('part', []))
+            host.count = Host.count - len(cores.get('full', []))
             db.session.add(host)
             db.session.commit()
 
@@ -121,7 +121,7 @@ class Container(Base):
         # release core and increase core count
         host = self.host
         cores = self.cores
-        cores_count = len(cores.get('full', [])) + len(cores.get('part', []))
+        cores_count = len(cores.get('full', []))
         host.release_cores(cores, cores.get('nshare', 0))
         del self.cores
         host.count = Host.count + cores_count
