@@ -37,6 +37,17 @@ def create_group():
 def list_groups():
     return Group.list_all(g.start, g.limit)
 
+@bp.route('/group/<id_or_name>/pods/list', methods=['GET', ])
+@jsonify
+def list_group_pod(id_or_name):
+    if id_or_name.isdigit():
+        group = Group.get(int(id_or_name))
+    else:
+        group = Group.get_by_name(id_or_name)
+    if not group:
+        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Group %s not found' % id_or_name)
+    return group.list_pods(g.start, g.limit)
+
 @bp.route('/pod/create', methods=['POST', ])
 @jsonify
 @check_request_json('name', consts.HTTP_BAD_REQUEST)

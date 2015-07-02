@@ -48,6 +48,21 @@ class Group(Base):
             q = q.limit(limit)
         return q.all()
 
+    @classmethod
+    def list_pods(cls, start=0, limit=20):
+        q = cls.query.offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
+    def list_hosts(self, start=0, limit=20):
+        from .pod import Pod
+        q = self.pods
+        q = q.order_by(Pod.id.desc()).offset(start)
+        if limit is not None:
+            q = q.limit(limit)
+        return q.all()
+
     def get_private_hosts(self, pod=None, start=0, limit=20):
         q = self.private_hosts
         if pod:

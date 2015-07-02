@@ -12,7 +12,7 @@ AUTHOR = "CMGS"
 AUTHOR_EMAIL = "ilskdw@gmail.com"
 LICENSE = "BSD"
 URL = "http://git.hunantv.com"
-KEYWORDS = "docker influxdb mysql"
+KEYWORDS = "docker redis borg eru"
 
 ENTRY_POINTS = {
     'console_scripts':['eru=eru.app:main',]
