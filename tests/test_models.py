@@ -200,7 +200,7 @@ def test_container(test_db):
         assert len(part_cores) == 1
         assert part_cores[0].remain == 6
         assert len(host.containers.all()) == 1
-        assert host.count == D('0.9')
+        assert host.count == D('0.6')
 
     assert len(containers) == 3
     assert len(v.containers.all()) == 3
@@ -256,7 +256,7 @@ def test_container(test_db):
         assert len(full_cores) == 1
         assert len(part_cores) == 0
         assert len(host.containers.all()) == 2
-        assert host.count == D('1.8')
+        assert host.count == D('1')
 
     assert len(containers) == 6
     assert len(v.containers.all()) == 6
