@@ -39,7 +39,7 @@ class Host(Base):
     ncore= db.Column(db.Integer, nullable=False, default=0)
     mem = db.Column(db.BigInteger, nullable=False, default=0)
     # 现在这个count是指free的core数
-    count = db.Column(db.Integer, nullable=False, default=0)
+    count = db.Column(db.Numeric(12, 3), nullable=False, default=0)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
     is_alive = db.Column(db.Boolean, default=True)

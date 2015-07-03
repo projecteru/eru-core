@@ -16,6 +16,7 @@ from eru import config
 from eru.clients import get_docker_client
 from eru.templates import template
 from eru.utils.ensure import ensure_dir_absent, ensure_file
+from eru.async.utils import replace_ports
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +79,12 @@ def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
-def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_shares=1024, image=''):
+def create_one_container(host, version, entrypoint, env='prod',
+        cores=None, ports=None, cpu_shares=1024, image=''):
     if cores is None:
         cores = []
+    if ports is None:
+        ports = []
 
     client = get_docker_client(host.addr)
     local_images = {r['RepoTags'][0] for r in client.images()}
@@ -89,6 +93,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     appname = appconfig.appname
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
+    cmd = replace_ports(entry['cmd'], ports)
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
 
@@ -134,7 +139,7 @@ def create_one_container(host, version, entrypoint, env='prod', cores=None, cpu_
     )
     container = client.create_container(
         image=image,
-        command=entry['cmd'],
+        command=cmd,
         environment=env_dict,
         entrypoint=None if image else 'launch',
         name=container_name,
