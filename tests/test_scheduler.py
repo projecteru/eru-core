@@ -28,6 +28,20 @@ def test_get_max_container_count(test_db):
     assert get_max_container_count(group, pod, ncore=1, nshare=1) == 56
     assert get_max_container_count(group, pod, ncore=2, nshare=1) == 28
 
+def test_get_max_container_count_single_host(test_db):
+    group = Group.create('group', 'group')
+    pod = Pod.create('pod', 'pod', 10, -1)
+    host = Host.create(pod, random_ipv4(), random_string(), random_uuid(), 64, 4096)
+    host.assigned_to_group(group)
+
+    assert get_max_container_count(group, pod, ncore=1, nshare=0) == 64
+    assert get_max_container_count(group, pod, ncore=2, nshare=0) == 32
+    assert get_max_container_count(group, pod, ncore=3, nshare=0) == 21
+    assert get_max_container_count(group, pod, ncore=4, nshare=0) == 16
+    assert get_max_container_count(group, pod, ncore=5, nshare=0) == 12
+    assert get_max_container_count(group, pod, ncore=1, nshare=5) == 42
+    assert get_max_container_count(group, pod, ncore=2, nshare=5) == 25
+
 def test_host_get_container_cores(test_db):
     group, pod = _create_data(10, -1, 1)
     host = pod.hosts.all()[0]

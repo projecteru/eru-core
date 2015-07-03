@@ -6,12 +6,14 @@ import logging
 from flask import Blueprint, request, current_app, g
 
 from eru import consts
-from eru.clients import get_docker_client
 from eru.config import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
 from eru.models import Group, Pod, Host
+from eru.clients import get_docker_client
+
 from eru.utils.decorator import jsonify, check_request_json
 from eru.utils.exception import EruAbortException
 from eru.helpers.docker import save_docker_certs
+from eru.helpers.scheduler import get_max_container_count
 
 bp = Blueprint('sys', __name__, url_prefix='/api/sys')
 logger = logging.getLogger(__name__)
@@ -150,4 +152,4 @@ def group_max_containers(group_name):
     ncore = core_require / pod.core_share
     nshare = core_require % pod.core_share
 
-    return {'r':0, 'msg': consts.OK, 'data': group.get_max_containers(pod, ncore, nshare)}
+    return {'r':0, 'msg': consts.OK, 'data': get_max_container_count(group, pod, ncore, nshare)}

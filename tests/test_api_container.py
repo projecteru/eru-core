@@ -13,10 +13,9 @@ def test_container_kill(client, test_db):
 
 def test_container_poll(client, test_db):
     rv = client.get('/api/container/12345/poll')
-    assert rv.status_code == 200
+    assert rv.status_code == 404
     d = json.loads(rv.data)
-    assert d['status_code'] == 404
-    assert d['r'] == 1
+    assert d['error'] == 'Container 12345 not found'
 
 def test_container_status(client, test_db):
     app, version, group, pod, hosts, containers = create_test_suite()
