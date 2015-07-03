@@ -45,6 +45,8 @@ def create_private(group_name, pod_name, appname):
     ncore = core_require / pod.core_share
     nshare = core_require % pod.core_share
 
+    ports = data.get('ports', [])
+
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
     spec_ips = data.get('spec_ips', [])
@@ -87,6 +89,7 @@ def create_private(group_name, pod_name, appname):
                 cores,
                 nshare,
                 networks,
+                ports,
                 spec_ips,
                 data['entrypoint'],
                 data['env'],
@@ -109,6 +112,7 @@ def create_public(group_name, pod_name, appname):
     data = request.get_json()
 
     vstr = data['version']
+    ports = data.get('ports', [])
 
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, vstr)
@@ -133,6 +137,7 @@ def create_public(group_name, pod_name, appname):
                 {},
                 0,
                 networks,
+                ports,
                 spec_ips,
                 data['entrypoint'],
                 data['env'],
@@ -169,6 +174,10 @@ def build_image(group_name, pod_name, appname):
 @check_request_json(['cids'])
 def rm_containers():
     cids = request.get_json()['cids']
+
+    if not all(len(cid) >= 7 for cid in cids):
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'must given at least 7 chars for container_id')
+
     version_dict = {}
     ts, watch_keys = [], []
     for cid in cids:
@@ -235,7 +244,7 @@ def validate_instance(group_name, pod_name, appname, version):
     return group, pod, application, version
 
 def _create_task(version, host, ncontainer,
-    cores, nshare, networks, spec_ips, entrypoint, env, image=''):
+    cores, nshare, networks, ports, spec_ips, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
 
     # host 模式不允许绑定 vlan
@@ -249,6 +258,7 @@ def _create_task(version, host, ncontainer,
         'env': env,
         'full_cores': [c.label for c in cores.get('full', [])],
         'part_cores': [c.label for c in cores.get('part', [])],
+        'ports': ports,
         'nshare': nshare,
         'networks': network_ids,
         'image': image,

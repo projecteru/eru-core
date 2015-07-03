@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import operator
+from decimal import Decimal as D
 from more_itertools import chunked
 from eru.models import Group, Pod, Host, App, Container, Network
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
@@ -199,7 +200,7 @@ def test_container(test_db):
         assert len(part_cores) == 1
         assert part_cores[0].remain == 6
         assert len(host.containers.all()) == 1
-        assert host.count == 0
+        assert host.count == D('0.9')
 
     assert len(containers) == 3
     assert len(v.containers.all()) == 3
@@ -255,7 +256,7 @@ def test_container(test_db):
         assert len(full_cores) == 1
         assert len(part_cores) == 0
         assert len(host.containers.all()) == 2
-        assert host.count == 0
+        assert host.count == D('1.8')
 
     assert len(containers) == 6
     assert len(v.containers.all()) == 6

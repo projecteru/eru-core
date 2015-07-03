@@ -4,6 +4,7 @@
 import cPickle
 import itertools
 import sqlalchemy.exc
+from decimal import Decimal as D
 from datetime import datetime
 
 from eru.clients import rds
@@ -44,7 +45,9 @@ class Container(Base):
         try:
             container = cls(container_id, host, version, name, entrypoint, env)
             db.session.add(container)
-            host.count = Host.count - len(cores.get('full', []))
+            host.count = Host.count - \
+                    D(len(cores.get('full', []))) - \
+                    D(format(D(len(cores.get('part', [])) / D(host.core_share)), '.3f'))
             db.session.add(host)
             db.session.commit()
 
@@ -121,10 +124,11 @@ class Container(Base):
         # release core and increase core count
         host = self.host
         cores = self.cores
-        cores_count = len(cores.get('full', []))
         host.release_cores(cores, cores.get('nshare', 0))
         del self.cores
-        host.count = Host.count + cores_count
+        host.count = Host.count + \
+                D(len(cores.get('full', []))) + \
+                D(format(D(len(cores.get('part', [])) / D(host.core_share)), '.3f'))
         db.session.add(host)
         # remove container
         db.session.delete(self)
