@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import sqlalchemy.exc
 from datetime import datetime
@@ -171,4 +170,3 @@ class App(Base):
         db.session.add(group)
         db.session.commit()
         return True
-

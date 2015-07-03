@@ -45,9 +45,8 @@ build: "pip install -r ./req.txt"
 
     rv = client.get('/api/app/random_app_name/')
     r = json.loads(rv.data)
-    assert rv.status_code == 200
-    assert r[u'r'] == 1
-    assert r[u'status_code'] == 404
+    assert rv.status_code == 404
+    assert r[u'error'] == 'App random_app_name not found'
 
     rv = client.get('/api/app/{0}/{1}/'.format(data['name'], data['version']))
     r = json.loads(rv.data)
@@ -120,19 +119,16 @@ build: "pip install -r ./req.txt"
     envdata.pop('env')
     rv = client.put(url, data=json.dumps(envdata), content_type='application/json')
     r = json.loads(rv.data)
-    assert rv.status_code == 200
-    assert r[u'r'] == 1
-    assert r[u'status_code'] == 400
+    assert rv.status_code == 400
+    assert r[u'error'].startswith('env must be')
 
     rv = client.get(url)
     r = json.loads(rv.data)
-    assert rv.status_code == 200
-    assert r[u'r'] == 1
-    assert r[u'status_code'] == 400
+    assert rv.status_code == 400
+    assert r[u'error'].startswith('env must be in request.args')
 
     # 错误的 env 返回空的
     rv = client.get(url+'?env=xxx')
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert not r['data']
-

@@ -2,7 +2,10 @@
 
 import docker
 from docker.utils import kwargs_from_env
+
 from eru.models import App, Group, Pod, Host, Container
+from eru.helpers.scheduler import centralized_schedule
+
 from tests.utils import random_sha1, random_string, random_uuid, random_ipv4
 
 def create_test_suite():
@@ -39,7 +42,7 @@ def create_test_suite():
         host.assigned_to_group(group)
 
     containers = []
-    for (host, count), cores in group.get_free_cores(pod, 4, 4, 0).iteritems():
+    for (host, count), cores in centralized_schedule(group, pod, 4, 4, 0).iteritems():
         cores_per_container = len(cores) / count
         for i in range(count):
             cid = random_sha1()
