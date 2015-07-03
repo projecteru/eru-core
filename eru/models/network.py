@@ -189,6 +189,15 @@ class Network(Base):
         """return this IP, which is an IP object"""
         rds.sadd(self.storekey, int(ip))
 
+    def add_ip(self, ip):
+        if isinstance(ip, basestring):
+            try:
+                ip = IPv4Address(ip)
+            except AddressValueError:
+                return False
+        rds.sadd(self.storekey, int(ip))
+        return True
+
     def to_dict(self):
         d = super(Network, self).to_dict()
         d.update(
