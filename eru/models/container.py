@@ -47,7 +47,7 @@ class Container(Base):
             db.session.add(container)
             host.count = Host.count - \
                     D(len(cores.get('full', []))) - \
-                    D(format(D(len(cores.get('part', [])) / D(host.core_share)), '.3f'))
+                    D(format(D(nshare) / D(host.core_share), '.3f'))
             db.session.add(host)
             db.session.commit()
 
@@ -128,7 +128,7 @@ class Container(Base):
         del self.cores
         host.count = Host.count + \
                 D(len(cores.get('full', []))) + \
-                D(format(D(len(cores.get('part', [])) / D(host.core_share)), '.3f'))
+                D(format(D(cores.get('nshare', 0)) / D(host.core_share), '.3f'))
         db.session.add(host)
         # remove container
         db.session.delete(self)
