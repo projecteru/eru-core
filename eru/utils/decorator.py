@@ -5,6 +5,7 @@ import inspect
 import functools
 from datetime import datetime
 from flask import request, Response
+from decimal import Decimal
 
 from eru import consts
 from eru.clients import rds
@@ -65,6 +66,8 @@ class EruJSONEncoder(json.JSONEncoder):
             return obj.to_dict()
         if isinstance(obj, datetime):
             return obj.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(obj, Decimal):
+            return float(obj)
         return super(EruJSONEncoder, self).default(obj)
 
 def jsonify(f):
