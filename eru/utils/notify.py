@@ -29,9 +29,12 @@ class TaskNotifier(object):
         rds.publish(self.publish_key, PUB_END_MESSAGE)
 
     def store_and_broadcast(self, iterable):
+        """iter完这个generator并且返回最后一个"""
+        line = ''
         for line in iterable:
             rds.rpush(self.log_key, line)
             rds.publish(self.publish_key, line)
+        return line
 
     def get_store_logs(self):
         return rds.lrange(self.log_key, 0, -1)
