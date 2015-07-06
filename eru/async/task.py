@@ -71,15 +71,20 @@ def build_docker_image(task_id, base):
         current_flask.logger.info('Task<id=%s>: Build image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.build_image(task.host, task.version, base))
         current_flask.logger.info('Task<id=%s>: Push image (base=%s)', task_id, base)
-        notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
+        last_line = notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
         dockerjob.remove_image(task.version, task.host)
     except Exception, e:
         task.finish_with_result(consts.TASK_FAILED)
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
-        task.finish_with_result(consts.TASK_SUCCESS)
-        notifier.pub_success()
+        # 粗暴的判断, 如果推送成功说明build成功
+        if 'Digest: sha256' in last_line:
+            task.finish_with_result(consts.TASK_SUCCESS)
+            notifier.pub_success()
+        else:
+            task.finish_with_result(consts.TASK_FAILED)
+            notifier.pub_fail()
         current_flask.logger.info('Task<id=%s>: Done', task_id)
     finally:
         notifier.pub_build_finish()
