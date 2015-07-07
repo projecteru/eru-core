@@ -3,7 +3,7 @@ import os
 DEBUG = bool(os.getenv('DEBUG', ''))
 ERU_BIND = os.getenv('ERU_BIND', '0.0.0.0:5000')
 ERU_DAEMON = bool(os.getenv('ERU_DAEMON', ''))
-ERU_OPLOG_PATH = os.getenv('ERU_OPLOG_PATH', '/var/log/eru/op.log')
+ERU_OPLOG_PATH = os.getenv('ERU_OPLOG_PATH', '/tmp/op.log')
 ERU_TIMEOUT = int(os.getenv('ERU_TIMEOUT', '300'))
 ERU_WORKERS = int(os.getenv('ERU_WORKERS', '4'))
 ERU_WORKER_CLASS = os.getenv('ERU_WORKER_CLASS', 'geventwebsocket.gunicorn.workers.GeventWebSocketWorker')

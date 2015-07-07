@@ -1,6 +1,8 @@
 Eru Core
 =========
 
+[![Build Status](https://travis-ci.org/HunanTV/eru-core.svg?branch=master)](https://travis-ci.org/HunanTV/eru-core)
+
 ## Features
 
 Core of Project Eru, for those reasons:
