@@ -96,6 +96,8 @@ def create_one_container(host, version, entrypoint, env='prod',
     cmd = replace_ports(entry['cmd'], ports)
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
+    mem_limit = entry.get('mem_limit', 0)
+    restart_policy = entry.get('restart', 'no') # could be no/always/on-failure
 
     if not image:
         image = '{0}/{1}:{2}'.format(config.DOCKER_REGISTRY, appname, version.short_sha)
@@ -149,10 +151,11 @@ def create_one_container(host, version, entrypoint, env='prod',
         volumes=volumes,
         host_config=host_config,
         cpu_shares=cpu_shares,
+        mem_limit=mem_limit,
     )
     container_id = container['Id']
 
-    client.start(container=container_id)
+    client.start(container=container_id, restart_policy=restart_policy)
     return container_id, container_name
 
 def execute_container(host, container_id, cmd, stream=False):

@@ -17,6 +17,8 @@ Example of app.yaml:
                 - "5000/tcp"
                 - "5001/udp"
             netword_mode = "bridge"
+            mem_limit: 5000
+            restart: "on-failure"
         daemon:
             cmd: "python daemon.py --interval 5"
             netword_mode = "host"
