@@ -23,7 +23,7 @@ def fix_core(host):
     # 没有的话, 直接销毁重建
     if not containers:
         rds.delete(host._cores_key)
-        _create_cores_on_host(host)
+        _create_cores_on_host(host, host.ncore)
         return
 
     data = {str(i): host.core_share for i in xrange(host.ncore)}
@@ -39,7 +39,8 @@ def fix_core(host):
             data[s.label] -= nshare
         c.cores = cores
     rds.delete(host._cores_key)
-    rds.zadd(host._cores_key, **data)
+    if data:
+        rds.zadd(host._cores_key, **data)
     print 'done', host
 
 
