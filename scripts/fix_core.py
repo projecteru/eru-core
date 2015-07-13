@@ -3,7 +3,7 @@
 from functools import wraps
 
 from eru.clients import rds
-from eru.app import create_app
+from eru.app import create_app_with_celery
 from eru.models import Host, Container
 from eru.models.host import _create_cores_on_host
 
@@ -11,7 +11,7 @@ from eru.models.host import _create_cores_on_host
 def with_app_context(f):
     @wraps(f)
     def _(*args, **kwargs):
-        app = create_app()
+        app, _ = create_app_with_celery()
         with app.app_context():
             return f(*args, **kwargs)
     return _
