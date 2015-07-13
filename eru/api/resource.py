@@ -15,7 +15,7 @@ def get_host_resource(host_id):
     host = Host.get(host_id)
     if not host:
         raise EruAbortException(consts.HTTP_NOT_FOUND, 'Host %s not found' % host_id)
-    core_count = len(host.cores.all())
+    core_count = len(host.cores)
     free_cores = host.get_free_cores()
     return {
         'core_count': core_count,
@@ -29,7 +29,7 @@ def get_pod_resource(pod_id):
     pod = Pod.get(pod_id)
     if not pod:
         raise EruAbortException(consts.HTTP_NOT_FOUND, 'Pod %s not found' % pod_id)
-    core_count = sum(len(h.cores.all()) for h in pod.hosts.all())
+    core_count = sum(len(h.cores) for h in pod.hosts.all())
     free_cores = [c for h in pod.hosts.all() for c in h.get_free_cores()]
     return {
         'core_count': core_count,
