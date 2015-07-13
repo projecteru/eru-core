@@ -27,7 +27,7 @@ class Core(object):
         return hash('%s:%s' % (self.label, self.host_id))
 
 def _create_cores_on_host(host, count):
-    data = {str(i): host.pod.core_share for i in xrange(count)}
+    data = {str(i): host.core_share for i in xrange(count)}
     rds.zadd(host._cores_key, **data)
 
 class Host(Base):

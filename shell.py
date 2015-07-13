@@ -33,6 +33,20 @@ def hook_readline_hist():
 def get_banner():
     return 'ERU shell.'
 
+def pre_imports():
+    from eru.models.base import Base
+    from eru.models.host import Core, Host, _create_cores_on_host
+    from eru.models.pod import Pod
+    from eru.models.group import Group, GroupPod
+    from eru.models.app import App, Version
+    from eru.models.appconfig import AppConfig, ResourceConfig
+    from eru.models.container import Container
+    from eru.models.task import Task
+    from eru.models.network import Network, IP
+    from eru.models import db
+    from eru.clients import rds, get_docker_client
+    return locals()
+
 def ipython_shell(user_ns):
     if getattr(IPython, 'version_info', None) and IPython.version_info[0] >= 1:
         from IPython.terminal.ipapp import TerminalIPythonApp
@@ -63,7 +77,7 @@ def ipython_shell(user_ns):
 
 def main():
     hook_readline_hist()
-    ipython_shell({})
+    ipython_shell(pre_imports())
 
 if __name__ == '__main__':
     main()
