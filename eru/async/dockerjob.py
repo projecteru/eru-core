@@ -97,7 +97,7 @@ def create_one_container(host, version, entrypoint, env='prod',
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
     mem_limit = entry.get('mem_limit', 0)
-    restart_policy = entry.get('restart', 'no') # could be no/always/on-failure
+    restart_policy = {'MaximumRetryCount': 3, 'Name': entry.get('restart', 'no')} # could be no/always/on-failure
 
     if not image:
         image = '{0}/{1}:{2}'.format(config.DOCKER_REGISTRY, appname, version.short_sha)
@@ -138,6 +138,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         network_mode=network_mode,
         log_config=LogConfig(type=config.DOCKER_LOG_DRIVER),
         ulimits=[Ulimit(name='nofile', soft=65535, hard=65535)],
+        restart_policy=restart_policy,
     )
     container = client.create_container(
         image=image,
@@ -155,7 +156,7 @@ def create_one_container(host, version, entrypoint, env='prod',
     )
     container_id = container['Id']
 
-    client.start(container=container_id, restart_policy=restart_policy)
+    client.start(container=container_id)
     return container_id, container_name
 
 def execute_container(host, container_id, cmd, stream=False):
