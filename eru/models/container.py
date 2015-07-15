@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # coding:utf-8
 
+import json
 import cPickle
 import itertools
 import sqlalchemy.exc
@@ -10,6 +11,8 @@ from datetime import datetime
 from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base
+
+_CONTAINER_PUB_KEY = 'container:%s'
 
 class Container(Base):
     __tablename__ = 'container'
@@ -53,6 +56,9 @@ class Container(Base):
 
             cores['nshare'] = nshare
             container.cores = cores
+
+            rds.publish(_CONTAINER_PUB_KEY % name.split('_')[0],
+                json.dumps({'container': container_id, 'status': 'create'}))
             return container
         except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
@@ -133,16 +139,22 @@ class Container(Base):
         # remove container
         db.session.delete(self)
         db.session.commit()
+        rds.publish(_CONTAINER_PUB_KEY % self.appname,
+            json.dumps({'container': self.container_id, 'status': 'delete'}))
 
     def kill(self):
         self.is_alive = 0
         db.session.add(self)
         db.session.commit()
+        rds.publish(_CONTAINER_PUB_KEY % self.appname,
+            json.dumps({'container': self.container_id, 'status': 'down'}))
 
     def cure(self):
         self.is_alive = 1
         db.session.add(self)
         db.session.commit()
+        rds.publish(_CONTAINER_PUB_KEY % self.appname,
+            json.dumps({'container': self.container_id, 'status': 'up'}))
 
     def to_dict(self):
         d = super(Container, self).to_dict()
