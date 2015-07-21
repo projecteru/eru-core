@@ -187,8 +187,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
-            ident_id = cname.split('_')[-1]
-            values = [str(task_id), cid, ident_id] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+            values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
             rds.publish(pub_agent_vlan_key, '|'.join(values))
 
         for _ in ips:
@@ -277,8 +276,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
-            ident_id = cname.split('_')[-1]
-            values = [str(task_id), cid, ident_id] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+            values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
             rds.publish(pub_agent_vlan_key, '|'.join(values))
 
         for _ in ips:
