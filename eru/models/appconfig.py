@@ -35,6 +35,9 @@ Example of app.yaml:
         /host/data2:
             bind: "/container/data2"
             ro: true
+    meta:
+        meta_key1: meta_value1
+        meta_key2: meta_value2
 """
 
 REQUIRED_KEYS = ['appname', 'entrypoints', 'build']
@@ -78,6 +81,10 @@ def verify_appconfig(appconfig):
 
     if len(volumes) != len(binds):
         raise ValueError('volumes and binds must be 1 to 1 mapping')
+
+    meta = appconfig.get('meta', {})
+    if not isinstance(meta, dict):
+        raise ValueError('meta must be dictionary')
 
     return True
 

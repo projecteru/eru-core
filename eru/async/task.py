@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #coding:utf-8
 
+import json
 from more_itertools import chunked
 from itertools import izip_longest
 from celery import current_app
@@ -36,15 +37,17 @@ def remove_container_backends(container):
 
 def add_container_for_agent(container):
     """agent需要从key里取值出来去跟踪
-    SMEMBERS key 可以拿出这个host上所有的container"""
+    **改成了hashtable, agent需要更多的信息**
+    另外key也改了, agent需要改下
+    """
     host = container.host
-    key = 'eru:agent:{0}:containers'.format(host.name)
-    rds.sadd(key, container.container_id)
+    key = 'eru:agent:{0}:containers:meta'.format(host.name)
+    rds.hset(key, container.container_id, json.dumps(container.meta))
 
 def remove_container_for_agent(container):
     host = container.host
-    key = 'eru:agent:{0}:containers'.format(host.name)
-    rds.srem(key, container.container_id)
+    key = 'eru:agent:{0}:containers:meta'.format(host.name)
+    rds.hdel(key, container.container_id)
 
 def publish_to_service_discovery(*appnames):
     for appname in appnames:
@@ -184,8 +187,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
-            ident_id = cname.split('_')[-1]
-            values = [str(task_id), cid, ident_id] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+            values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
             rds.publish(pub_agent_vlan_key, '|'.join(values))
 
         for _ in ips:
@@ -206,7 +208,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env, nshare)
             for ip in ips:
                 ip.assigned_to_container(c)
-            notifier.notify_agent(cid)
+            notifier.notify_agent(c)
             add_container_for_agent(c)
             add_container_backends(c)
             cids.append(cid)
@@ -274,8 +276,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
-            ident_id = cname.split('_')[-1]
-            values = [str(task_id), cid, ident_id] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+            values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
             rds.publish(pub_agent_vlan_key, '|'.join(values))
 
         for _ in ips:
@@ -296,7 +297,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
             c = Container.create(cid, host, version, cname, entrypoint, {}, env, nshare)
             for ip in ips:
                 ip.assigned_to_container(c)
-            notifier.notify_agent(cid)
+            notifier.notify_agent(c)
             add_container_for_agent(c)
             add_container_backends(c)
             cids.append(cid)

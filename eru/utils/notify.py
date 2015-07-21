@@ -1,5 +1,7 @@
 # coding:utf-8
 
+import json
+
 from eru.clients import rds
 from eru.consts import (
     ERU_TASK_PUBKEY,
@@ -39,8 +41,9 @@ class TaskNotifier(object):
     def get_store_logs(self):
         return rds.lrange(self.log_key, 0, -1)
 
-    def notify_agent(self, cid):
+    def notify_agent(self, container):
+        if not container:
+            return
         watcher_key = ERU_AGENT_WATCHERKEY % self.task.host.name
-        message = '+|%s' % cid
+        message = '+|%s|%s' % (container.container_id, json.dumps(container.meta))
         rds.publish(watcher_key, message)
-

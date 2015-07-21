@@ -77,6 +77,10 @@ class Container(Base):
         return self.name.split('_')[0]
 
     @property
+    def meta(self):
+        return self.version.appconfig.get('meta', {})
+
+    @property
     def ident_id(self):
         return self.name.split('_')[-1]
 
