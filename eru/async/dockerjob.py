@@ -147,6 +147,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         log_config=LogConfig(type=config.DOCKER_LOG_DRIVER),
         ulimits=[Ulimit(name='nofile', soft=65535, hard=65535)],
         restart_policy=restart_policy,
+        mem_limit=mem_limit,
     )
     container = client.create_container(
         image=image,
@@ -160,7 +161,6 @@ def create_one_container(host, version, entrypoint, env='prod',
         volumes=volumes,
         host_config=host_config,
         cpu_shares=cpu_shares,
-        mem_limit=mem_limit,
     )
     container_id = container['Id']
 
