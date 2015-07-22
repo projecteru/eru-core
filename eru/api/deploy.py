@@ -46,6 +46,7 @@ def create_private(group_name, pod_name, appname):
     nshare = core_require % pod.core_share
 
     ports = data.get('ports', [])
+    args = data.get('args', [])
 
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
@@ -90,6 +91,7 @@ def create_private(group_name, pod_name, appname):
                 nshare,
                 networks,
                 ports,
+                args,
                 spec_ips,
                 data['entrypoint'],
                 data['env'],
@@ -113,6 +115,7 @@ def create_public(group_name, pod_name, appname):
 
     vstr = data['version']
     ports = data.get('ports', [])
+    args = data.get('args', [])
 
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, vstr)
@@ -138,6 +141,7 @@ def create_public(group_name, pod_name, appname):
                 0,
                 networks,
                 ports,
+                args,
                 spec_ips,
                 data['entrypoint'],
                 data['env'],
@@ -244,7 +248,7 @@ def validate_instance(group_name, pod_name, appname, version):
     return group, pod, application, version
 
 def _create_task(version, host, ncontainer,
-    cores, nshare, networks, ports, spec_ips, entrypoint, env, image=''):
+    cores, nshare, networks, ports, args, spec_ips, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
 
     # host 模式不允许绑定 vlan
@@ -259,6 +263,7 @@ def _create_task(version, host, ncontainer,
         'full_cores': [c.label for c in cores.get('full', [])],
         'part_cores': [c.label for c in cores.get('part', [])],
         'ports': ports,
+        'args': args,
         'nshare': nshare,
         'networks': network_ids,
         'image': image,

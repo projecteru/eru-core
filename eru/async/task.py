@@ -155,6 +155,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     entrypoint = task.props['entrypoint']
     env = task.props['env']
     ports = task.props['ports']
+    args = task.props['args']
     # use raw
     image = task.props['image']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
@@ -173,7 +174,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         cores_for_one_container = {'full': fcores, 'part': pcores}
         try:
             cid, cname = dockerjob.create_one_container(host, version,
-                entrypoint, env, fcores+pcores, ports=ports, cpu_shares=cpu_shares, image=image)
+                entrypoint, env, fcores+pcores, ports=ports, args=args,
+                cpu_shares=cpu_shares, image=image)
         except Exception as e:
             print e # 写给celery日志看
             host.release_cores(cores_for_one_container, nshare)
@@ -253,6 +255,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
     # use raw
     image = task.props['image']
     ports = task.props['ports']
+    args = task.props['args']
     cpu_shares = 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
@@ -263,7 +266,8 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
     for _ in range(ncontainer):
         try:
             cid, cname = dockerjob.create_one_container(host, version,
-                entrypoint, env, cores=None, ports=ports, cpu_shares=cpu_shares, image=image)
+                entrypoint, env, cores=None, ports=ports, args=args,
+                cpu_shares=cpu_shares, image=image)
         except Exception as e:
             print e # 同上
             continue

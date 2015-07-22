@@ -80,11 +80,13 @@ def pull_image(host, repo, tag):
     return client.pull(repo, tag=tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
 def create_one_container(host, version, entrypoint, env='prod',
-        cores=None, ports=None, cpu_shares=1024, image=''):
+        cores=None, ports=None, args=None, cpu_shares=1024, image=''):
     if cores is None:
         cores = []
     if ports is None:
         ports = []
+    if args is None:
+        args = []
 
     client = get_docker_client(host.addr)
     local_images = {r['RepoTags'][0] for r in client.images()}
@@ -93,7 +95,10 @@ def create_one_container(host, version, entrypoint, env='prod',
     appname = appconfig.appname
     entry = appconfig.entrypoints[entrypoint]
     envconfig = version.get_resource_config(env)
+    # replace $port1...
     cmd = replace_ports(entry['cmd'], ports)
+    # add extend arguments
+    cmd = cmd + ' '.join([''] + args)
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
     mem_limit = entry.get('mem_limit', 0)
