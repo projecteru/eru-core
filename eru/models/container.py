@@ -78,7 +78,10 @@ class Container(Base):
 
     @property
     def meta(self):
-        return self.version.appconfig.get('meta', {})
+        """一定会加入__version__这个变量, 7位的git sha1值"""
+        m = self.version.appconfig.get('meta', {})
+        m['__version__'] = self.version.short_sha
+        return m
 
     @property
     def ident_id(self):
