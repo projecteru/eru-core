@@ -41,7 +41,7 @@ def build_image_environment(version, base, rev):
 
     # launcher script
     launcher = template.render_template('launcher.jinja', appname=appname)
-    ensure_file(os.path.join(build_path, '__nbe_launcher__'), content=launcher, mode=0755)
+    ensure_file(os.path.join(build_path, 'launcher'), content=launcher, mode=0755)
 
     # build dockerfile
     dockerfile = template.render_template(
@@ -152,7 +152,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         image=image,
         command=cmd,
         environment=env_dict,
-        entrypoint=None if is_raw else '__nbe_launcher__',
+        entrypoint=None if is_raw else '/usr/local/bin/launcher',
         name=container_name,
         cpuset=cpuset,
         working_dir=None if is_raw else '/%s' % appname,
