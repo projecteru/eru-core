@@ -41,7 +41,7 @@ def build_image_environment(version, base, rev):
 
     # launcher script
     launcher = template.render_template('launcher.jinja', appname=appname)
-    ensure_file(os.path.join(build_path, 'launch'), content=launcher, mode=0755)
+    ensure_file(os.path.join(build_path, 'launcher'), content=launcher, mode=0755)
 
     # build dockerfile
     dockerfile = template.render_template(
@@ -81,6 +81,9 @@ def pull_image(host, repo, tag):
 
 def create_one_container(host, version, entrypoint, env='prod',
         cores=None, ports=None, args=None, cpu_shares=1024, image=''):
+    # raw方式有些设定不同
+    is_raw = bool(image)
+
     if cores is None:
         cores = []
     if ports is None:
@@ -149,10 +152,10 @@ def create_one_container(host, version, entrypoint, env='prod',
         image=image,
         command=cmd,
         environment=env_dict,
-        entrypoint=None if image else 'launch',
+        entrypoint=None if is_raw else '/usr/local/bin/launcher',
         name=container_name,
         cpuset=cpuset,
-        working_dir=None if image else '/%s' % appname,
+        working_dir=None if is_raw else '/%s' % appname,
         network_disabled=config.DOCKER_NETWORK_DISABLED,
         volumes=volumes,
         host_config=host_config,
