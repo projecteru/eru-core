@@ -102,6 +102,8 @@ def create_one_container(host, version, entrypoint, env='prod',
     cmd = replace_ports(entry['cmd'], ports)
     # add extend arguments
     cmd = cmd + ' '.join([''] + args)
+    if is_raw:
+        cmd = '/usr/local/bin/launcher ' + cmd
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
     mem_limit = entry.get('mem_limit', 0)
@@ -153,7 +155,6 @@ def create_one_container(host, version, entrypoint, env='prod',
         image=image,
         command=cmd,
         environment=env_dict,
-        entrypoint=None if is_raw else '/usr/local/bin/launcher',
         name=container_name,
         cpuset=cpuset,
         working_dir=None if is_raw else '/%s' % appname,
