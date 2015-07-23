@@ -82,7 +82,7 @@ def pull_image(host, repo, tag):
 def create_one_container(host, version, entrypoint, env='prod',
         cores=None, ports=None, args=None, cpu_shares=1024, image=''):
     # raw方式有些设定不同
-    is_raw = not bool(image)
+    is_raw = bool(image)
 
     if cores is None:
         cores = []
@@ -102,7 +102,7 @@ def create_one_container(host, version, entrypoint, env='prod',
     cmd = replace_ports(entry['cmd'], ports)
     # add extend arguments
     cmd = cmd + ' '.join([''] + args)
-    if is_raw:
+    if not is_raw:
         cmd = '/usr/local/bin/launcher ' + cmd
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
