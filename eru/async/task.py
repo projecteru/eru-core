@@ -147,6 +147,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     if spec_ips is None:
         spec_ips = []
 
+    need_network = bool(network_ids)
     networks = Network.get_multi(network_ids)
 
     notifier = TaskNotifier(task)
@@ -175,7 +176,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         try:
             cid, cname = dockerjob.create_one_container(host, version,
                 entrypoint, env, fcores+pcores, ports=ports, args=args,
-                cpu_shares=cpu_shares, image=image)
+                cpu_shares=cpu_shares, image=image, need_network=need_network)
         except Exception as e:
             print e # 写给celery日志看
             host.release_cores(cores_for_one_container, nshare)
@@ -245,6 +246,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
     if spec_ips is None:
         spec_ips = []
 
+    need_network = bool(network_ids)
     networks = Network.get_multi(network_ids)
 
     notifier = TaskNotifier(task)
@@ -267,7 +269,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
         try:
             cid, cname = dockerjob.create_one_container(host, version,
                 entrypoint, env, cores=None, ports=ports, args=args,
-                cpu_shares=cpu_shares, image=image)
+                cpu_shares=cpu_shares, image=image, need_network=need_network)
         except Exception as e:
             print e # 同上
             continue

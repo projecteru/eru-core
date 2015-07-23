@@ -4,10 +4,14 @@ echo 1 > /writable-proc/sys/vm/overcommit_memory
 chmod 777 /dev/stdout
 chmod 777 /dev/stderr
 
-# wait for macvlan
-while ( ! ip addr show | grep 'UP' | grep 'vnbe'); do
-    echo -n o
-    sleep .5
-done
+neednetwork=$1
+if [ $neednetwork = "network" ]; then
+    # wait for macvlan
+    while ( ! ip addr show | grep 'UP' | grep 'vnbe'); do
+        echo -n o
+        sleep .5
+    done
+fi
 
+shift
 exec sudo -E -u {{appname}} $@
