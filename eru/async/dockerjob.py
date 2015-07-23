@@ -80,7 +80,7 @@ def pull_image(host, repo, tag):
     return client.pull(repo, tag=tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
 def create_one_container(host, version, entrypoint, env='prod',
-        cores=None, ports=None, args=None, cpu_shares=1024, image=''):
+        cores=None, ports=None, args=None, cpu_shares=1024, image='', need_network=False):
     # raw方式有些设定不同
     is_raw = bool(image)
 
@@ -103,7 +103,8 @@ def create_one_container(host, version, entrypoint, env='prod',
     # add extend arguments
     cmd = cmd + ' '.join([''] + args)
     if not is_raw:
-        cmd = '/usr/local/bin/launcher ' + cmd
+        network = 'network' if need_network else 'nonetwork'
+        cmd = '/usr/local/bin/launcher %s ' % network + cmd
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
     mem_limit = entry.get('mem_limit', 0)
