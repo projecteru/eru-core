@@ -82,7 +82,7 @@ def pull_image(host, repo, tag):
 def create_one_container(host, version, entrypoint, env='prod',
         cores=None, ports=None, args=None, cpu_shares=1024, image=''):
     # raw方式有些设定不同
-    is_raw = bool(image)
+    is_raw = not bool(image)
 
     if cores is None:
         cores = []
