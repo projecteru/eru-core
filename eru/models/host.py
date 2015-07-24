@@ -79,6 +79,10 @@ class Host(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
+    @classmethod
+    def get_random_public_host(cls):
+        return cls.query.filter(cls.group_id == None).limit(1).first()
+
     @property
     def ip(self):
         return self.addr.split(':', 1)[0]

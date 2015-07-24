@@ -165,7 +165,7 @@ def build_image(group_name, pod_name, appname):
     # 这个group可以用这个pod不?
     # 这个group可以build这个version不?
     base = data['base']
-    host = pod.get_random_host()
+    host = Host.get_random_public_host() or pod.get_random_host()
     task = Task.create(consts.TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
         args=(task.id, base),
