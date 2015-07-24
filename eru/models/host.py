@@ -40,7 +40,7 @@ class Host(Base):
     mem = db.Column(db.BigInteger, nullable=False, default=0)
     # 现在这个count是指free的core数
     count = db.Column(db.Numeric(12, 3), nullable=False, default=0)
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), default=0)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
     is_alive = db.Column(db.Boolean, default=True)
 
@@ -81,7 +81,7 @@ class Host(Base):
 
     @classmethod
     def get_random_public_host(cls):
-        return cls.query.filter(cls.group_id == 0).limit(1).first()
+        return cls.query.filter(cls.group_id == None).limit(1).first()
 
     @property
     def ip(self):
