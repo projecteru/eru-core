@@ -1,11 +1,10 @@
 # coding: utf-8
 
-import json
 import sqlalchemy.exc
 from datetime import datetime
 
 from eru.models import db
-from eru.models.base import Base
+from eru.models.base import Base, PropsMixin
 from eru.consts import (
     ERU_TASK_RESULTKEY,
     ERU_TASK_LOGKEY,
@@ -13,7 +12,7 @@ from eru.consts import (
     TASK_ACTIONS,
 )
 
-class Task(Base):
+class Task(Base, PropsMixin):
     __tablename__ = 'task'
 
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))
@@ -23,14 +22,12 @@ class Task(Base):
     result = db.Column(db.Integer, nullable=True)
     finished = db.Column(db.DateTime, nullable=True)
     created = db.Column(db.DateTime, default=datetime.now)
-    properties = db.Column(db.String(512), default='{}')
 
-    def __init__(self, host_id, app_id, version_id, type_, props):
+    def __init__(self, host_id, app_id, version_id, type_):
         self.host_id = host_id
         self.app_id = app_id
         self.version_id = version_id
         self.type = type_
-        self.properties = json.dumps(props)
 
     @classmethod
     def create(cls, type_, version, host, props={}):
@@ -38,6 +35,7 @@ class Task(Base):
             task = cls(host.id, version.app_id, version.id, type_, props)
             db.session.add(task)
             db.session.commit()
+            task.set_props(**props)
             return task
         except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
@@ -55,24 +53,12 @@ class Task(Base):
 
     def finish_with_result(self, result, **kw):
         self.finished = datetime.now()
+        db.session.add(self)
+        db.session.commit()
         self.result = result
+
         if kw:
-            p = self.props
-            p.update(kw)
-            self.properties = json.dumps(p)
-        db.session.add(self)
-        db.session.commit()
-
-    @property
-    def props(self):
-        return json.loads(self.properties)
-
-    def set_props(self, key, value):
-        p = self.props
-        p[key] = value
-        self.properties = json.dumps(p)
-        db.session.add(self)
-        db.session.commit()
+            self.set_props(**kw)
 
     @property
     def publish_key(self):

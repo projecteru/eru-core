@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import json
 from sqlalchemy.ext.declarative import declared_attr
 
 from eru.models import db
@@ -27,3 +28,19 @@ class Base(db.Model):
     def __repr__(self):
         attrs = ', '.join('{0}={1}'.format(k, v) for k, v in self.to_dict().iteritems())
         return '{0}({1})'.format(self.__class__.__name__, attrs)
+
+
+class PropsMixin(object):
+
+    properties = db.Column(db.Text, default='{}')
+
+    @property
+    def props(self):
+        return json.loads(self.properties)
+
+    def set_props(self, **data):
+        p = self.props.copy()
+        p.update(**data)
+        self.properties = json.dumps(p)
+        db.session.add(self)
+        db.session.commit()
