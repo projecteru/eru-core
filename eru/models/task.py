@@ -32,7 +32,7 @@ class Task(Base, PropsMixin):
     @classmethod
     def create(cls, type_, version, host, props={}):
         try:
-            task = cls(host.id, version.app_id, version.id, type_, props)
+            task = cls(host.id, version.app_id, version.id, type_)
             db.session.add(task)
             db.session.commit()
             task.set_props(**props)
