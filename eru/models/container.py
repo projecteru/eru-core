@@ -10,11 +10,11 @@ from datetime import datetime
 
 from eru.clients import rds
 from eru.models import db
-from eru.models.base import Base
+from eru.models.base import Base, PropsMixin
 
 _CONTAINER_PUB_KEY = 'container:%s'
 
-class Container(Base):
+class Container(Base, PropsMixin):
     __tablename__ = 'container'
 
     host_id = db.Column(db.Integer, db.ForeignKey('host.id'))

@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from flask import Blueprint, current_app
+from flask import Blueprint, current_app, request
 
 from eru import consts
 from eru.async import dockerjob
@@ -42,6 +42,9 @@ def kill_container(cid):
     c = Container.get_by_container_id(cid)
     if c:
         c.kill()
+        data = request.get_json()
+        if data:
+            c.set_props(**data)
         current_app.logger.info('Kill container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
 
