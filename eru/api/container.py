@@ -1,10 +1,11 @@
 # coding: utf-8
 
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app
 
 from eru import consts
 from eru.async import dockerjob
 from eru.models import Container
+from eru.clients import rds
 from eru.utils.decorator import jsonify
 from eru.utils.exception import EruAbortException
 from eru.helpers.network import rebind_container_ip
@@ -42,9 +43,10 @@ def kill_container(cid):
     c = Container.get_by_container_id(cid)
     if c:
         c.kill()
-        data = request.get_json()
-        if data:
-            c.set_props(**data)
+        r = rds.get('eru:agent:%s:container:reason' % c.container_id)
+        rds.delete('eru:agent:%s:container:reason' % c.container_id)
+        if r is not None:
+            c.set_props({'oom': 1})
         current_app.logger.info('Kill container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
 
