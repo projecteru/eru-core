@@ -43,7 +43,8 @@ def kill_container(cid):
     c = Container.get_by_container_id(cid)
     if c:
         c.kill()
-        r = rds.get('eru:agent:%s:container:reason')
+        r = rds.get('eru:agent:%s:container:reason' % c.container_id)
+        rds.delete('eru:agent:%s:container:reason' % c.container_id)
         if r is not None:
             c.set_props({'oom': 1})
         current_app.logger.info('Kill container (container_id=%s)', cid[:7])
