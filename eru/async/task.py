@@ -55,7 +55,7 @@ def build_docker_image(task_id, base):
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
-    current_flask.logger.info('Task<id=%s>: Start on host %s', (task_id, task.host.ip))
+    current_flask.logger.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
     notifier = TaskNotifier(task)
 
     try:
@@ -90,7 +90,7 @@ def remove_containers(task_id, cids, rmi=False):
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
-    current_flask.logger.info('Task<id=%s>: Start on host %s', (task_id, task.host.ip))
+    current_flask.logger.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
     container_ids = [c.container_id for c in containers]
