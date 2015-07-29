@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import json
 from more_itertools import chunked
@@ -35,6 +34,7 @@ def remove_container_backends(container):
     if backends:
         rds.srem(entrypoint_key, *backends)
 
+# 删除在下面
 def add_container_for_agent(container):
     """agent需要从key里取值出来去跟踪
     **改成了hashtable, agent需要更多的信息**
@@ -44,29 +44,20 @@ def add_container_for_agent(container):
     key = 'eru:agent:{0}:containers:meta'.format(host.name)
     rds.hset(key, container.container_id, json.dumps(container.meta))
 
-def remove_container_for_agent(container):
-    host = container.host
-    key = 'eru:agent:{0}:containers:meta'.format(host.name)
-    rds.hdel(key, container.container_id)
-
 def publish_to_service_discovery(*appnames):
     for appname in appnames:
         rds.publish('eru:discovery:published', appname)
 
-def dont_report_these(container_ids):
-    """告诉agent这些不要care了"""
-    flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
-    rds.mset(**flags)
-
 @current_app.task()
 def build_docker_image(task_id, base):
-    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
+    current_flask.logger.info('Task<id=%s>: Start on host %s', (task_id, task.host.ip))
     notifier = TaskNotifier(task)
+
     try:
         repo, tag = base.split(':', 1)
         current_flask.logger.info('Task<id=%s>: Pull base image (base=%s)', task_id, base)
@@ -94,17 +85,18 @@ def build_docker_image(task_id, base):
 
 @current_app.task()
 def remove_containers(task_id, cids, rmi=False):
-    current_flask.logger.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
         current_flask.logger.error('Task (id=%s) not found, quit', task_id)
         return
 
+    current_flask.logger.info('Task<id=%s>: Start on host %s', (task_id, task.host.ip))
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
     container_ids = [c.container_id for c in containers]
     host = task.host
     try:
+        # flag, don't report these
         flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
         rds.mset(**flags)
         for c in containers:
@@ -128,7 +120,7 @@ def remove_containers(task_id, cids, rmi=False):
         task.finish_with_result(consts.TASK_SUCCESS)
         notifier.pub_success()
         if container_ids:
-            rds.srem('eru:agent:%s:containers' % host.name, *container_ids)
+            rds.srem('eru:agent:%s:containers:meta' % host.name, *container_ids)
         rds.delete(*flags.keys())
         current_flask.logger.info('Task<id=%s>: Done', task_id)
 
