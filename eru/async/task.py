@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import json
 from more_itertools import chunked
@@ -109,6 +108,7 @@ def remove_containers(task_id, cids, rmi=False):
         rds.mset(**flags)
         for c in containers:
             remove_container_backends(c)
+            remove_container_for_agent(c)
             current_flask.logger.info('Task<id=%s>: Container (cid=%s) backends removed',
                     task_id, c.container_id[:7])
         appnames = {c.appname for c in containers}
