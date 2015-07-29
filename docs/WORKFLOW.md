@@ -35,7 +35,7 @@ WORKFLOW
     4. 增加名字为 :appname 的用户, 用来之后运行用户程序
     5. 按照 app.yaml 里描述的 build 信息来逐行运行构建命令 
 
-    build 可以指定为列表, 也可以是单个值, 内容为 shell 命令接受的所有输入, 参考 [Appconfig](../Appconfig.md) 的介绍
+    build 可以指定为列表, 也可以是单个值, 内容为 shell 命令接受的所有输入, 参考 [Appconfig](./Appconfig.md) 的介绍
 
 * Push Image:
 
@@ -53,4 +53,4 @@ WORKFLOW
 
 ------------
 
-可以参考 [API](../API.md)
+可以参考 [API](./API.md)
