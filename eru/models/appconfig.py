@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import yaml
+import ipaddress
 
 from eru.clients import config_backend
 
@@ -16,12 +17,13 @@ Example of app.yaml:
             ports:
                 - "5000/tcp"
                 - "5001/udp"
-            netword_mode = "bridge"
+            network_mode: "bridge"
             mem_limit: 5000
             restart: "on-failure"
         daemon:
             cmd: "python daemon.py --interval 5"
-            netword_mode = "host"
+            network_mode: "host"
+            network_route: "10.100.1.254"
         service:
             cmd: "python service.py"
     build: "pip install -r ./req.txt"
@@ -65,6 +67,12 @@ def verify_appconfig(appconfig):
             po, proto = port.split('/', 1)
             if not po.isdigit():
                 raise ValueError('port must be formatted as port/protocol like 5000/tcp')
+
+        route = content.get('network_route', '')
+        try:
+            ipaddress.ip_address(unicode(route))
+        except ValueError:
+            raise ValueError('network_route must be IPv4 address')
 
     # check build
     build = appconfig['build']
