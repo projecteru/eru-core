@@ -51,6 +51,7 @@ def create_private(group_name, pod_name, appname):
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
     spec_ips = data.get('spec_ips', [])
+    entrypoint = data['entrypoint']
     appconfig = version.appconfig
 
     strategy = data.get('strategy', 'average')
@@ -63,10 +64,12 @@ def create_private(group_name, pod_name, appname):
                 host, pod_name, group_name)
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Host must belong to this pod and group')
 
-    if not data['entrypoint'] in appconfig.entrypoints:
+    if not entrypoint in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
-                data['entrypoint'], appname, version.short_sha)
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
+                entrypoint, appname, version.short_sha)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % entrypoint)
+
+    route = appconfig.entrypoints[entrypoint].get('network_route', '')
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
@@ -93,6 +96,7 @@ def create_private(group_name, pod_name, appname):
                 ports,
                 args,
                 spec_ips,
+                route,
                 data['entrypoint'],
                 data['env'],
                 image=data.get('image', ''),
@@ -121,13 +125,15 @@ def create_public(group_name, pod_name, appname):
             pod_name, appname, vstr)
 
     networks = Network.get_multi(data.get('networks', []))
+    entrypoint = data['entrypoint']
     spec_ips = data.get('spec_ips', [])
     ncontainer = int(data['ncontainer'])
     appconfig = version.appconfig
-    if not data['entrypoint'] in appconfig.entrypoints:
+    if not entrypoint in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
-                data['entrypoint'], appname, version.short_sha)
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % data['entrypoint'])
+                entrypoint, appname, version.short_sha)
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % entrypoint)
+    route = appconfig.entrypoints[entrypoint].get('network_route', '')
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
@@ -143,6 +149,7 @@ def create_public(group_name, pod_name, appname):
                 ports,
                 args,
                 spec_ips,
+                route,
                 data['entrypoint'],
                 data['env'],
                 image=data.get('image', ''),
@@ -248,7 +255,7 @@ def validate_instance(group_name, pod_name, appname, version):
     return group, pod, application, version
 
 def _create_task(version, host, ncontainer,
-    cores, nshare, networks, ports, args, spec_ips, entrypoint, env, image=''):
+    cores, nshare, networks, ports, args, spec_ips, route, entrypoint, env, image=''):
     network_ids = [n.id for n in networks]
 
     # host 模式不允许绑定 vlan
@@ -267,6 +274,7 @@ def _create_task(version, host, ncontainer,
         'nshare': nshare,
         'networks': network_ids,
         'image': image,
+        'route': route,
     }
     task = Task.create(consts.TASK_CREATE, version, host, task_props)
     if not task:

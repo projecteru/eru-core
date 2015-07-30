@@ -150,10 +150,12 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     ports = task.props['ports']
     args = task.props['args']
     # use raw
+    route = task.props['route']
     image = task.props['image']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
+    pub_agent_route_key = 'eru:agent:%s:route' % host.name
     feedback_key = 'eru:agent:%s:feedback' % task_id
 
     cids = []
@@ -197,6 +199,9 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             ip = ip_dict.get(vlan_address, None)
             if ip:
                 ip.set_vethname(vethname)
+
+        if route:
+            rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
@@ -247,12 +252,14 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
     entrypoint = task.props['entrypoint']
     env = task.props['env']
     # use raw
+    route = task.props['route']
     image = task.props['image']
     ports = task.props['ports']
     args = task.props['args']
     cpu_shares = 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
+    pub_agent_route_key = 'eru:agent:%s:route' % host.name
     feedback_key = 'eru:agent:%s:feedback' % task_id
 
     cids = []
@@ -289,6 +296,9 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
             ip = ip_dict.get(vlan_address, None)
             if ip:
                 ip.set_vethname(vethname)
+
+        if route:
+            rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
