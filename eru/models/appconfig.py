@@ -69,10 +69,11 @@ def verify_appconfig(appconfig):
                 raise ValueError('port must be formatted as port/protocol like 5000/tcp')
 
         route = content.get('network_route', '')
-        try:
-            ipaddress.ip_address(unicode(route))
-        except ValueError:
-            raise ValueError('network_route must be IPv4 address')
+        if route:
+            try:
+                ipaddress.ip_address(unicode(route))
+            except ValueError:
+                raise ValueError('network_route must be IPv4 address')
 
     # check build
     build = appconfig['build']

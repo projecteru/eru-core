@@ -23,7 +23,6 @@ entrypoints:
 build: "pip install -r ./req.txt"
 '''
     data = {
-        'name': 'test_app',
         'version': random_sha1(),
         'git': 'http://git.huanntv.com/test_app.git',
         'token': random_string(random_size=10),
@@ -48,7 +47,7 @@ build: "pip install -r ./req.txt"
     assert rv.status_code == 404
     assert r[u'error'] == 'App random_app_name not found'
 
-    rv = client.get('/api/app/{0}/{1}/'.format(data['name'], data['version']))
+    rv = client.get('/api/app/{0}/{1}/'.format('test_app', data['version']))
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
@@ -62,7 +61,7 @@ build: "pip install -r ./req.txt"
     assert r[u'appconfig']['build'] == u'pip install -r ./req.txt'
 
     # 短 version 试试
-    rv = client.get('/api/app/{0}/{1}/'.format(data['name'], data['version'][:7]))
+    rv = client.get('/api/app/{0}/{1}/'.format('test_app', data['version'][:7]))
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
@@ -85,7 +84,6 @@ entrypoints:
 build: "pip install -r ./req.txt"
 '''
     data = {
-        'name': 'test_app',
         'version': random_sha1(),
         'git': 'http://git.huanntv.com/test_app.git',
         'token': random_string(random_size=10),
@@ -95,7 +93,7 @@ build: "pip install -r ./req.txt"
     rv = client.get('/api/app/test_app/')
     assert rv.status_code == 200
 
-    url = '/api/app/{0}/env/'.format(data['name'])
+    url = '/api/app/{0}/env/'.format('test_app')
     envdata = {
         'env': 'prod',
         'TEST_APP_REDIS': 'test_app_redis',
