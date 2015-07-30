@@ -124,6 +124,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         'ERU_RUNENV': env.upper(),
         'ERU_POD': host.pod.name,
         'ERU_HOST': host.name,
+        'ERU_HOST_IP': host.ip,
     }
     env_dict.update(envconfig.to_env_dict())
 
