@@ -32,12 +32,18 @@ def get_version(name, version):
 
 @bp.route('/register/', methods=['POST', ])
 @jsonify
-@check_request_json(['name', 'version', 'git', 'token', 'appyaml'])
+@check_request_json(['version', 'git', 'token', 'appyaml'])
 def register_app_version():
     data = request.get_json()
-    name = data['name']
-
     version = data['version']
+
+    appyaml = data['appyaml']
+    try:
+        verify_appconfig(appyaml)
+    except (ValueError, KeyError) as e:
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, e.message)
+
+    name = appyaml['appname']
 
     app = App.get_or_create(name, data['git'], data['token'])
     if not app:
@@ -49,12 +55,6 @@ def register_app_version():
     if not v:
         current_app.logger.error('Version create failed. (name=%s, version=%s)', name, version[:7])
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Version %s create failed' % version[:7])
-
-    appyaml = data['appyaml']
-    try:
-        verify_appconfig(appyaml)
-    except (ValueError, KeyError) as e:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, e.message)
 
     appconfig = v.appconfig
     appconfig.update(**appyaml)
