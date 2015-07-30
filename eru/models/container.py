@@ -74,7 +74,7 @@ class Container(Base, PropsMixin):
 
     @property
     def appname(self):
-        return self.name.split('_')[0]
+        return self.name.rsplit('_', 2)[0]
 
     @property
     def meta(self):
@@ -85,7 +85,7 @@ class Container(Base, PropsMixin):
 
     @property
     def ident_id(self):
-        return self.name.split('_')[-1]
+        return self.name.rsplit('_', 2)[-1]
 
     @property
     def _cores_key(self):
