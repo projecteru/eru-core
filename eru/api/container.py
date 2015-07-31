@@ -1,14 +1,14 @@
 # coding: utf-8
 
-from flask import Blueprint, current_app
+from flask import Blueprint, current_app, request
 
 from eru import consts
-from eru.async import dockerjob
-from eru.models import Container
 from eru.clients import rds
+from eru.async import dockerjob
+from eru.models import Container, Network
 from eru.utils.decorator import jsonify
 from eru.utils.exception import EruAbortException
-from eru.helpers.network import rebind_container_ip
+from eru.helpers.network import rebind_container_ip, bind_container_ip
 
 bp = Blueprint('container', __name__, url_prefix='/api/container')
 
@@ -89,3 +89,20 @@ def stop_container(cid):
         dockerjob.stop_containers([c,], c.host)
         current_app.logger.info('Stop container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
+
+@bp.route('/<cid>/bind_network', methods=['PUT'])
+@jsonify
+def bind_network(cid):
+    data = request.get_json()
+    appname = data.get('appname')
+    c = Container.get_by_container_id(cid)
+    if not (c and c.is_alive):
+        return {'r': 1, 'msg': 'container not found or dead'}
+    if c.appname != appname:
+        return {'r': 1, 'msg': 'container doesn\'t belong to this app'}
+
+    network_names = data.get('networks', [])
+    networks = filter(None, [Network.get_by_name(n) for n in network_names])
+    ips = filter(None, [n.acquire_ip() for n in networks])
+    bind_container_ip(c, ips)
+    return {'r': 0, 'msg': ips}
