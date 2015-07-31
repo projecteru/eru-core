@@ -105,4 +105,6 @@ def bind_network(cid):
     networks = filter(None, [Network.get_by_name(n) for n in network_names])
     ips = filter(None, [n.acquire_ip() for n in networks])
     bind_container_ip(c, ips)
+    for ip in ips:
+        ip.assigned_to_container(c)
     return {'r': 0, 'msg': ips}
