@@ -17,7 +17,7 @@ def bind_container_ip(container, ips, nid=None):
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % container.host.name
     feedback_key = 'eru:agent:%s:feedback' % task_id
 
-    values = [task_id, container.container_id, container.ident_id]
+    values = [task_id, container.container_id]
     values += ['{0}:{1}'.format(nid or ip.vlan_seq_id, ip.vlan_address) for ip in ips]
 
     @retrying.retry(retry_on_result=lambda r: not r)
