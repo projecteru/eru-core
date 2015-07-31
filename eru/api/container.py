@@ -97,14 +97,21 @@ def bind_network(cid):
     appname = data.get('appname')
     c = Container.get_by_container_id(cid)
     if not (c and c.is_alive):
-        return {'r': 1, 'msg': 'container not found or dead'}
+        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container %s not found' % cid)
     if c.appname != appname:
-        return {'r': 1, 'msg': 'container doesn\'t belong to this app'}
+        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container does not belong to app')
 
     network_names = data.get('networks', [])
     networks = filter(None, [Network.get_by_name(n) for n in network_names])
+    if not networks:
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'network empty')
+
     ips = filter(None, [n.acquire_ip() for n in networks])
-    bind_container_ip(c, ips)
+    if not ips:
+        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'no ip available')
+
+    nid = max([ip.network_id for ip in c.ips.all()] + [-1]) + 1
+    bind_container_ip(c, ips, nid=nid)
     for ip in ips:
         ip.assigned_to_container(c)
     return {'r': 0, 'msg': ips}
