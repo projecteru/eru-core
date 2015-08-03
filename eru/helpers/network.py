@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import logging
 import retrying
 from res.ext.common import random_string
 
@@ -7,7 +8,9 @@ from eru.clients import rds
 from eru.agent import get_agent
 from eru.config import ERU_AGENT_API
 
-@retrying.retry(retry_on_result=lambda r: not r)
+logger = logging.getLogger(__name__)
+
+@retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
 def _bind_container_ip_pubsub(task_id, container, ips, nid=None):
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % container.host.name
     feedback_key = 'eru:agent:%s:feedback' % task_id
@@ -29,7 +32,7 @@ def _bind_container_ip_pubsub(task_id, container, ips, nid=None):
     rds.delete(feedback_key)
     return False
 
-@retrying.retry(retry_on_result=lambda r: not r)
+@retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
 def _bind_container_ip_http(task_id, container, ips, nid=None):
     agent = get_agent(container.host)
     feedback_key = 'eru:agent:%s:feedback' % task_id
@@ -59,10 +62,14 @@ def bind_container_ip(container, ips, nid=None):
         return
 
     task_id = random_string(10)
-    if ERU_AGENT_API == 'pubsub':
-        _bind_container_ip_pubsub(task_id, container, ips, nid=nid)
-    elif ERU_AGENT_API == 'http':
-        _bind_container_ip_http(task_id, container, ips, nid=nid)
+    try:
+        if ERU_AGENT_API == 'pubsub':
+            _bind_container_ip_pubsub(task_id, container, ips, nid=nid)
+        elif ERU_AGENT_API == 'http':
+            _bind_container_ip_http(task_id, container, ips, nid=nid)
+    except retrying.RetryError:
+        logger.info('still failed after 5 times retry, %s, %s' % (container.container_id, ips))
+        pass
 
 def rebind_container_ip(container):
     ips = container.ips.all()
