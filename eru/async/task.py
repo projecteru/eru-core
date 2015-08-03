@@ -7,6 +7,8 @@ from celery import current_app
 from flask import current_app as current_flask
 
 from eru import consts
+from eru.agent import get_agent
+from eru.config import ERU_AGENT_API
 from eru.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
@@ -184,8 +186,13 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
-            values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-            rds.publish(pub_agent_vlan_key, '|'.join(values))
+            if ERU_AGENT_API == 'pubsub':
+                values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+                rds.publish(pub_agent_vlan_key, '|'.join(values))
+            elif ERU_AGENT_API == 'http':
+                agent = get_agent(host)
+                ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+                agent.add_container_vlan(cid, task_id, ip_list)
 
         for _ in ips:
             # timeout 15s
@@ -281,8 +288,13 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         if ips:
-            values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-            rds.publish(pub_agent_vlan_key, '|'.join(values))
+            if ERU_AGENT_API == 'pubsub':
+                values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+                rds.publish(pub_agent_vlan_key, '|'.join(values))
+            elif ERU_AGENT_API == 'http':
+                agent = get_agent(host)
+                ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+                agent.add_container_vlan(cid, task_id, ip_list)
 
         for _ in ips:
             # timeout 15s
