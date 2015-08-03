@@ -12,6 +12,8 @@ from eru.consts import (
     TASK_RESULT_FAILED,
     PUB_END_MESSAGE,
 )
+from eru.config import ERU_AGENT_API
+from eru.agent import get_agent
 
 class TaskNotifier(object):
 
@@ -44,6 +46,10 @@ class TaskNotifier(object):
     def notify_agent(self, container):
         if not container:
             return
-        watcher_key = ERU_AGENT_WATCHERKEY % self.task.host.name
-        message = '+|%s|%s' % (container.container_id, json.dumps(container.meta))
-        rds.publish(watcher_key, message)
+        if ERU_AGENT_API == 'pubsub':
+            watcher_key = ERU_AGENT_WATCHERKEY % self.task.host.name
+            message = '+|%s|%s' % (container.container_id, json.dumps(container.meta))
+            rds.publish(watcher_key, message)
+        elif ERU_AGENT_API == 'http':
+            agent = get_agent(container.host)
+            agent.add_container(container)

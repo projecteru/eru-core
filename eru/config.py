@@ -7,6 +7,8 @@ ERU_OPLOG_PATH = os.getenv('ERU_OPLOG_PATH', '/tmp/op.log')
 ERU_TIMEOUT = int(os.getenv('ERU_TIMEOUT', '300'))
 ERU_WORKERS = int(os.getenv('ERU_WORKERS', '4'))
 ERU_WORKER_CLASS = os.getenv('ERU_WORKER_CLASS', 'geventwebsocket.gunicorn.workers.GeventWebSocketWorker')
+ERU_AGENT_PORT = int(os.getenv('ERU_AGENT_PORT', '11234'))
+ERU_AGENT_API = os.getenv('ERU_AGENT_API', 'pubsub')
 
 DOCKER_CERT_PATH = os.getenv('DOCKER_CERT_PATH', '')
 DOCKER_REGISTRY = os.getenv('DOCKER_REGISTRY', 'docker-registry.intra.hunantv.com')
@@ -67,3 +69,6 @@ except ImportError:
 SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
         MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE)
 ADMINS = [line.split(':') for line in CELERY_ADMINS.split(',')]
+
+if ERU_AGENT_API not in ('http', 'pubsub'):
+    raise ValueError('ERU_AGENT_API must be either http or pubsub')
