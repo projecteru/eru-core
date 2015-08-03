@@ -192,7 +192,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             elif ERU_AGENT_API == 'http':
                 agent = get_agent(host)
                 ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-                agent.add_container_vlan(cid, task_id, ip_list)
+                agent.add_container_vlan(cid, str(task_id), ip_list)
 
         for _ in ips:
             # timeout 15s
@@ -294,7 +294,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
             elif ERU_AGENT_API == 'http':
                 agent = get_agent(host)
                 ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-                agent.add_container_vlan(cid, task_id, ip_list)
+                agent.add_container_vlan(cid, str(task_id), ip_list)
 
         for _ in ips:
             # timeout 15s

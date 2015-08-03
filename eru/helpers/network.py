@@ -35,7 +35,7 @@ def _bind_container_ip_http(task_id, container, ips, nid=None):
     feedback_key = 'eru:agent:%s:feedback' % task_id
 
     ip_list = [(nid or ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-    agent.add_container_vlan(container.container_id, task_id, ip_list)
+    agent.add_container_vlan(container.container_id, str(task_id), ip_list)
 
     for _ in ips:
         rv = rds.blpop(feedback_key, 15)
