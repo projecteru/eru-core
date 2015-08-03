@@ -68,7 +68,7 @@ def bind_container_ip(container, ips, nid=None):
         elif ERU_AGENT_API == 'http':
             _bind_container_ip_http(task_id, container, ips, nid=nid)
     except retrying.RetryError:
-        logger.info('still failed after 5 times retry')
+        logger.info('still failed after 5 times retry, %s, %s' % (container.container_id, ips))
         pass
 
 def rebind_container_ip(container):
