@@ -5,5 +5,5 @@ ADD launcher /usr/local/bin/launcher
 WORKDIR /{{appname}}
 RUN useradd -u {{user_id}} -d /nonexistent -s /sbin/nologin -U {{appname}}
 {% for build_cmd in build_cmds %}
-RUN {{build_cmd}}
+RUN {{build_cmd|safe}}
 {% endfor %}
