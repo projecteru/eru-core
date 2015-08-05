@@ -207,8 +207,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             if ip:
                 ip.set_vethname(vethname)
 
-        if route:
-            rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
+            if route:
+                rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
@@ -309,8 +309,8 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
             if ip:
                 ip.set_vethname(vethname)
 
-        if route:
-            rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
+            if route:
+                rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
