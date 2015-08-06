@@ -52,6 +52,8 @@ def verify_appconfig(appconfig):
     # check entrypoints
     entrypoints = appconfig['entrypoints']
     for entry, content in entrypoints.iteritems():
+        if '_' in entry:
+            raise ValueError('sorry but we do not support `_` in entrypoint 눈_눈')
         if not isinstance(content, dict):
             raise ValueError('entrypoint %s must be dictionary' % entry)
         if 'cmd' not in content:
