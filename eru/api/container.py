@@ -48,6 +48,9 @@ def kill_container(cid):
         rds.delete(key)
         if r is not None:
             c.set_props({'oom': 1})
+
+        c.callback_report(status='die')
+
         current_app.logger.info('Kill container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
 
@@ -58,6 +61,9 @@ def cure_container(cid):
     if c and not c.is_alive:
         rebind_container_ip(c)
         c.cure()
+
+        c.callback_report(status='start')
+
         current_app.logger.info('Cure container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
 

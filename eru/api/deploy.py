@@ -47,6 +47,10 @@ def create_private(group_name, pod_name, appname):
 
     ports = data.get('ports', [])
     args = data.get('args', [])
+    callback_url = data.get('callback_url', '')
+
+    if callback_url and not (callback_url.startswith('http://') or callback_url.startswith('https://')):
+        raise EruAbortException(400, 'callback_url must starts with http:// or https://')
 
     ncontainer = int(data['ncontainer'])
     networks = Network.get_multi(data.get('networks', []))
@@ -100,6 +104,7 @@ def create_private(group_name, pod_name, appname):
                 data['entrypoint'],
                 data['env'],
                 image=data.get('image', ''),
+                callback_url=callback_url,
             )
             if not t:
                 continue
@@ -120,6 +125,10 @@ def create_public(group_name, pod_name, appname):
     vstr = data['version']
     ports = data.get('ports', [])
     args = data.get('args', [])
+    callback_url = data.get('callback_url', '')
+
+    if callback_url and not (callback_url.startswith('http://') or callback_url.startswith('https://')):
+        raise EruAbortException(400, 'callback_url must starts with http:// or https://')
 
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, vstr)
@@ -153,6 +162,7 @@ def create_public(group_name, pod_name, appname):
                 data['entrypoint'],
                 data['env'],
                 image=data.get('image', ''),
+                callback_url=callback_url,
             )
             if not t:
                 continue
@@ -254,8 +264,9 @@ def validate_instance(group_name, pod_name, appname, version):
 
     return group, pod, application, version
 
-def _create_task(version, host, ncontainer,
-    cores, nshare, networks, ports, args, spec_ips, route, entrypoint, env, image=''):
+def _create_task(version, host, ncontainer, cores, nshare, networks,
+        ports, args, spec_ips, route, entrypoint, env, image='',
+        callback_url=''):
     network_ids = [n.id for n in networks]
 
     # host 模式不允许绑定 vlan
@@ -275,6 +286,7 @@ def _create_task(version, host, ncontainer,
         'networks': network_ids,
         'image': image,
         'route': route,
+        'callback_url': callback_url,
     }
     task = Task.create(consts.TASK_CREATE, version, host, task_props)
     if not task:

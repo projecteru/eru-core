@@ -1,8 +1,8 @@
-#!/usr/bin/python
 # coding:utf-8
 
 import json
 import cPickle
+import requests
 import itertools
 import sqlalchemy.exc
 from decimal import Decimal as D
@@ -42,7 +42,7 @@ class Container(Base, PropsMixin):
 
     @classmethod
     def create(cls, container_id, host, version, name,
-            entrypoint, cores, env, nshare=0):
+            entrypoint, cores, env, nshare=0, callback_url=''):
         """创建一个容器. cores 是 {'full': [core, ...], 'part': [core, ...]}"""
         from .host import Host
         try:
@@ -56,6 +56,7 @@ class Container(Base, PropsMixin):
 
             cores['nshare'] = nshare
             container.cores = cores
+            container.set_props(callback_url=callback_url)
 
             rds.publish(_CONTAINER_PUB_KEY % name.split('_')[0],
                 json.dumps({'container': container_id, 'status': 'create'}))
@@ -162,6 +163,18 @@ class Container(Base, PropsMixin):
         db.session.commit()
         rds.publish(_CONTAINER_PUB_KEY % self.appname,
             json.dumps({'container': self.container_id, 'status': 'up'}))
+
+    def callback_report(self, **kwargs):
+        """调用创建的时候设置的回调url, 失败就不care了"""
+        data = self.to_dict()
+        data.update(**kwargs)
+        callback_url = self.props.get('callback_url', '')
+        if not callback_url:
+            return
+        try:
+            requests.post(callback_url, data=data, timeout=5)
+        except:
+            pass
 
     def to_dict(self):
         d = super(Container, self).to_dict()
