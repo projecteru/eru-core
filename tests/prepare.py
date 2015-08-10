@@ -47,7 +47,7 @@ def create_test_suite():
         for i in range(count):
             cid = random_sha1()
             used_cores = {'full': cores['full'][i*cores_per_container:(i+1)*cores_per_container]}
-            c = Container.create(cid, host, version, random_string(), 'entrypoint', used_cores, 'env')
+            c = Container.create(cid, host, version, random_string(), 'web', used_cores, 'env')
             containers.append(c)
         host.occupy_cores(cores, 0)
     return app, version, group, pod, hosts, containers
