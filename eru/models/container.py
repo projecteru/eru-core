@@ -166,11 +166,13 @@ class Container(Base, PropsMixin):
 
     def callback_report(self, **kwargs):
         """调用创建的时候设置的回调url, 失败就不care了"""
-        data = self.to_dict()
-        data.update(**kwargs)
         callback_url = self.props.get('callback_url', '')
         if not callback_url:
             return
+
+        data = self.to_dict()
+        data.update(**kwargs)
+
         try:
             requests.post(callback_url, data=data, timeout=5)
         except:
