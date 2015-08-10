@@ -95,7 +95,7 @@ def remove_containers(task_id, cids, rmi=False):
     current_flask.logger.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
-    container_ids = [c.container_id for c in containers]
+    container_ids = [c.container_id for c in containers if c]
     host = task.host
     try:
         # flag, don't report these
