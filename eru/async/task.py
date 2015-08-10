@@ -154,6 +154,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     # use raw
     route = task.props['route']
     image = task.props['image']
+    callback_url = task.props['callback_url']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
@@ -212,7 +213,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
-            c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env, nshare)
+            c = Container.create(cid, host, version, cname, entrypoint,
+                    cores_for_one_container, env, nshare, callback_url)
             for ip in ips:
                 ip.assigned_to_container(c)
             notifier.notify_agent(c)
@@ -263,6 +265,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
     image = task.props['image']
     ports = task.props['ports']
     args = task.props['args']
+    callback_url = task.props['callback_url']
     cpu_shares = 1024
 
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
@@ -314,7 +317,8 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
-            c = Container.create(cid, host, version, cname, entrypoint, {}, env, nshare)
+            c = Container.create(cid, host, version, cname, entrypoint, {},
+                    env, nshare, callback_url)
             for ip in ips:
                 ip.assigned_to_container(c)
             notifier.notify_agent(c)
