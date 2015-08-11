@@ -53,6 +53,9 @@ def create_private(group_name, pod_name, appname):
         raise EruAbortException(400, 'callback_url must starts with http:// or https://')
 
     ncontainer = int(data['ncontainer'])
+    if not ncontainer:
+        raise EruAbortException(400, 'ncontainer must be > 0')
+
     networks = Network.get_multi(data.get('networks', []))
     spec_ips = data.get('spec_ips', [])
     entrypoint = data['entrypoint']
@@ -137,6 +140,9 @@ def create_public(group_name, pod_name, appname):
     entrypoint = data['entrypoint']
     spec_ips = data.get('spec_ips', [])
     ncontainer = int(data['ncontainer'])
+    if not ncontainer:
+        raise EruAbortException(400, 'ncontainer must be > 0')
+
     appconfig = version.appconfig
     if not entrypoint in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
