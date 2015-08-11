@@ -20,7 +20,7 @@ def average_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None):
 
     if spec_host:
         count, rs = spec_host.get_container_cores(ncontainer, ncore, nshare)
-        return {(spec_host, count): rs}
+        return {(spec_host, count): rs} if count else {}
 
     if ncontainer > get_max_container_count(group, pod, ncore, nshare):
         return {}
@@ -32,7 +32,9 @@ def average_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None):
     used_counter = Counter()
 
     for host in hosts:
-        host_counter[host] = host.get_max_container_count(ncore, nshare)
+        count = host.get_max_container_count(ncore, nshare)
+        if count:
+            host_counter[host] = count
 
     still_need = ncontainer
     while still_need > 0:
@@ -54,7 +56,7 @@ def centralized_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None
 
     if spec_host:
         count, rs = spec_host.get_container_cores(ncontainer, ncore, nshare)
-        return {(spec_host, count): rs}
+        return {(spec_host, count): rs} if count else {}
 
     if ncontainer > get_max_container_count(group, pod, ncore, nshare):
         return {}
@@ -65,9 +67,10 @@ def centralized_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None
     still_need = ncontainer
     for host in hosts:
         count, rs = host.get_container_cores(still_need, ncore, nshare)
-        result[(host, count)] = rs
-        still_need -= count
-        if still_need <= 0:
-            break
+        if count:
+            result[(host, count)] = rs
+            still_need -= count
+            if still_need <= 0:
+                break
 
     return result
