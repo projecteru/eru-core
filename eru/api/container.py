@@ -58,11 +58,13 @@ def kill_container(cid):
 @jsonify
 def cure_container(cid):
     c = Container.get_by_container_id(cid)
+
+    if c:
+        c.callback_report(status='start')
+
     if c and not c.is_alive:
         rebind_container_ip(c)
         c.cure()
-
-        c.callback_report(status='start')
 
         current_app.logger.info('Cure container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
