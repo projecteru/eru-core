@@ -174,7 +174,8 @@ class Container(Base, PropsMixin):
         data.update(**kwargs)
 
         try:
-            requests.post(callback_url, data=data, timeout=5)
+            requests.post(callback_url, data=json.dumps(data),
+                    timeout=5, headers={'content-type': 'application/json'})
         except:
             pass
 
