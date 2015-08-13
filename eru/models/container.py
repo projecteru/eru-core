@@ -11,6 +11,7 @@ from datetime import datetime
 from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base, PropsMixin
+from eru.utils.decorator import EruJSONEncoder
 
 _CONTAINER_PUB_KEY = 'container:%s'
 
@@ -174,7 +175,7 @@ class Container(Base, PropsMixin):
         data.update(**kwargs)
 
         try:
-            requests.post(callback_url, data=json.dumps(data),
+            requests.post(callback_url, data=json.dumps(data, cls=EruJSONEncoder),
                     timeout=5, headers={'content-type': 'application/json'})
         except:
             pass
