@@ -61,6 +61,8 @@ EMAIL_USE_SSL = bool(os.getenv('EMAIL_USE_SSL', '1'))
 ERU_HOST_PERMDIR = os.getenv('ERU_HOST_PERMDIR', '/mnt/mfs/permdirs/%s')
 ERU_CONTAINER_PERMDIR = os.getenv('ERU_CONTAINER_PERMDIR', '/%s/permdir')
 
+FALCON_API_HOST = os.getenv('FALCON_API_HOST', 'http://localhost')
+
 try:
     from local_config import *
 except ImportError:

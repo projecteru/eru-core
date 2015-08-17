@@ -13,6 +13,7 @@ from eru.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network
+from eru.helpers.falcon import falcon_all_graphs
 
 def add_container_backends(container):
     """单个container所拥有的后端服务
@@ -233,6 +234,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         rds.delete(feedback_key)
 
     publish_to_service_discovery(version.name)
+    falcon_all_graphs(version)
     task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
     notifier.pub_success()
     current_flask.logger.info('Task<id=%s>: Done', task_id)
@@ -336,6 +338,7 @@ def create_containers_with_macvlan_public(task_id, ncontainer, nshare, network_i
         rds.delete(feedback_key)
 
     publish_to_service_discovery(version.name)
+    falcon_all_graphs(version)
     task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
     notifier.pub_success()
     current_flask.logger.info('Task<id=%s>: Done', task_id)
