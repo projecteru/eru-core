@@ -22,8 +22,9 @@ def _add_falcon_graph(index, screen, counters, hosts,
     data['graph_type'] = graph_type
     data['timespan'] = timespan
 
+    url = '%s/api/add_screen_graph' % FALCON_API_HOST
     try:
-        requests.post(FALCON_API_HOST, data=data)
+        requests.post(url, data=data)
     except:
         pass
 
