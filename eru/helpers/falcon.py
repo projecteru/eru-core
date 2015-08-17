@@ -10,6 +10,8 @@ def _add_falcon_graph(index, screen, counters, hosts,
         title, graph_type='k', timespan=SIX_HOURS):
     if not FALCON_API_HOST:
         return
+    if not (counters and hosts):
+        return
 
     data = {}
     data['index'] = index
