@@ -13,7 +13,6 @@ from eru.utils.decorator import check_request_json, jsonify
 from eru.utils.exception import EruAbortException
 from eru.async.task import (
     create_containers_with_macvlan,
-    create_containers_with_macvlan_public,
     build_docker_image,
     remove_containers,
 )
@@ -298,22 +297,12 @@ def _create_task(version, host, ncontainer, cores, nshare, networks,
     if not task:
         return None
 
-    if cores:
-        try:
-            create_containers_with_macvlan.apply_async(
-                args=(task.id, ncontainer, nshare, cores, network_ids, spec_ips),
-                task_id='task:%d' % task.id
-            )
-        except Exception as e:
-            logger.exception(e)
-            host.release_cores(cores)
-    else:
-        try:
-            create_containers_with_macvlan_public.apply_async(
-                args=(task.id, ncontainer, nshare, network_ids, spec_ips),
-                task_id='task:%d' % task.id
-            )
-        except Exception as e:
-            logger.exception(e)
-
+    try:
+        create_containers_with_macvlan.apply_async(
+            args=(task.id, ncontainer, nshare, cores, network_ids, spec_ips),
+            task_id='task:%d' % task.id
+        )
+    except Exception as e:
+        logger.exception(e)
+        host.release_cores(cores)
     return task

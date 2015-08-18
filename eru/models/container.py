@@ -93,20 +93,18 @@ class Container(Base, PropsMixin):
     def _cores_key(self):
         return 'eru:container:%s:cores' % self.id
 
-    @property
-    def cores(self):
+    def _get_cores(self):
         try:
             return cPickle.loads(rds.get(self._cores_key))
         except (EOFError, TypeError):
             return {}
-
-    @cores.setter
-    def cores(self, cores):
+    def _set_cores(self, cores):
         rds.set(self._cores_key, cPickle.dumps(cores))
-
-    @cores.deleter
-    def cores(self):
+    def _del_cores(self):
         rds.delete(self._cores_key)
+
+    cores = property(_get_cores, _set_cores, _del_cores)
+    del _get_cores, _set_cores, _del_cores
 
     @property
     def full_cores(self):
