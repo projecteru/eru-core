@@ -130,7 +130,7 @@ def remove_containers(task_id, cids, rmi=False):
 def _iter_cores(cores, ncontainer):
     full_cores, part_cores = cores.get('full', []), cores.get('part', [])
     if not (full_cores or part_cores):
-        return (([], []) for _ in ncontainer)
+        return (([], []) for _ in range(ncontainer))
 
     return izip_longest(
         chunked(full_cores, len(full_cores)/ncontainer),
