@@ -211,12 +211,17 @@ def rm_containers():
         if not container:
             continue
         version_dict.setdefault((container.version, container.host), []).append(container)
+
     for (version, host), containers in version_dict.iteritems():
         cids = [c.id for c in containers]
         task_props = {'container_ids': cids}
         task = Task.create(consts.TASK_REMOVE, version, host, task_props)
+
+        all_host_cids = [c.id for c in Container.get_multi_by_host(host) if c and c.version_id == version.id]
+        need_to_delete_image = set(cids) == set(all_host_cids)
+
         remove_containers.apply_async(
-            args=(task.id, cids, False),
+            args=(task.id, cids, need_to_delete_image),
             task_id='task:%d' % task.id
         )
         ts.append(task.id)
