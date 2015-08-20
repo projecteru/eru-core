@@ -79,6 +79,11 @@ class Container(Base, PropsMixin):
         return self.name.rsplit('_', 2)[0]
 
     @property
+    def network_mode(self):
+        appconfig = self.version.appconfig
+        return appconfig.entrypoints.get(self.entrypoint, {}).get('network_mode', 'bridge')
+
+    @property
     def meta(self):
         """一定会加入__version__这个变量, 7位的git sha1值"""
         m = self.version.appconfig.get('meta', {})

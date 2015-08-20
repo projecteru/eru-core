@@ -17,7 +17,7 @@ bp = Blueprint('container', __name__, url_prefix='/api/container')
 def get_container_by_cid(cid):
     c = Container.get_by_container_id(cid)
     if not c:
-        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container %s not found' % cid)
+        raise EruAbortException(404, 'Container %s not found' % cid)
     return c
 
 @bp.route('/<int:id>/', methods=['GET', ])
@@ -25,7 +25,7 @@ def get_container_by_cid(cid):
 def get_container_by_id(id):
     c = Container.get(id)
     if not c:
-        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container %s not found' % id)
+        raise EruAbortException(404, 'Container %s not found' % id)
     return c
 
 @bp.route('/<cid>/', methods=['DELETE', ])
@@ -62,9 +62,9 @@ def cure_container(cid):
     if c:
         c.callback_report(status='start')
 
-    if c and not c.is_alive:
-        rebind_container_ip(c)
-        c.cure()
+        if not c.is_alive:
+            rebind_container_ip(c)
+            c.cure()
 
         current_app.logger.info('Cure container (container_id=%s)', cid[:7])
     return {'r': 0, 'msg': consts.OK}
@@ -74,7 +74,7 @@ def cure_container(cid):
 def poll_container(cid):
     c = Container.get_by_container_id(cid)
     if not c:
-        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container %s not found' % cid)
+        raise EruAbortException(404, 'Container %s not found' % cid)
     return {'r': 0, 'container': c.container_id, 'status': c.is_alive}
 
 @bp.route('/<cid>/start', methods=['PUT', ])
@@ -105,18 +105,20 @@ def bind_network(cid):
     appname = data.get('appname')
     c = Container.get_by_container_id(cid)
     if not (c and c.is_alive):
-        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container %s not found' % cid)
+        raise EruAbortException(404, 'Container %s not found' % cid)
     if c.appname != appname:
-        raise EruAbortException(consts.HTTP_NOT_FOUND, 'Container does not belong to app')
+        raise EruAbortException(404, 'Container does not belong to app')
+    if c.network_mode == 'host':
+        raise EruAbortException(400, 'Container use host network mode')
 
     network_names = data.get('networks', [])
     networks = filter(None, [Network.get_by_name(n) for n in network_names])
     if not networks:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'network empty')
+        raise EruAbortException(400, 'network empty')
 
     ips = filter(None, [n.acquire_ip() for n in networks])
     if not ips:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'no ip available')
+        raise EruAbortException(400, 'no ip available')
 
     nid = max([ip.network_id for ip in c.ips.all()] + [-1]) + 1
     bind_container_ip(c, ips, nid=nid)
