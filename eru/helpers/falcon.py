@@ -122,3 +122,4 @@ def falcon_remove_alarms(version):
             requests.post('%s/api/delete_expression' % FALCON_API_HOST, data={'id': exp_id})
         except:
             pass
+    del version.falcon_expression_ids
