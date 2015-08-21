@@ -13,7 +13,7 @@ from eru.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network
-from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms
+from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms, falcon_remove_alarms
 
 def add_container_backends(container):
     """单个container所拥有的后端服务
@@ -98,6 +98,7 @@ def remove_containers(task_id, cids, rmi=False):
     containers = Container.get_multi(cids)
     container_ids = [c.container_id for c in containers if c]
     host = task.host
+    version = task.version
     try:
         # flag, don't report these
         flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
@@ -126,6 +127,9 @@ def remove_containers(task_id, cids, rmi=False):
             rds.hdel('eru:agent:%s:containers:meta' % host.name, *container_ids)
         rds.delete(*flags.keys())
         current_flask.logger.info('Task<id=%s>: Done', task_id)
+
+    if not version.containers.count():
+        falcon_remove_alarms(version)
 
 def _iter_cores(cores, ncontainer):
     full_cores, part_cores = cores.get('full', []), cores.get('part', [])

@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import json
 import requests
 
 from eru.config import FALCON_API_HOST
@@ -73,17 +74,17 @@ def falcon_all_graphs(version):
     for f in [falcon_cpu_graph, falcon_mem_graph, falcon_network_graph]:
         f(version)
 
-def _add_falcon_alarm(metric, version):
+def _add_falcon_alarm(metric, version, value):
     if not (metric and version):
         return
 
     data = {}
-    data['op'] = '=='
+    data['op'] = '>'
     data['callback'] = '0'
     data['max_step'] = '3'
     data['func'] = 'all(#3)'
     data['priority'] = '0'
-    data['right_value'] = '0'
+    data['right_value'] = value
     data['before_callback_mail'] = '0'
     data['after_callback_sms'] = '0'
     data['after_callback_mail'] = '0'
@@ -92,28 +93,32 @@ def _add_falcon_alarm(metric, version):
 
     url = '%s/api/add_alarm_expression' % FALCON_API_HOST
     try:
-        requests.post(url, data=data)
+        r = requests.post(url, data=data, timeout=7)
+        return json.loads(r.content)['data']['expression_id']
     except:
-        pass
+        return 0
 
 def falcon_all_alarms(version):
-    alarm_keys = set(version.appconfig.get('falcon-alarm', []))
-    basic_keys = {
-        'cpu_system_rate', 'cpu_usage_rate', 'cpu_user_rate',
-        'mem_max_usage, mem_usage', 'mem_rss',
-    }
-    alarm_keys = alarm_keys.union(basic_keys)
-
+    __version__ = version.short_sha
     containers = version.list_containers(limit=None)
     vethnames = set([ip.vethname for c in containers for ip in c.ips])
-    if 'inbytes' in alarm_keys:
-        for vethname in vethnames:
-            _add_falcon_alarm('%s.inbytes.rate' % vethname, version.short_sha)
-        alarm_keys.remove('inbytes')
-    if 'outbytes' in alarm_keys:
-        for vethname in vethnames:
-            _add_falcon_alarm('%s.outbytes.rate' % vethname, version.short_sha)
-        alarm_keys.remove('outbytes')
 
-    for key in alarm_keys:
-        _add_falcon_alarm(key, version.short_sha)
+    exp_ids = set()
+    for vethname in vethnames:
+        exp_ids.add(_add_falcon_alarm('%s.inbytes.rate' % vethname, version.short_sha, 100 * 1000 * 1000))
+        exp_ids.add(_add_falcon_alarm('%s.outbytes.rate' % vethname, version.short_sha, 100 * 1000 * 1000))
+
+    exp_ids.add(_add_falcon_alarm('cpu_system_rate', __version__, '90'))
+    exp_ids.add(_add_falcon_alarm('cpu_usage_rate', __version__, '90'))
+    exp_ids.add(_add_falcon_alarm('cpu_user_rate', __version__, '90'))
+    exp_ids.add(_add_falcon_alarm('mem_max_usage', __version__, 20 * 1000 * 1000))
+    exp_ids.add(_add_falcon_alarm('mem_usage', __version__, 20 * 1000 * 1000))
+
+    version.falcon_expression_ids = [i for i in exp_ids if i]
+
+def falcon_remove_alarms(version):
+    for exp_id in version.falcon_expression_ids:
+        try:
+            requests.post('%s/api/delete_expression' % FALCON_API_HOST, data={'id': exp_id})
+        except:
+            pass
