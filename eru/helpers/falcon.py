@@ -72,3 +72,48 @@ def falcon_network_graph(version):
 def falcon_all_graphs(version):
     for f in [falcon_cpu_graph, falcon_mem_graph, falcon_network_graph]:
         f(version)
+
+def _add_falcon_alarm(metric, version):
+    if not (metric and version):
+        return
+
+    data = {}
+    data['op'] = '=='
+    data['callback'] = '0'
+    data['max_step'] = '3'
+    data['func'] = 'all(#3)'
+    data['priority'] = '0'
+    data['right_value'] = '0'
+    data['before_callback_mail'] = '0'
+    data['after_callback_sms'] = '0'
+    data['after_callback_mail'] = '0'
+    data['uic'] = 'nbe'
+    data['expression'] = 'each(metric=%s __version__=%s)' % (metric, version)
+
+    url = '%s/api/add_alarm_expression' % FALCON_API_HOST
+    try:
+        requests.post(url, data=data)
+    except:
+        pass
+
+def falcon_all_alarms(version):
+    alarm_keys = set(version.appconfig.get('falcon-alarm', []))
+    basic_keys = {
+        'cpu_system_rate', 'cpu_usage_rate', 'cpu_user_rate',
+        'mem_max_usage, mem_usage', 'mem_rss',
+    }
+    alarm_keys = alarm_keys.union(basic_keys)
+
+    containers = version.list_containers(limit=None)
+    vethnames = set([ip.vethname for c in containers for ip in c.ips])
+    if 'inbytes' in alarm_keys:
+        for vethname in vethnames:
+            _add_falcon_alarm('%s.inbytes.rate' % vethname, version.short_sha)
+        alarm_keys.remove('inbytes')
+    if 'outbytes' in alarm_keys:
+        for vethname in vethnames:
+            _add_falcon_alarm('%s.outbytes.rate' % vethname, version.short_sha)
+        alarm_keys.remove('outbytes')
+
+    for key in alarm_keys:
+        _add_falcon_alarm(key, version.short_sha)
