@@ -12,10 +12,10 @@ from eru.models.app import App, Version
 from eru.models.appconfig import AppConfig, ResourceConfig
 from eru.models.container import Container
 from eru.models.task import Task
-from eru.models.network import Network, IP
+from eru.models.network import Network, IP, VLanGateway
 
 __all__ = [
     'db', 'Base', 'Core', 'Host', 'Pod', 'Group', 'GroupPod',
     'App', 'Version', 'Container', 'Task', 'AppConfig', 'ResourceConfig',
-    'Network', 'IP',
+    'Network', 'IP', 'VLanGateway',
 ]
