@@ -4,7 +4,7 @@ import operator
 from decimal import Decimal as D
 from more_itertools import chunked
 
-from eru.models import Group, Pod, Host, App, Container, Network
+from eru.models import Group, Pod, Host, App, Container, Network, VLanGateway
 from eru.helpers.scheduler import get_max_container_count, centralized_schedule
 
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
@@ -386,6 +386,8 @@ def test_network(test_db):
     assert n.hostmask_string == '16'
     assert n.pool_size == 65436
     assert n.used_count == 0
+    assert n.used_gate_count == 0
+    assert n.gate_pool_size == 100
 
     ip = n.acquire_ip()
     assert ip is not None
@@ -404,3 +406,27 @@ def test_network(test_db):
     assert len(n.ips.all()) == 0
     assert n.pool_size == 65436
     assert n.used_count == 0
+
+    p = Pod.create('pod', 'pod', 10, -1)
+    host = Host.create(p, random_ipv4(), random_string(prefix='host'), random_uuid(), 4, 4096)
+
+    gate = n.acquire_gateway_ip(host)
+    assert gate is not None
+    assert gate.network_id == n.id
+    assert gate.vlan_address.startswith('10.1.0.')
+    assert gate.vlan_seq_id == n.id
+    assert gate.name == 'vlan.%02d.br' % n.id
+
+    g = VLanGateway.get_by_host_and_network(host.id, n.id)
+    assert g is not None
+    assert g.id == gate.id
+    assert len(host.list_vlans()) == 1
+
+    assert n.used_gate_count == 1
+    assert n.gate_pool_size == 99
+
+    gate.release()
+    assert n.used_gate_count == 0
+    assert n.gate_pool_size == 100
+    assert VLanGateway.get_by_host_and_network(host.id, n.id) is None
+    assert len(host.list_vlans()) == 0

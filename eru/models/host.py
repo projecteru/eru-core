@@ -46,6 +46,7 @@ class Host(Base):
 
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
+    vlans = db.relationship('VLanGateway', backref='host', lazy='dynamic')
 
     def __init__(self, addr, name, uid, ncore, mem, pod_id, count):
         self.addr = addr
@@ -109,6 +110,9 @@ class Host(Base):
         if limit is not None:
             q = q.limit(limit)
         return q.all()
+
+    def list_vlans(self, start=0, limit=20):
+        return self.vlans[start:start+limit]
 
     def get_free_cores(self):
         """取可用的core, 返回一个完全可用列表, 以及部分可用列表"""

@@ -1,5 +1,4 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import logging
 
@@ -87,8 +86,8 @@ def assign_pod_to_group(pod_name):
 @jsonify
 def create_host():
     """为了文件, 只好不用json了"""
-    addr = request.form.get('addr', type=str, default='')
-    pod_name = request.form.get('pod_name', type=str, default='')
+    addr = request.form.get('addr', default='')
+    pod_name = request.form.get('pod_name', default='')
     if not (addr and pod_name):
         raise EruAbortException(consts.HTTP_BAD_REQUEST, 'need addr and pod_name')
 
@@ -138,7 +137,7 @@ def assign_host_to_group(addr):
 @bp.route('/group/<group_name>/available_container_count', methods=['GET', ])
 @jsonify
 def group_max_containers(group_name):
-    pod_name = request.args.get('pod_name', type=str, default='')
+    pod_name = request.args.get('pod_name', default='')
     core_require = request.args.get('ncore', type=float, default=1)
 
     group = Group.get_by_name(group_name)
