@@ -40,5 +40,5 @@ def take_one(host_ip, netspace, vlan_ip):
 if __name__ == '__main__':
     if len(sys.argv) != 4:
         print 'python get_gateway.py host_ip, netspace vlan_ip'
-        return
+        sys.exit(0)
     take_one(sys.argv[1], sys.argv[2], sys.argv[3])
