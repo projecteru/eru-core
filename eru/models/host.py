@@ -82,7 +82,7 @@ class Host(Base):
 
     @classmethod
     def get_random_public_host(cls):
-        return cls.query.filter(cls.group_id == None).limit(1).first()
+        return cls.query.filter(cls.group_id == None, cls.ncore > 0).limit(1).first()
 
     @property
     def ip(self):
