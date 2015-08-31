@@ -189,6 +189,9 @@ def build_image(group_name, pod_name, appname):
     # 这个group可以build这个version不?
     base = data['base']
     host = Host.get_random_public_host() or pod.get_random_host()
+    if ':' not in base:
+        abort(400, 'Do not forget `:` and label')
+
     task = Task.create(consts.TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
         args=(task.id, base),

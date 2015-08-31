@@ -1,16 +1,14 @@
 # coding:utf-8
 
 import os
+import docker
 import logging
 import tempfile
 import pygit2
 import contextlib
-
-import docker
 from docker.utils import create_host_config, LogConfig, Ulimit
 from retrying import retry
-
-from res.ext.common import random_string
+from werkzeug.security import gen_salt
 
 from eru import config
 from eru.clients import get_docker_client
@@ -124,7 +122,6 @@ def create_one_container(host, version, entrypoint, env='prod',
         'ERU_RUNENV': env.upper(),
         'ERU_POD': host.pod.name,
         'ERU_HOST': host.name,
-        'ERU_HOST_IP': host.ip,
     }
     env_dict.update(envconfig.to_env_dict())
 
@@ -141,7 +138,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         binds[config.ERU_HOST_PERMDIR % appname] =  {'bind': permdir, 'ro': False}
 
     # container name: {appname}_{entrypoint}_{ident_id}
-    container_name = '_'.join([appname, entrypoint, random_string(6)])
+    container_name = '_'.join([appname, entrypoint, gen_salt(6)])
     # cpuset: '0,1,2,3'
     cpuset = ','.join([c.label for c in cores])
     # host_config, include log_config
