@@ -123,7 +123,7 @@ build: "pip install -r ./req.txt"
     rv = client.get(url)
     r = json.loads(rv.data)
     assert rv.status_code == 400
-    assert r[u'error'].startswith('env must be in request.args')
+    assert r[u'error'].startswith('env must be in querystring')
 
     # 错误的 env 返回空的
     rv = client.get(url+'?env=xxx')

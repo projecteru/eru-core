@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import json
+
 
 def test_version(client):
     from eru import __VERSION__
@@ -12,6 +14,6 @@ def test_version(client):
     assert 'deploy control' in rv.data
 
     rv = client.get('/')
+    r = json.loads(rv.data)
     assert rv.status_code == 200
-    assert 'Eru %s' % __VERSION__ == rv.data
-
+    assert __VERSION__ == r['version']
