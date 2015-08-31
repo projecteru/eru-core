@@ -2,7 +2,7 @@
 
 import logging
 import retrying
-from res.ext.common import random_string
+from werkzeug.security import gen_salt
 
 from eru.clients import rds
 from eru.agent import get_agent
@@ -61,7 +61,7 @@ def bind_container_ip(container, ips, nid=None):
     if not ips:
         return
 
-    task_id = random_string(10)
+    task_id = gen_salt(10)
     try:
         if ERU_AGENT_API == 'pubsub':
             _bind_container_ip_pubsub(task_id, container, ips, nid=nid)
