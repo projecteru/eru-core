@@ -54,6 +54,8 @@ FALCON_ALARM_KEY = ['cpu_system_rate', 'cpu_usage_rate', 'cpu_user_rate',
 ]
 
 def verify_appconfig(appconfig):
+    if not isinstance(appconfig, dict):
+        raise ValueError('app.yaml must be dictionary')
     for key in REQUIRED_KEYS:
         if key not in appconfig:
             raise KeyError('need %s set' % key)

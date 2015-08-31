@@ -1,16 +1,14 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import logging
 import itertools
 
-from flask import Blueprint, request, current_app
+from flask import abort, request, current_app
 
 from eru import consts
 from eru.clients import rds
 from eru.models import App, Group, Pod, Task, Network, Container, Host
-from eru.utils.decorator import check_request_json, jsonify
-from eru.utils.exception import EruAbortException
+from eru.utils.decorator import check_request_json
 from eru.async.task import (
     create_containers_with_macvlan,
     build_docker_image,
@@ -18,16 +16,19 @@ from eru.async.task import (
 )
 from eru.helpers.scheduler import average_schedule, centralized_schedule
 
-bp = Blueprint('deploy', __name__, url_prefix='/api/deploy')
+from .bp import create_api_blueprint
+
+
+bp = create_api_blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
 
+
 @bp.route('/')
-@jsonify
 def index():
     return {'r': 0, 'msg': 'ok', 'data': 'deploy control'}
 
+
 @bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['POST', ])
-@jsonify
 @check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
 def create_private(group_name, pod_name, appname):
     """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
@@ -49,11 +50,11 @@ def create_private(group_name, pod_name, appname):
     callback_url = data.get('callback_url', '')
 
     if callback_url and not (callback_url.startswith('http://') or callback_url.startswith('https://')):
-        raise EruAbortException(400, 'callback_url must starts with http:// or https://')
+        abort(400, 'callback_url must starts with http:// or https://')
 
     ncontainer = int(data['ncontainer'])
     if not ncontainer:
-        raise EruAbortException(400, 'ncontainer must be > 0')
+        abort(400, 'ncontainer must be > 0')
 
     networks = Network.get_multi(data.get('networks', []))
     spec_ips = data.get('spec_ips', [])
@@ -68,12 +69,12 @@ def create_private(group_name, pod_name, appname):
     if host and not (host.group_id == group.id and host.pod_id == pod.id):
         current_app.logger.error('Host must belong to pod/group (hostname=%s, pod=%s, group=%s)',
                 host, pod_name, group_name)
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Host must belong to this pod and group')
+        abort(400, 'Host must belong to this pod and group')
 
     if not entrypoint in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
                 entrypoint, appname, version.short_sha)
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % entrypoint)
+        abort(400, 'Entrypoint %s not in app.yaml' % entrypoint)
 
     route = appconfig.entrypoints[entrypoint].get('network_route', '')
 
@@ -84,12 +85,12 @@ def create_private(group_name, pod_name, appname):
         elif strategy == 'centralized':
             host_cores = centralized_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
         else:
-            raise EruAbortException(consts.HTTP_BAD_REQUEST, 'strategy %s not supported' % strategy)
+            abort(400, 'strategy %s not supported' % strategy)
 
         if not host_cores:
             current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
                     appname, version.short_sha, data['ncore'])
-            raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Not enough core resources')
+            abort(400, 'Not enough core resources')
 
         for (host, container_count), cores in host_cores.iteritems():
             t = _create_task(
@@ -117,8 +118,8 @@ def create_private(group_name, pod_name, appname):
 
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
+
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['POST', ])
-@jsonify
 @check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
 def create_public(group_name, pod_name, appname):
     """参数同private, 只是不能指定需要的核心数量"""
@@ -130,7 +131,7 @@ def create_public(group_name, pod_name, appname):
     callback_url = data.get('callback_url', '')
 
     if callback_url and not (callback_url.startswith('http://') or callback_url.startswith('https://')):
-        raise EruAbortException(400, 'callback_url must starts with http:// or https://')
+        abort(400, 'callback_url must starts with http:// or https://')
 
     group, pod, application, version = validate_instance(group_name,
             pod_name, appname, vstr)
@@ -140,13 +141,13 @@ def create_public(group_name, pod_name, appname):
     spec_ips = data.get('spec_ips', [])
     ncontainer = int(data['ncontainer'])
     if not ncontainer:
-        raise EruAbortException(400, 'ncontainer must be > 0')
+        abort(400, 'ncontainer must be > 0')
 
     appconfig = version.appconfig
     if not entrypoint in appconfig.entrypoints:
         current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
                 entrypoint, appname, version.short_sha)
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'Entrypoint %s not in app.yaml' % entrypoint)
+        abort(400, 'Entrypoint %s not in app.yaml' % entrypoint)
     route = appconfig.entrypoints[entrypoint].get('network_route', '')
 
     ts, keys = [], []
@@ -176,8 +177,8 @@ def create_public(group_name, pod_name, appname):
 
     return {'r':0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
 
+
 @bp.route('/build/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
-@jsonify
 @check_request_json(['base', 'version'])
 def build_image(group_name, pod_name, appname):
     data = request.get_json()
@@ -195,14 +196,14 @@ def build_image(group_name, pod_name, appname):
     )
     return {'r': 0, 'msg': 'ok', 'task': task.id, 'watch_key': task.result_key}
 
+
 @bp.route('/rmcontainers/', methods=['PUT', 'POST', ])
-@jsonify
 @check_request_json(['cids'])
 def rm_containers():
     cids = request.get_json()['cids']
 
     if not all(len(cid) >= 7 for cid in cids):
-        raise EruAbortException(consts.HTTP_BAD_REQUEST, 'must given at least 7 chars for container_id')
+        abort(400, 'must given at least 7 chars for container_id')
 
     version_dict = {}
     ts, watch_keys = [], []
@@ -229,7 +230,6 @@ def rm_containers():
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': watch_keys}
 
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
-@jsonify
 @check_request_json(['version'])
 def offline_version(group_name, pod_name, appname):
     data = request.get_json()
@@ -254,23 +254,19 @@ def offline_version(group_name, pod_name, appname):
 def validate_instance(group_name, pod_name, appname, version):
     group = Group.get_by_name(group_name)
     if not group:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST,
-                'Group `%s` not found' % group_name)
+        abort(400, 'Group `%s` not found' % group_name)
 
     pod = Pod.get_by_name(pod_name)
     if not pod:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST,
-                'Pod `%s` not found' % pod_name)
+        abort(400, 'Pod `%s` not found' % pod_name)
 
     application = App.get_by_name(appname)
     if not application:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST,
-                'App `%s` not found' % appname)
+        abort(400, 'App `%s` not found' % appname)
 
     version = application.get_version(version)
     if not version:
-        raise EruAbortException(consts.HTTP_BAD_REQUEST,
-                'Version `%s` not found' % version)
+        abort(400, 'Version `%s` not found' % version)
 
     return group, pod, application, version
 
