@@ -1,7 +1,5 @@
 # coding:utf-8
 
-import logging
-
 from flask import abort, request, current_app, g
 
 from eru import consts
@@ -17,12 +15,6 @@ from .bp import create_api_blueprint
 
 
 bp = create_api_blueprint('sys', __name__, url_prefix='/api/sys')
-logger = logging.getLogger(__name__)
-
-
-@bp.route('/')
-def index():
-    return {'r': 0, 'msg': consts.OK, 'data': 'sys control'}
 
 
 @bp.route('/group/create', methods=['POST', ])
@@ -150,8 +142,5 @@ def group_max_containers(group_name):
     if not pod:
         abort(400, 'No pod found')
 
-    core_require = int(core_require * pod.core_share)
-    ncore = core_require / pod.core_share
-    nshare = core_require % pod.core_share
-
+    ncore, nshare = pod.get_core_allocation(core_require)
     return {'r':0, 'msg': consts.OK, 'data': get_max_container_count(group, pod, ncore, nshare)}

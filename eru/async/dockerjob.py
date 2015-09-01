@@ -64,7 +64,7 @@ def build_image(host, version, base):
     tag = '{0}:{1}'.format(repo, rev)
 
     with build_image_environment(version, base, rev) as build_path:
-        return client.build(path=build_path, rm=True, tag=tag)
+        return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
 
 def push_image(host, version):
     client = get_docker_client(host.addr)
