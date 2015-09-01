@@ -3,6 +3,7 @@
 import json
 import inspect
 import functools
+
 from flask import request, Response, abort
 from datetime import datetime
 from decimal import Decimal
@@ -64,7 +65,7 @@ class EruJSONEncoder(json.JSONEncoder):
             return float(obj)
         return super(EruJSONEncoder, self).default(obj)
 
-def jsonify(f):
+def jsonize(f):
     @functools.wraps(f)
     def _(*args, **kwargs):
         r = f(*args, **kwargs)
