@@ -3,7 +3,7 @@
 from flask import Blueprint, jsonify
 from functools import partial
 
-from eru.utils.decorator import jsonify as jsonize
+from eru.utils.decorator import jsonize
 
 
 ERROR_CODES = [400, 401, 403, 404]

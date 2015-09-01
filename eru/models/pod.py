@@ -45,6 +45,12 @@ class Pod(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
+    def get_core_allocation(self, core_require):
+        """按照core_share来分配core_require的独占/共享份数"""
+        # TODO: 更细粒度的应该是把丫丢host上
+        core_require = int(core_require * self.core_share)
+        return core_require / self.core_share, core_require % self.core_share
+
     def list_hosts(self, start=0, limit=20, show_all=False):
         from .host import Host
         q = self.hosts

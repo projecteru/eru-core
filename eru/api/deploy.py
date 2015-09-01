@@ -3,12 +3,14 @@
 import logging
 import itertools
 
-from flask import abort, request, current_app
+from flask import abort, request
+
+from eru.utils import is_strict_url
+from eru.utils.decorator import check_request_json
 
 from eru import consts
 from eru.clients import rds
 from eru.models import App, Group, Pod, Task, Network, Container, Host
-from eru.utils.decorator import check_request_json
 from eru.async.task import (
     create_containers_with_macvlan,
     build_docker_image,
@@ -23,34 +25,30 @@ bp = create_api_blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
 
 
-@bp.route('/')
-def index():
-    return {'r': 0, 'msg': 'ok', 'data': 'deploy control'}
+def _get_strategy(name):
+    if name == 'average':
+        return average_schedule
+    elif name == 'centralized':
+        return centralized_schedule
+    abort(400, 'strategy %s not supported' % name)
 
 
 @bp.route('/private/<group_name>/<pod_name>/<appname>', methods=['POST', ])
 @check_request_json(['ncore', 'ncontainer', 'version', 'entrypoint', 'env'])
 def create_private(group_name, pod_name, appname):
-    """ncore: 需要的核心数, 可以是小数, 例如1.5个"""
     data = request.get_json()
-
     vstr = data['version']
-
-    group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, vstr)
+    group, pod, _, version = validate_instance(group_name, pod_name, appname, vstr)
 
     # TODO check if group has this pod
-
-    core_require = int(float(data['ncore']) * pod.core_share) # 是说一个容器要几个核...
-    ncore = core_require / pod.core_share
-    nshare = core_require % pod.core_share
-
+    ncore, nshare = pod.get_core_allocation(float(data['ncore']))
     ports = data.get('ports', [])
     args = data.get('args', [])
-    callback_url = data.get('callback_url', '')
+    strategy = data.get('strategy', 'average')
 
-    if callback_url and not (callback_url.startswith('http://') or callback_url.startswith('https://')):
-        abort(400, 'callback_url must starts with http:// or https://')
+    callback_url = data.get('callback_url', '')
+    if callback_url and not is_strict_url(callback_url):
+        abort(400, 'callback_url must start with http:// or https://')
 
     ncontainer = int(data['ncontainer'])
     if not ncontainer:
@@ -58,38 +56,21 @@ def create_private(group_name, pod_name, appname):
 
     networks = Network.get_multi(data.get('networks', []))
     spec_ips = data.get('spec_ips', [])
-    entrypoint = data['entrypoint']
     appconfig = version.appconfig
 
-    strategy = data.get('strategy', 'average')
+    entrypoint = data['entrypoint']
+    if entrypoint not in appconfig.entrypoints:
+        abort(400, 'Entrypoint %s not in app.yaml' % entrypoint)
 
-    # 指定的host, 如果没有则按照编排分配host
     hostname = data.get('hostname', '')
     host = hostname and Host.get_by_name(hostname) or None
     if host and not (host.group_id == group.id and host.pod_id == pod.id):
-        current_app.logger.error('Host must belong to pod/group (hostname=%s, pod=%s, group=%s)',
-                host, pod_name, group_name)
         abort(400, 'Host must belong to this pod and group')
-
-    if not entrypoint in appconfig.entrypoints:
-        current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
-                entrypoint, appname, version.short_sha)
-        abort(400, 'Entrypoint %s not in app.yaml' % entrypoint)
-
-    route = appconfig.entrypoints[entrypoint].get('network_route', '')
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
-        if strategy == 'average':
-            host_cores = average_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
-        elif strategy == 'centralized':
-            host_cores = centralized_schedule(group, pod, ncontainer, ncore, nshare, spec_host=host)
-        else:
-            abort(400, 'strategy %s not supported' % strategy)
-
+        host_cores = _get_strategy(strategy)(group, pod, ncontainer, ncore, nshare, host)
         if not host_cores:
-            current_app.logger.error('Not enough cores (name=%s, version=%s, ncore=%s)',
-                    appname, version.short_sha, data['ncore'])
             abort(400, 'Not enough core resources')
 
         for (host, container_count), cores in host_cores.iteritems():
@@ -103,8 +84,7 @@ def create_private(group_name, pod_name, appname):
                 ports,
                 args,
                 spec_ips,
-                route,
-                data['entrypoint'],
+                entrypoint,
                 data['env'],
                 image=data.get('image', ''),
                 callback_url=callback_url,
@@ -122,33 +102,28 @@ def create_private(group_name, pod_name, appname):
 @bp.route('/public/<group_name>/<pod_name>/<appname>', methods=['POST', ])
 @check_request_json(['ncontainer', 'version', 'entrypoint', 'env'])
 def create_public(group_name, pod_name, appname):
-    """参数同private, 只是不能指定需要的核心数量"""
     data = request.get_json()
-
     vstr = data['version']
+    group, pod, _, version = validate_instance(group_name, pod_name, appname, vstr)
+
     ports = data.get('ports', [])
     args = data.get('args', [])
-    callback_url = data.get('callback_url', '')
 
-    if callback_url and not (callback_url.startswith('http://') or callback_url.startswith('https://')):
+    callback_url = data.get('callback_url', '')
+    if callback_url and not is_strict_url(callback_url):
         abort(400, 'callback_url must starts with http:// or https://')
 
-    group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, vstr)
-
     networks = Network.get_multi(data.get('networks', []))
-    entrypoint = data['entrypoint']
     spec_ips = data.get('spec_ips', [])
+    appconfig = version.appconfig
+
     ncontainer = int(data['ncontainer'])
     if not ncontainer:
         abort(400, 'ncontainer must be > 0')
 
-    appconfig = version.appconfig
-    if not entrypoint in appconfig.entrypoints:
-        current_app.logger.error('Entrypoint not in app.yaml (entry=%s, name=%s, version=%s)',
-                entrypoint, appname, version.short_sha)
+    entrypoint = data['entrypoint']
+    if entrypoint not in appconfig.entrypoints:
         abort(400, 'Entrypoint %s not in app.yaml' % entrypoint)
-    route = appconfig.entrypoints[entrypoint].get('network_route', '')
 
     ts, keys = [], []
     with rds.lock('%s:%s' % (group_name, pod_name)):
@@ -164,7 +139,6 @@ def create_public(group_name, pod_name, appname):
                 ports,
                 args,
                 spec_ips,
-                route,
                 data['entrypoint'],
                 data['env'],
                 image=data.get('image', ''),
@@ -182,16 +156,13 @@ def create_public(group_name, pod_name, appname):
 @check_request_json(['base', 'version'])
 def build_image(group_name, pod_name, appname):
     data = request.get_json()
-    group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
-    # TODO
-    # 这个group可以用这个pod不?
-    # 这个group可以build这个version不?
+    group, pod, _, version = validate_instance(group_name, pod_name, appname, data['version'])
+
     base = data['base']
-    host = Host.get_random_public_host() or pod.get_random_host()
     if ':' not in base:
         abort(400, 'Do not forget `:` and label')
 
+    host = Host.get_random_public_host() or pod.get_random_host()
     task = Task.create(consts.TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
         args=(task.id, base),
@@ -209,17 +180,16 @@ def rm_containers():
         abort(400, 'must given at least 7 chars for container_id')
 
     version_dict = {}
-    ts, watch_keys = [], []
     for cid in cids:
         container = Container.get_by_container_id(cid)
         if not container:
             continue
         version_dict.setdefault((container.version, container.host), []).append(container)
 
+    ts, watch_keys = [], []
     for (version, host), containers in version_dict.iteritems():
         cids = [c.id for c in containers]
-        task_props = {'container_ids': cids}
-        task = Task.create(consts.TASK_REMOVE, version, host, task_props)
+        task = Task.create(consts.TASK_REMOVE, version, host, {'container_ids': cids})
 
         all_host_cids = [c.id for c in Container.get_multi_by_host(host) if c and c.version_id == version.id]
         need_to_delete_image = set(cids) == set(all_host_cids)
@@ -232,20 +202,21 @@ def rm_containers():
         watch_keys.append(task.result_key)
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': watch_keys}
 
+
 @bp.route('/rmversion/<group_name>/<pod_name>/<appname>', methods=['PUT', 'POST', ])
 @check_request_json(['version'])
 def offline_version(group_name, pod_name, appname):
     data = request.get_json()
-    group, pod, application, version = validate_instance(group_name,
-            pod_name, appname, data['version'])
+    group, pod, _, version = validate_instance(group_name, pod_name, appname, data['version'])
+
     d = {}
-    ts, keys = [], []
     for container in version.containers.all():
         d.setdefault(container.host, []).append(container)
+
+    ts, keys = [], []
     for host, containers in d.iteritems():
         cids = [c.id for c in containers]
-        task_props = {'container_ids': cids}
-        task = Task.create(consts.TASK_REMOVE, version, host, task_props)
+        task = Task.create(consts.TASK_REMOVE, version, host, {'container_ids': cids})
         remove_containers.apply_async(
             args=(task.id, cids, True),
             task_id='task:%d' % task.id
@@ -253,6 +224,7 @@ def offline_version(group_name, pod_name, appname):
         ts.append(task.id)
         keys.append(task.result_key)
     return {'r': 0, 'msg': 'ok', 'tasks': ts, 'watch_keys': keys}
+
 
 def validate_instance(group_name, pod_name, appname, version):
     group = Group.get_by_name(group_name)
@@ -263,25 +235,26 @@ def validate_instance(group_name, pod_name, appname, version):
     if not pod:
         abort(400, 'Pod `%s` not found' % pod_name)
 
-    application = App.get_by_name(appname)
-    if not application:
+    app = App.get_by_name(appname)
+    if not app:
         abort(400, 'App `%s` not found' % appname)
 
-    version = application.get_version(version)
+    version = app.get_version(version)
     if not version:
         abort(400, 'Version `%s` not found' % version)
 
-    return group, pod, application, version
+    return group, pod, app, version
+
 
 def _create_task(version, host, ncontainer, cores, nshare, networks,
-        ports, args, spec_ips, route, entrypoint, env, image='',
+        ports, args, spec_ips, entrypoint, env, image='',
         callback_url=''):
-    network_ids = [n.id for n in networks]
-
     # host 模式不允许绑定 vlan
     entry = version.appconfig['entrypoints'][entrypoint]
     if entry.get('network_mode') == 'host':
         network_ids = []
+    else:
+        network_ids = [n.id for n in networks]
 
     task_props = {
         'ncontainer': ncontainer,
@@ -294,7 +267,7 @@ def _create_task(version, host, ncontainer, cores, nshare, networks,
         'nshare': nshare,
         'networks': network_ids,
         'image': image,
-        'route': route,
+        'route': entry.get('network_route', ''),
         'callback_url': callback_url,
     }
     task = Task.create(consts.TASK_CREATE, version, host, task_props)

@@ -33,6 +33,25 @@ def test_group_pod(test_db):
     assert get_max_container_count(g3, p3, 1, 2) == 0
     assert centralized_schedule(g3, p3, 1, 1, 2) == {}
 
+def test_pod(test_db):
+    p1 = Pod.create('p1', 'p1', core_share=10)
+    assert p1 is not None
+    assert p1.get_core_allocation(1) == (1, 0)
+    assert p1.get_core_allocation(1.5) == (1, 5)
+    assert p1.get_core_allocation(2) == (2, 0)
+    assert p1.get_core_allocation(2.8) == (2, 8)
+    assert p1.get_core_allocation(0.8) == (0, 8)
+    assert p1.get_core_allocation(0.1) == (0, 1)
+
+    p2 = Pod.create('p2', 'p2', core_share=100)
+    assert p2 is not None
+    assert p2.get_core_allocation(1) == (1, 0)
+    assert p2.get_core_allocation(1.5) == (1, 50)
+    assert p2.get_core_allocation(2) == (2, 0)
+    assert p2.get_core_allocation(2.8) == (2, 80)
+    assert p2.get_core_allocation(0.81) == (0, 81)
+    assert p2.get_core_allocation(0.14) == (0, 14)
+
 def test_host(test_db):
     g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod', 10, -1)
