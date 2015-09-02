@@ -160,7 +160,7 @@ def build_image(group_name, pod_name, appname):
 
     base = data['base']
     if ':' not in base:
-        abort(400, 'Do not forget `:` and label')
+        base = base + ':latest'
 
     host = Host.get_random_public_host() or pod.get_random_host()
     task = Task.create(consts.TASK_BUILD, version, host, {'base': base})
