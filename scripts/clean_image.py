@@ -37,12 +37,15 @@ def clean_image():
 
         for c in client.containers(all=True):
             if need_to_delete_container(c['Image'], c['Names'][0]):
-                client.remove_container(c['Id'])
-                print 'container %s cleaned.' % c['Names'][0]
+                try:
+                    client.remove_container(c['Id'])
+                    print 'container %s cleaned.' % c['Names'][0]
+                except:
+                    print 'container %s still running.' % c['Names'][0]
 
         for i in client.images():
             try:
-                client.remove_image(i['RepoTags'][0])
+                client.remove_image(i['Id'])
                 print 'image %s cleaned.' % i['RepoTags'][0]
             except:
                 print 'conflict, image %s is still being used.' % i['RepoTags'][0]
