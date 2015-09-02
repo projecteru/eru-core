@@ -41,8 +41,11 @@ def clean_image():
                 print 'container %s cleaned.' % c['Names'][0]
 
         for i in client.images():
-            client.remove_image(i['RepoTags'][0])
-            print 'image %s cleaned.' % i['RepoTags'][0]
+            try:
+                client.remove_image(i['RepoTags'][0])
+                print 'image %s cleaned.' % i['RepoTags'][0]
+            except:
+                print 'conflict, image %s is still being used.' % i['RepoTags'][0]
 
         print 'host %s cleaned.' % host.ip
 
