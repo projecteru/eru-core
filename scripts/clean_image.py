@@ -37,11 +37,11 @@ def clean_image():
 
         for c in client.containers(all=True):
             if need_to_delete_container(c['Image'], c['Names'][0]):
-                c.remove_container(c['Id'])
+                client.remove_container(c['Id'])
                 print 'container %s cleaned.' % c['Names'][0]
 
         for i in client.images():
-            c.remove_image(i['RepoTags'][0])
+            client.remove_image(i['RepoTags'][0])
             print 'image %s cleaned.' % i['RepoTags'][0]
 
         print 'host %s cleaned.' % host.ip
