@@ -25,8 +25,10 @@ def need_to_delete_container(image, name):
 @with_app_context
 def clean_image():
     for host in Host.query.all():
-        client = get_docker_client(host.addr)
-        if not client:
+        try:
+            client = get_docker_client(host.addr)
+        except:
+            print 'can not connect, maybe tls problem.'
             continue
 
         try:
