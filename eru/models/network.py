@@ -253,7 +253,15 @@ class Network(Base):
     @redis_lock('net:gateway_ip:{self.id}')
     def acquire_gateway_ip(self, host):
         ipnum = rds.spop(self.gatekey)
-        return ipnum and VLanGateway.create(ipnum, self.id, host.id) or None
+        if not ipnum:
+            return
+
+        vg = VLanGateway.create(ipnum, self.id, host.id)
+        if not vg:
+            rds.sadd(self.gatekey, ipnum)
+            return
+
+        return vg
 
     @redis_lock('net:gateway_ip:{self.id}')
     def release_gateway(self, ip):
