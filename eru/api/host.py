@@ -75,10 +75,10 @@ def macvlan(id_or_name):
     if not network:
         abort(404, 'Network not found')
 
+    vg = VLanGateway.get_by_host_and_network(host.id, network.id)
     if request.method == 'POST':
-        return network.acquire_gateway_ip(host)
+        return vg or network.acquire_gateway_ip(host)
     elif request.method == 'DELETE':
-        vg = VLanGateway.get_by_host_and_network(host.id, network.id)
         if vg:
             vg.release()
         return {'r': 0, 'msg': consts.OK}
