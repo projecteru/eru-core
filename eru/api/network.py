@@ -26,6 +26,7 @@ def create_network():
             data['name'], data['netspace'])
     return {'r': 0, 'msg': consts.OK}
 
+
 @bp.route('/<id_or_name>/', methods=['GET'])
 def get_network(id_or_name):
     if id_or_name.isdigit():
