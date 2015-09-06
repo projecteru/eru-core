@@ -111,8 +111,8 @@ def falcon_all_alarms(version):
     exp_ids.add(_add_falcon_alarm('cpu_system_rate', __version__, '90'))
     exp_ids.add(_add_falcon_alarm('cpu_usage_rate', __version__, '90'))
     exp_ids.add(_add_falcon_alarm('cpu_user_rate', __version__, '90'))
-    exp_ids.add(_add_falcon_alarm('mem_max_usage', __version__, 20 * 1000 * 1000))
-    exp_ids.add(_add_falcon_alarm('mem_usage', __version__, 20 * 1000 * 1000))
+    exp_ids.add(_add_falcon_alarm('mem_max_usage', __version__, 20 * 1000 * 1000 * 1000))
+    exp_ids.add(_add_falcon_alarm('mem_usage', __version__, 10 * 1000 * 1000 * 1000))
 
     version.falcon_expression_ids = [i for i in exp_ids if i]
 
