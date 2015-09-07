@@ -48,6 +48,8 @@ def fix_core(host):
 def fix_all_hosts_core():
     hosts = Host.query.all()
     for host in hosts:
+        if not host.pod:
+            continue
         fix_core(host)
 
 
