@@ -6,6 +6,10 @@ import requests
 from eru.config import FALCON_API_HOST
 
 SIX_HOURS = 3600 * 6
+DEFAULT_INDEX = 'eru'
+_100MB = 100 * 1024 * 1024
+_10GB = 10 * 1024 * 1024 * 1024
+_20GB = 20 * 1024 * 1024 * 1024
 
 def _add_falcon_graph(index, screen, counters, hosts,
         title, graph_type='k', timespan=SIX_HOURS):
@@ -36,7 +40,7 @@ def falcon_cpu_graph(version):
     entrypoints = set([c.entrypoint for c in containers])
     appname = version.name
 
-    index = version.appconfig.get('falcon-index', 'basic')
+    index = version.appconfig.get('falcon-index', DEFAULT_INDEX)
     counters = ','.join(['metric=%s __version__=%s' % (m, version.short_sha) for m in indicators])
     hosts = ','.join(['%s-%s' % (appname, e) for e in entrypoints])
 
@@ -62,7 +66,7 @@ def falcon_network_graph(version):
     vethnames = set([ip.vethname for c in containers for ip in c.ips])
     appname = version.name
 
-    index = version.appconfig.get('falcon-index', 'basic')
+    index = version.appconfig.get('falcon-index', DEFAULT_INDEX)
     inbytes_counters = ','.join(['metric=%s.inbytes.rate __version__=%s' % (v, version.short_sha) for v in vethnames])
     outbytes_counters = ','.join(['metric=%s.outbytes.rate __version__=%s' % (v, version.short_sha) for v in vethnames])
     hosts = ','.join(['%s-%s' % (appname, e) for e in entrypoints])
@@ -105,14 +109,14 @@ def falcon_all_alarms(version):
 
     exp_ids = set()
     for vethname in vethnames:
-        exp_ids.add(_add_falcon_alarm('%s.inbytes.rate' % vethname, version.short_sha, 100 * 1000 * 1000))
-        exp_ids.add(_add_falcon_alarm('%s.outbytes.rate' % vethname, version.short_sha, 100 * 1000 * 1000))
+        exp_ids.add(_add_falcon_alarm('%s.inbytes.rate' % vethname, version.short_sha, _100MB))
+        exp_ids.add(_add_falcon_alarm('%s.outbytes.rate' % vethname, version.short_sha, _100MB))
 
     exp_ids.add(_add_falcon_alarm('cpu_system_rate', __version__, '90'))
     exp_ids.add(_add_falcon_alarm('cpu_usage_rate', __version__, '90'))
     exp_ids.add(_add_falcon_alarm('cpu_user_rate', __version__, '90'))
-    exp_ids.add(_add_falcon_alarm('mem_max_usage', __version__, 20 * 1000 * 1000 * 1000))
-    exp_ids.add(_add_falcon_alarm('mem_usage', __version__, 10 * 1000 * 1000 * 1000))
+    exp_ids.add(_add_falcon_alarm('mem_max_usage', __version__, _20GB))
+    exp_ids.add(_add_falcon_alarm('mem_usage', __version__, _10GB))
 
     version.falcon_expression_ids = [i for i in exp_ids if i]
 
