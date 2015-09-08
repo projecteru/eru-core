@@ -106,7 +106,7 @@ def create_host():
         abort(400, 'Docker daemon error on host %s, error: %s' % (addr, e.message))
 
     if not Host.create(pod, addr, info['Name'], info['ID'], info['NCPU'], info['MemTotal']):
-        abort(400)
+        abort(400, 'Host create error.')
     return 201, {'r':0, 'msg': consts.OK}
 
 
