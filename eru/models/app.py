@@ -12,9 +12,6 @@ from eru.models.appconfig import AppConfig, ResourceConfig
 
 class Version(Base):
     __tablename__ = 'version'
-    __table_args__ = (
-        db.UniqueConstraint('app_id', 'sha'),
-    )
 
     sha = db.Column(db.CHAR(40), index=True, nullable=False)
     app_id = db.Column(db.Integer, db.ForeignKey('app.id'))
@@ -40,7 +37,7 @@ class Version(Base):
 
     @classmethod
     def get_by_app_and_version(cls, application, sha):
-        return cls.query.filter(cls.app_id == application.id, cls.sha.like('{}%'.format(sha))).one()
+        return cls.query.filter(cls.sha.like('{}%'.format(sha)), cls.app_id == application.id).one()
 
     @property
     def name(self):
