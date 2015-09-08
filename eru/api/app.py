@@ -54,7 +54,7 @@ def register_app_version():
     v = app.add_version(version)
     if not v:
         current_app.logger.error('Version create failed. (name=%s, version=%s)', name, version[:7])
-        abort(400, 'Version %s create failed' % version[:7])
+        abort(400, 'Version %s create failed, maybe duplicate revision?' % version[:7])
 
     appconfig = v.appconfig
     appconfig.update(**appyaml)
