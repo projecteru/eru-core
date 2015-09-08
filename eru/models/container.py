@@ -121,6 +121,9 @@ class Container(Base, PropsMixin):
 
     def get_ports(self):
         appconfig = self.version.appconfig
+        if self.entrypoint not in appconfig.entrypoints:
+            return []
+
         entry = appconfig.entrypoints[self.entrypoint]
         ports = entry.get('ports', [])
         return [int(p.split('/')[0]) for p in ports]
