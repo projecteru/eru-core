@@ -4,7 +4,6 @@ import os
 import docker
 import logging
 import tempfile
-import pygit2
 import contextlib
 from docker.utils import create_host_config, LogConfig, Ulimit
 from retrying import retry
@@ -13,10 +12,13 @@ from werkzeug.security import gen_salt
 from eru import config
 from eru.clients import get_docker_client
 from eru.templates import template
-from eru.utils.ensure import ensure_dir_absent, ensure_file
 from eru.async.utils import replace_ports
+from eru.utils.ensure import ensure_dir_absent, ensure_file
+from eru.helpers.cloner import clone_code
+
 
 logger = logging.getLogger(__name__)
+
 
 @contextlib.contextmanager
 def build_image_environment(version, base, rev):
@@ -29,10 +31,7 @@ def build_image_environment(version, base, rev):
     # checkout code of version @ rev
     build_path = tempfile.mkdtemp()
     clone_path = os.path.join(build_path, appname)
-    repo = pygit2.clone_repository(version.app.git, clone_path)
-    repo.checkout('HEAD')
-    o = repo.revparse_single(rev)
-    repo.checkout_tree(o.tree)
+    clone_code(version.app.git, clone_path, rev, branch=None)
 
     # remove git history
     ensure_dir_absent(os.path.join(clone_path, '.git'))
@@ -52,6 +51,7 @@ def build_image_environment(version, base, rev):
     # clean build dir
     ensure_dir_absent(build_path)
 
+
 def build_image(host, version, base):
     """
     用 host 机器, 以 base 为基础镜像, 为 version 构建
@@ -66,6 +66,7 @@ def build_image(host, version, base):
     with build_image_environment(version, base, rev) as build_path:
         return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
 
+
 def push_image(host, version):
     client = get_docker_client(host.addr)
     appname = version.app.name
@@ -73,9 +74,11 @@ def push_image(host, version):
     rev = version.short_sha
     return client.push(repo, tag=rev, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
+
 def pull_image(host, repo, tag):
     client = get_docker_client(host.addr)
     return client.pull(repo, tag=tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
+
 
 def create_one_container(host, version, entrypoint, env='prod',
         cores=None, ports=None, args=None, cpu_shares=1024, image='', need_network=False):
@@ -167,11 +170,13 @@ def create_one_container(host, version, entrypoint, env='prod',
     client.start(container=container_id)
     return container_id, container_name
 
+
 def execute_container(host, container_id, cmd, stream=False):
     """在容器里跑一个命令, stream的话返回一个generator"""
     client = get_docker_client(host.addr)
     exec_id = client.exec_create(container_id, cmd, stream=stream)
     return client.exec_start(exec_id)
+
 
 def start_containers(containers, host):
     """启动这个host上的这些容器"""
@@ -179,19 +184,23 @@ def start_containers(containers, host):
     for c in containers:
         client.start(c.container_id)
 
+
 def __retry_on_api_error(e):
     return isinstance(e, docker.errors.APIError) and '500 Server Error' in str(e)
+
 
 @retry(retry_on_exception=__retry_on_api_error)
 def __stop_container(client, cid):
     """为什么要包一层, 因为 https://github.com/docker/docker/issues/12738 """
     client.stop(cid)
 
+
 def stop_containers(containers, host):
     """停止这个host上的这些容器"""
     client = get_docker_client(host.addr)
     for c in containers:
         __stop_container(client, c.container_id)
+
 
 def remove_host_containers(containers, host):
     """删除这个host上的这些容器"""
@@ -206,6 +215,7 @@ def remove_host_containers(containers, host):
                 continue
             raise
 
+
 def remove_container_by_cid(cids, host):
     client = get_docker_client(host.addr)
     for cid in cids:
@@ -217,6 +227,7 @@ def remove_container_by_cid(cids, host):
                 logger.info('%s not found, just delete it' % cid)
                 continue
             raise
+
 
 def remove_image(version, host):
     """在host上删除掉version的镜像"""
