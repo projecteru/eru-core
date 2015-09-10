@@ -25,6 +25,13 @@ DOCKER_NETWORK_DISABLED = bool(os.getenv('DOCKER_NETWORK_DISABLED', ''))
 DEFAULT_CORE_SHARE = int(os.getenv('DEFAULT_CORE_SHARE', '10'))
 DEFAULT_MAX_SHARE_CORE = int(os.getenv('DEFAULT_MAX_SHARE_CORE', '-1'))
 
+GIT_KEY_PUB = os.getenv('GIT_KEY_PUB', '')
+GIT_KEY_PRI = os.getenv('GIT_KEY_PRI', '')
+GIT_KEY_USER = os.getenv('GIT_KEY_USER', '')
+GIT_KEY_ENCRYPT = os.getenv('GIT_KEY_ENCRYPT', '')
+GIT_USERNAME = os.getenv('GIT_USERNAME', '')
+GIT_PASSWORD = os.getenv('GIT_PASSWORD', '')
+
 MYSQL_HOST = os.getenv('MYSQL_HOST', '127.0.0.1')
 MYSQL_PORT = int(os.getenv('MYSQL_PORT', '3306'))
 MYSQL_USER = os.getenv('MYSQL_USER', 'eru')
