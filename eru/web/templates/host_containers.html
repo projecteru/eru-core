@@ -1,0 +1,24 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Version</th>
+      <th>Time</th>
+      <th>Backends</th>
+      <th>ContainerID</th>
+      <th>Entrypoint</th>
+      <th>Env</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="c in containers">
+      <td>{{c.name}}</td>
+      <td>{{c.version}}</td>
+      <td>{{c.created}}</td>
+      <td>{{c.backends.join(', ')}}</td>
+      <td>{{c.container_id.substr(0, 7)}}</td>
+      <td>{{c.entrypoint}}</td>
+      <td>{{c.env}}</td>
+    </tr>
+  </tbody>
+</table>

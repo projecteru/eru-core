@@ -1,0 +1,18 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>名字</th>
+      <th>机器数量</th>
+      <th>共享核心数</th>
+      <th>共享份数</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="pod in pods">
+      <td><a href="#/pod/{{pod.name}}/hosts/">{{pod.name}}</a></td>
+      <td>{{pod.host_count}}</td>
+      <td>{{pod.max_share_core}}</td>
+      <td>{{pod.core_share}}</td>
+    </tr>
+  </tbody>
+</table>
