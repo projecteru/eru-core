@@ -70,6 +70,7 @@ def main():
                 'timeout': opts.timeout or ERU_TIMEOUT,
                 'worker_class': opts.worker_class or ERU_WORKER_CLASS,
                 'pidfile': opts.pidfile,
+                'reload': opts.reload,
             }
 
         def load(self):

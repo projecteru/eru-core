@@ -1,0 +1,22 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>名字</th>
+      <th>总核心数</th>
+      <th>可用核心数</th>
+      <th>健康</th>
+      <th>地址</th>
+      <th>MacVLANs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="host in hosts">
+      <td><a href="#/host/{{host.name}}/containers/">{{host.name}}</a></td>
+      <td>{{host.ncore}}</td>
+      <td>{{host.count}}</td>
+      <td>{{host.is_alive}}</td>
+      <td>{{host.addr}}</td>
+      <td><a href="#/host/{{host.name}}/macvlan/"><i class="glyphicon glyphicon-transfer"></i></a></td>
+    </tr>
+  </tbody>
+</table>
