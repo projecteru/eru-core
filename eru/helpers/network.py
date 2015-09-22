@@ -19,13 +19,14 @@ def _bind_container_ip_pubsub(task_id, container, ips, nid=None):
     values += ['{0}:{1}'.format(nid or ip.vlan_seq_id, ip.vlan_address) for ip in ips]
 
     rds.publish(pub_agent_vlan_key, '|'.join(values))
-    for _ in ips:
+    for ip in ips:
         rv = rds.blpop(feedback_key, 15)
         if rv is None:
             break
-        succ = rv[1].split('|')[0]
+        succ, _, vethname, _ = rv[1].split('|')
         if succ == '0':
             break
+        ip.set_vethname(vethname)
     else:
         return True
 
@@ -44,9 +45,10 @@ def _bind_container_ip_http(task_id, container, ips, nid=None):
         rv = rds.blpop(feedback_key, 15)
         if rv is None:
             break
-        succ = rv[1].split('|')[0]
+        succ, _, vethname, _ = rv[1].split('|')
         if succ == '0':
             break
+        ip.set_vethname(vethname)
     else:
         return True
 
