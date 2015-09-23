@@ -1,0 +1,18 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Version</th>
+      <th>Time</th>
+      <th>AppConfig</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="v in versions">
+      <td>{{v.name}}</td>
+      <td>{{v.sha.substr(0, 7)}}</td>
+      <td>{{v.created}}</td>
+      <td><pre>{{v.appconfig}}</pre></td>
+    </tr>
+  </tbody>
+</table>

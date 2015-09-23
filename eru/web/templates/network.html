@@ -1,0 +1,20 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Pool Size</th>
+      <th>Gateway Size</th>
+      <th>CIDR</th>
+      <th>Used Count</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="n in networks">
+      <td>{{n.name}}</td>
+      <td>{{n.pool_size}}</td>
+      <td>{{n.gateway_count}}</td>
+      <td>{{n.netspace}}</td>
+      <td>{{n.used_count}}</td>
+    </tr>
+  </tbody>
+</table>
