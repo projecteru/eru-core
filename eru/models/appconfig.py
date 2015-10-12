@@ -17,6 +17,8 @@ Example of app.yaml:
             ports:
                 - "5000/tcp"
                 - "5001/udp"
+            exposes:
+                - "22:6000"
             network_mode: "bridge"
             mem_limit: 5000
             restart: "on-failure"
@@ -78,7 +80,19 @@ def verify_appconfig(appconfig):
                 raise ValueError('port must be formatted as port/protocol like 5000/tcp')
             po, proto = port.split('/', 1)
             if not po.isdigit():
-                raise ValueError('port must be formatted as port/protocol like 5000/tcp')
+                raise ValueError('port must be integer')
+
+        exposes = content.get('exposes', [])
+        if not isinstance(exposes, list):
+            raise ValueError('exposes must be a list')
+
+        for expose in exposes:
+            if ':' not in expose:
+                raise ValueError('expose must be formatted as inport:hostport')
+            inport, hostport = expose.split(':', 1)
+            if not (inport.isdigit() and hostport.isdigit()):
+                raise ValueError('port must be integer')
+
 
         route = content.get('network_route', '')
         if route:
