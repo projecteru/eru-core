@@ -120,7 +120,7 @@ def create_one_container(host, version, entrypoint, env='prod',
     exposed_ports = None
     port_bindings = None
     if is_raw and exposes:
-        exposed_ports = [p for p, in exposes]
+        exposed_ports = [p for p, _ in exposes]
         port_bindings = dict(exposes)
 
     if not image:
