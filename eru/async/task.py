@@ -113,8 +113,11 @@ def remove_containers(task_id, cids, rmi=False):
         dockerjob.remove_host_containers(containers, host)
         current_flask.logger.info('Task<id=%s>: Containers (cids=%s) removed', task_id, cids)
         if rmi:
-            dockerjob.remove_image(task.version, host)
-    except Exception, e:
+            try:
+                dockerjob.remove_image(task.version, host)
+            except Exception as e:
+                current_flask.logger.error('Task<id=%s>: Exception (e=%s), fail to remove image', task_id, e)
+    except Exception as e:
         task.finish_with_result(consts.TASK_FAILED)
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
