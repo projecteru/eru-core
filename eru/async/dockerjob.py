@@ -111,6 +111,18 @@ def create_one_container(host, version, entrypoint, env='prod',
     mem_limit = entry.get('mem_limit', 0)
     restart_policy = {'MaximumRetryCount': 3, 'Name': entry.get('restart', 'no')} # could be no/always/on-failure
 
+    # raw 模式下可以选择暴露端口
+    def get_ports(expose):
+        inport, hostport = expose.split(':')
+        return int(inport), int(hostport)
+
+    exposes = [get_ports(expose) for expose in entry.get('exposes', [])]
+    exposed_ports = None
+    port_bindings = None
+    if is_raw and exposes:
+        exposed_ports = [p for p, in exposes]
+        port_bindings = dict(exposes)
+
     if not image:
         image = '{0}/{1}:{2}'.format(config.DOCKER_REGISTRY, appname, version.short_sha)
 
@@ -152,6 +164,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         ulimits=[Ulimit(name='nofile', soft=65535, hard=65535)],
         restart_policy=restart_policy,
         mem_limit=mem_limit,
+        port_bindings=port_bindings,
     )
     container = client.create_container(
         image=image,
@@ -164,6 +177,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         volumes=volumes,
         host_config=host_config,
         cpu_shares=cpu_shares,
+        ports=exposed_ports,
     )
     container_id = container['Id']
 
