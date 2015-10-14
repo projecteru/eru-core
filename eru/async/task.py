@@ -1,6 +1,7 @@
 # coding:utf-8
 
 import json
+import time
 from more_itertools import chunked
 from itertools import izip_longest
 from celery import current_app
@@ -109,6 +110,8 @@ def remove_containers(task_id, cids, rmi=False):
                     task_id, c.container_id[:7])
         appnames = {c.appname for c in containers}
         publish_to_service_discovery(*appnames)
+
+        time.sleep(3)
 
         dockerjob.remove_host_containers(containers, host)
         current_flask.logger.info('Task<id=%s>: Containers (cids=%s) removed', task_id, cids)
