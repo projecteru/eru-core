@@ -13,5 +13,7 @@ if [ $neednetwork = "network" ]; then
     done
 fi
 
+sleep 1
+
 shift
 exec sudo -E -u {{appname}} $@
