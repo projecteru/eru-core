@@ -18,6 +18,11 @@ def _get_app_by_name(name):
     return app
 
 
+@bp.route('/', methods=['GET'])
+def list_all_apps():
+    return App.list_all(g.start, g.limit)
+
+
 @bp.route('/<name>/', methods=['GET', ])
 def get_app(name):
     return _get_app_by_name(name)
