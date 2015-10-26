@@ -132,6 +132,11 @@ class App(Base):
     def get_by_name(cls, name):
         return cls.query.filter(cls.name == name).first()
 
+    @classmethod
+    def list_all(cls, start=0, limit=20):
+        q = cls.query.order_by(cls.name.asc())
+        return q[start:start+limit]
+
     @property
     def user_id(self):
         """默认使用id, 如果不对可以通过_user_id手动纠正."""
