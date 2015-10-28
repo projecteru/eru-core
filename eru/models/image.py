@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import sqlalchemy.exc
 from datetime import datetime
 from eru.models import db
 from eru.models.base import Base
@@ -7,6 +8,9 @@ from eru.models.base import Base
 
 class Image(Base):
     __tablename__ = 'image'
+    __table_args__ = (
+        db.UniqueConstraint('app_id', 'version_id'),
+    )
 
     app_id = db.Column(db.Integer)
     version_id = db.Column(db.Integer)
@@ -21,10 +25,13 @@ class Image(Base):
 
     @classmethod
     def create(cls, app_id, version_id, image_url):
-        image = cls(app_id, version_id, image_url)
-        db.session.add(image)
-        db.session.commit()
-        return image
+        try:
+            image = cls(app_id, version_id, image_url)
+            db.session.add(image)
+            db.session.commit()
+            return image
+        except sqlalchemy.exc.IntegrityError:
+            pass
 
     @classmethod
     def get_by_app_and_version(cls, app_id, version_id):
