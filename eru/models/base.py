@@ -4,6 +4,7 @@ import json
 from sqlalchemy.ext.declarative import declared_attr
 
 from eru.models import db
+from eru.clients import rds
 
 class Base(db.Model):
 
@@ -31,16 +32,62 @@ class Base(db.Model):
 
 
 class PropsMixin(object):
+    """丢redis里"""
 
     properties = db.Column(db.Text, default='{}')
 
-    @property
-    def props(self):
-        return json.loads(self.properties)
+    def get_uuid(self):
+        raise NotImplementedError('Need uuid to idenify objects')
 
-    def set_props(self, **data):
-        p = self.props.copy()
-        p.update(**data)
-        self.properties = json.dumps(p)
-        db.session.add(self)
-        db.session.commit()
+    def _property_key(self):
+        return self.get_uuid() + '/property'
+
+    def get_props(self):
+        props = rds.get(self._property_key) or '{}'
+        return json.loads(props)
+
+    def set_props(self, props):
+        rds.set(self._property_key, json.dumps(props))
+
+    def destroy_props(self):
+        rds.delete(self._property_key)
+
+    props = property(get_props, set_props, destroy_props)
+
+    def update_props(self, **kw):
+        props = self.props
+        props.update(kw)
+        self.props = props
+
+    def get_props_item(self, key, default=None):
+        return self.props.get(key, default)
+
+    def set_props_item(self, key, value):
+        props = self.props
+        props[key] = value
+        self.props = props
+
+    def delete_props_item(self, key):
+        props = self.props
+        props.pop(key, None)
+        self.props = props
+
+
+class PropsItem(object):
+
+    def __init__(self, name, default=None, type=None):
+        self.name = name
+        self.default = default
+        self.type = type
+
+    def __get__(self, obj, obj_type):
+        r = obj.get_props_item(self.name, self.default)
+        if self.type:
+            r = self.type(r)
+        return r
+
+    def __set__(self, obj, value):
+        obj.set_props_item(self.name, value)
+
+    def __delete__(self, obj):
+        obj.delete_props_item(self.name)

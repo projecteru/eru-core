@@ -10,7 +10,7 @@ from datetime import datetime
 
 from eru.clients import rds
 from eru.models import db
-from eru.models.base import Base, PropsMixin
+from eru.models.base import Base, PropsMixin, PropsItem
 from eru.utils.decorator import EruJSONEncoder
 
 _CONTAINER_PUB_KEY = 'container:%s'
@@ -32,6 +32,8 @@ class Container(Base, PropsMixin):
 
     ips = db.relationship('IP', backref='container', lazy='dynamic')
 
+    callback_url = PropsItem('callback_url')
+
     def __init__(self, container_id, host, version, name, entrypoint, env):
         self.container_id = container_id
         self.host_id = host.id
@@ -40,6 +42,9 @@ class Container(Base, PropsMixin):
         self.name = name
         self.entrypoint = entrypoint
         self.env = env
+
+    def get_uuid(self):
+        return '/eru/container/%s' % self.id
 
     @classmethod
     def create(cls, container_id, host, version, name,
@@ -57,7 +62,7 @@ class Container(Base, PropsMixin):
 
             cores['nshare'] = nshare
             container.cores = cores
-            container.set_props(callback_url=callback_url)
+            container.callback_url = callback_url
 
             rds.publish(_CONTAINER_PUB_KEY % name.split('_')[0],
                 json.dumps({'container': container_id, 'status': 'create'}))

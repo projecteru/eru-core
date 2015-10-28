@@ -29,13 +29,16 @@ class Task(Base, PropsMixin):
         self.version_id = version_id
         self.type = type_
 
+    def get_uuid(self):
+        return '/eru/task/%s' % self.id
+
     @classmethod
     def create(cls, type_, version, host, props={}):
         try:
             task = cls(host.id, version.app_id, version.id, type_)
             db.session.add(task)
             db.session.commit()
-            task.set_props(**props)
+            task.set_props(props)
             return task
         except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
@@ -58,7 +61,7 @@ class Task(Base, PropsMixin):
         self.result = result
 
         if kw:
-            self.set_props(**kw)
+            self.set_props(kw)
 
     @property
     def publish_key(self):
@@ -81,6 +84,4 @@ class Task(Base, PropsMixin):
             version=self.version.short_sha,
             host=self.host.ip,
         )
-        d.pop('properties', '')
         return d
-
