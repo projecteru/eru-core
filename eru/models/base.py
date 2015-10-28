@@ -39,6 +39,7 @@ class PropsMixin(object):
     def get_uuid(self):
         raise NotImplementedError('Need uuid to idenify objects')
 
+    @property
     def _property_key(self):
         return self.get_uuid() + '/property'
 
