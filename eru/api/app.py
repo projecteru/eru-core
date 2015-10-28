@@ -117,7 +117,7 @@ def list_app_versions(name):
 @bp.route('/<name>/images/', methods=['GET', ])
 def list_app_images(name):
     app = _get_app_by_name(name)
-    return {'r': 0, 'msg': 'ok', 'versions': app.list_images(g.start, g.limit)}
+    return app.list_images(g.start, g.limit)
 
 
 @bp.route('/<name>/<version>/containers/', methods=['GET', ])
