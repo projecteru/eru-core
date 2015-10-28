@@ -34,8 +34,6 @@ class Base(db.Model):
 class PropsMixin(object):
     """丢redis里"""
 
-    properties = db.Column(db.Text, default='{}')
-
     def get_uuid(self):
         raise NotImplementedError('Need uuid to idenify objects')
 

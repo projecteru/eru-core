@@ -171,6 +171,10 @@ class App(Base):
             q = q.limit(limit)
         return q.all()
 
+    def list_images(self, start=0, limit=20):
+        from .image import Image
+        return Image.list_by_app_id(self.id, start, limit)
+
     def add_version(self, sha):
         version = Version.create(sha, self.id)
         if not version:

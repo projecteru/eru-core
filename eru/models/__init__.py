@@ -13,9 +13,24 @@ from eru.models.appconfig import AppConfig, ResourceConfig
 from eru.models.container import Container
 from eru.models.task import Task
 from eru.models.network import Network, IP, VLanGateway
+from eru.models.image import Image
 
 __all__ = [
-    'db', 'Base', 'Core', 'Host', 'Pod', 'Group', 'GroupPod',
-    'App', 'Version', 'Container', 'Task', 'AppConfig', 'ResourceConfig',
-    'Network', 'IP', 'VLanGateway',
+    'db',
+    'Base',
+    'Pod',
+    'Core',
+    'Host',
+    'Group',
+    'GroupPod',
+    'App',
+    'Version',
+    'Image',
+    'Container',
+    'AppConfig',
+    'ResourceConfig',
+    'Network',
+    'IP',
+    'VLanGateway',
+    'Task',
 ]

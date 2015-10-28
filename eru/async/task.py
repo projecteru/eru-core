@@ -9,11 +9,11 @@ from flask import current_app as current_flask
 
 from eru import consts
 from eru.agent import get_agent
-from eru.config import ERU_AGENT_API
+from eru.config import ERU_AGENT_API, DOCKER_REGISTRY
 from eru.clients import rds
 from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
-from eru.models import Container, Task, Network
+from eru.models import Container, Task, Network, Image
 from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms, falcon_remove_alarms
 
 def add_container_backends(container):
@@ -62,15 +62,21 @@ def build_docker_image(task_id, base):
     current_flask.logger.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
     notifier = TaskNotifier(task)
 
+    app = task.app
+    host = task.host
+    version = task.version
+
     try:
         repo, tag = base.split(':', 1)
         current_flask.logger.info('Task<id=%s>: Pull base image (base=%s)', task_id, base)
-        notifier.store_and_broadcast(dockerjob.pull_image(task.host, repo, tag))
+        notifier.store_and_broadcast(dockerjob.pull_image(host, repo, tag))
+
         current_flask.logger.info('Task<id=%s>: Build image (base=%s)', task_id, base)
-        notifier.store_and_broadcast(dockerjob.build_image(task.host, task.version, base))
+        notifier.store_and_broadcast(dockerjob.build_image(host, version, base))
+
         current_flask.logger.info('Task<id=%s>: Push image (base=%s)', task_id, base)
-        last_line = notifier.store_and_broadcast(dockerjob.push_image(task.host, task.version))
-        dockerjob.remove_image(task.version, task.host)
+        last_line = notifier.store_and_broadcast(dockerjob.push_image(host, version))
+        dockerjob.remove_image(version, host)
     except Exception, e:
         task.finish_with_result(consts.TASK_FAILED)
         notifier.pub_fail()
@@ -79,6 +85,10 @@ def build_docker_image(task_id, base):
         # 粗暴的判断, 如果推送成功说明build成功
         if 'Digest: sha256' in last_line:
             task.finish_with_result(consts.TASK_SUCCESS)
+
+            image_url = '%s/%s:%s' % (DOCKER_REGISTRY, app.name, version.short_sha)
+            Image.create(app.id, version.id, image_url)
+
             notifier.pub_success()
         else:
             task.finish_with_result(consts.TASK_FAILED)
