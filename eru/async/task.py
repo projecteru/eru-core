@@ -8,13 +8,15 @@ from celery import current_app
 from flask import current_app as current_flask
 
 from eru import consts
+from eru.async import dockerjob
 from eru.agent import get_agent
 from eru.config import ERU_AGENT_API, DOCKER_REGISTRY
 from eru.clients import rds
-from eru.async import dockerjob
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network, Image
+
 from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms, falcon_remove_alarms
+from eru.helpers.check import wait_health_check
 
 def add_container_backends(container):
     """单个container所拥有的后端服务
@@ -193,6 +195,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     feedback_key = 'eru:agent:%s:feedback' % task_id
 
     cids = []
+    backends = []
+    entry = version.appconfig.entrypoints[entrypoint]
 
     for fcores, pcores in _iter_cores(cores, ncontainer):
         cores_for_one_container = {'full': fcores, 'part': pcores}
@@ -248,6 +252,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             add_container_for_agent(c)
             add_container_backends(c)
             cids.append(cid)
+            backends.extend(c.get_backends())
             # 略过清理工作
             continue
 
@@ -259,9 +264,17 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         # 失败了就得清理掉这个key
         rds.delete(feedback_key)
 
-    publish_to_service_discovery(version.name)
-    task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
-    notifier.pub_success()
+    # 不要在意这个写法
+    ok = True
+    health_check = entry.get('health_check', '')
+    if health_check and backends:
+        urls = [b + health_check for b in backends]
+        ok = wait_health_check(urls)
+
+    if ok:
+        publish_to_service_discovery(version.name)
+        task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
+        notifier.pub_success()
 
     # 有IO, 丢最后面算了
     falcon_all_graphs(version)

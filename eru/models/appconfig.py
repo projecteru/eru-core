@@ -22,6 +22,7 @@ Example of app.yaml:
             network_mode: "bridge"
             mem_limit: 5000
             restart: "on-failure"
+            health_check: "/health-check"
         daemon:
             cmd: "python daemon.py --interval 5"
             network_mode: "host"
