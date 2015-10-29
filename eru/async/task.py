@@ -264,17 +264,21 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         # 失败了就得清理掉这个key
         rds.delete(feedback_key)
 
+    ok = True
     health_check = entry.get('health_check', '')
     if health_check and backends:
         urls = [b + health_check for b in backends]
-        wait_health_check(urls)
+        ok = wait_health_check(urls)
 
-    publish_to_service_discovery(version.name)
-    task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
-    notifier.pub_success()
+    if ok:
+        publish_to_service_discovery(version.name)
+        task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
+        notifier.pub_success()
 
-    # 有IO, 丢最后面算了
-    falcon_all_graphs(version)
-    falcon_all_alarms(version)
+        # 有IO, 丢最后面算了
+        falcon_all_graphs(version)
+        falcon_all_alarms(version)
 
-    current_flask.logger.info('Task<id=%s>: Done', task_id)
+        current_flask.logger.info('Task<id=%s>: Done', task_id)
+    else:
+        current_flask.logger.info('Task<id=%s>: Done, but something went error', task_id)
