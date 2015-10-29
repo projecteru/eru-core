@@ -2,7 +2,8 @@
 
 import time
 import requests
-from requests.exceptions import ConnectTimeout, ReadTimeout
+from threading import Thread
+from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
 
 
 def _normalize_url(url):
@@ -11,16 +12,20 @@ def _normalize_url(url):
     return url
 
 
+def _check_one_url(url):
+    total = 0
+    while total < 10:
+        try:
+            requests.get(_normalize_url(url), timeout=0.5)
+        except (ConnectTimeout, ReadTimeout, ConnectionError):
+            pass
+        else:
+            break
+        total += 1
+        time.sleep(1)
+
+
 def wait_health_check(urls):
-    total = len(urls)
-    while total:
-        for url in urls:
-            try:
-                requests.get(_normalize_url(url), timeout=0.5)
-                total -= 1
-            except (ConnectTimeout, ReadTimeout):
-                pass
-        if total:
-            time.sleep(1)
-    # 给个返回值是怕有些用coroutine的会switch走
-    return True
+    threads = [Thread(target=_check_one_url, args=(url,),) for url in urls]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
