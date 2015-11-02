@@ -75,5 +75,6 @@ class Task(Base, PropsMixin):
             name=self.app.name,
             version=self.version.short_sha,
             host=self.host.ip,
+            reason=self.reason,
         )
         return d
