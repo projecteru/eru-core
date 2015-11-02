@@ -57,8 +57,8 @@ class Task(Base, PropsMixin):
     def finish_with_result(self, result, **kw):
         self.finished = datetime.now()
         db.session.add(self)
-        db.session.commit()
         self.result = result
+        db.session.commit()
 
         if kw:
             self.set_props(kw)
