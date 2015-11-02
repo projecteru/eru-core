@@ -80,20 +80,23 @@ def build_docker_image(task_id, base):
         last_line = notifier.store_and_broadcast(dockerjob.push_image(host, version))
         dockerjob.remove_image(version, host)
     except Exception, e:
-        task.finish_with_result(consts.TASK_FAILED)
+        task.finish(consts.TASK_FAILED)
+        task.reason = e.message
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         # 粗暴的判断, 如果推送成功说明build成功
         if 'Digest: sha256' in last_line:
-            task.finish_with_result(consts.TASK_SUCCESS)
+            task.finish(consts.TASK_SUCCESS)
+            task.reason = 'ok'
 
             image_url = '%s/%s:%s' % (DOCKER_REGISTRY, app.name, version.short_sha)
             Image.create(app.id, version.id, image_url)
 
             notifier.pub_success()
         else:
-            task.finish_with_result(consts.TASK_FAILED)
+            task.finish(consts.TASK_FAILED)
+            task.reason = 'failed to push image to image hub'
             notifier.pub_fail()
         current_flask.logger.info('Task<id=%s>: Done', task_id)
     finally:
@@ -133,13 +136,15 @@ def remove_containers(task_id, cids, rmi=False):
             except Exception as e:
                 current_flask.logger.error('Task<id=%s>: Exception (e=%s), fail to remove image', task_id, e)
     except Exception as e:
-        task.finish_with_result(consts.TASK_FAILED)
+        task.finish(consts.TASK_FAILED)
+        task.reason = e.message
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         for c in containers:
             c.delete()
-        task.finish_with_result(consts.TASK_SUCCESS)
+        task.finish(consts.TASK_SUCCESS)
+        task.reason = 'ok'
         notifier.pub_success()
         if container_ids:
             rds.hdel('eru:agent:%s:containers:meta' % host.name, *container_ids)
@@ -273,7 +278,9 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             return
 
     publish_to_service_discovery(version.name)
-    task.finish_with_result(consts.TASK_SUCCESS, container_ids=cids)
+    task.finish(consts.TASK_SUCCESS)
+    task.reason = 'ok'
+    task.container_ids = cids
     notifier.pub_success()
 
     # 有IO, 丢最后面算了
