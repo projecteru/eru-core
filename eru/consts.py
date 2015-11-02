@@ -24,6 +24,10 @@ TASK_ACTIONS = {
     TASK_BUILD: 'build',
     TASK_REMOVE: 'remove',
 }
+TASK_RESULTS = {
+    TASK_SUCCESS: 'succeeded',
+    TASK_FAILED: 'failed',
+}
 
 TASK_RESULT_SUCCESS = 'SUCCESS'
 TASK_RESULT_FAILED = 'FAILED'
