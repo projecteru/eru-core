@@ -22,7 +22,7 @@ def _get_credit():
 def clone_code(repo_url, clone_path, revision, branch=None):
     """branch 为 None, 默认用远端的 default branch"""
     type, cred = _get_credit()
-    if type == 'ssh' and repo_url.startswith('git'):
+    if type == 'ssh' and not repo_url.startswith('git'):
         raise CloneError('Use ssh while repo url is %s' % repo_url)
 
     repo = pygit2.clone_repository(repo_url, clone_path,
