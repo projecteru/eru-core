@@ -10,7 +10,6 @@ from eru.consts import (
     ERU_TASK_LOGKEY,
     ERU_TASK_PUBKEY,
     TASK_ACTIONS,
-    TASK_RESULTS,
 )
 
 class Task(Base, PropsMixin):
@@ -70,8 +69,7 @@ class Task(Base, PropsMixin):
         d = super(Task, self).to_dict()
         d.update(
             props=self.props,
-            action=TASK_ACTIONS.get(self.type, 'unkown'),
-            result=TASK_RESULTS.get(self.result, 'unkown'),
+            action=TASK_ACTIONS.get(self.type, 'unknown'),
             name=self.app.name,
             version=self.version.short_sha,
             host=self.host.ip,
