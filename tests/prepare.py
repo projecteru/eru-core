@@ -25,7 +25,7 @@ def create_test_suite():
         },
         'build': 'pip install -r ./requirements.txt',
     }
-    app = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', 'token')
+    app = App.get_or_create('app', 'http://git.hunantv.com/group/app.git')
     version = app.add_version(random_sha1())
     appconfig = version.appconfig
     appconfig.update(**appyaml)
@@ -69,7 +69,7 @@ def create_local_test_data(private=False):
         },
         'build': 'pip install -r ./requirements.txt',
     }
-    app = App.get_or_create('blueberry', 'http://git.hunantv.com/tonic/blueberry.git', 'token')
+    app = App.get_or_create('blueberry', 'http://git.hunantv.com/tonic/blueberry.git')
     version = app.add_version('abe23812aeb50a17a2509c02a28423462161d306')
     appconfig = version.appconfig
     appconfig.update(**appyaml)
