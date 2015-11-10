@@ -37,8 +37,12 @@ def build_image_environment(version, base, rev):
     ensure_dir_absent(os.path.join(clone_path, '.git'))
 
     # launcher script
-    launcher = template.render_template('launcher.jinja', appname=appname)
+    entry = 'exec sudo -E -u %s $@' % appname
+    entry_root = 'exec $@'
+    launcher = template.render_template('launcher.jinja', entrypoint=entry)
+    launcheroot = template.render_template('launcher.jinja', entrypoint=entry_root)
     ensure_file(os.path.join(build_path, 'launcher'), content=launcher, mode=0755)
+    ensure_file(os.path.join(build_path, 'launcheroot'), content=launcheroot, mode=0755)
 
     # build dockerfile
     dockerfile = template.render_template(
@@ -104,8 +108,9 @@ def create_one_container(host, version, entrypoint, env='prod',
     # add extend arguments
     cmd = cmd + ' '.join([''] + args)
     if not is_raw:
+        starter = 'launcheroot' if entry.get('privileged', '') else 'launcher'
         network = 'network' if need_network else 'nonetwork'
-        cmd = '/usr/local/bin/launcher %s ' % network + cmd
+        cmd = '/usr/local/bin/%s %s %s' % (starter, network, cmd)
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
     mem_limit = entry.get('mem_limit', 0)
