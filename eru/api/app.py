@@ -38,7 +38,7 @@ def get_version(name, version):
 
 
 @bp.route('/register/', methods=['POST', ])
-@check_request_json(['version', 'git', 'token', 'appyaml'])
+@check_request_json(['version', 'git', 'appyaml'])
 def register_app_version():
     data = request.get_json()
     version = data['version']
@@ -51,10 +51,7 @@ def register_app_version():
 
     name = appyaml['appname']
 
-    app = App.get_or_create(name, data['git'], data['token'])
-    if not app:
-        current_app.logger.error('App create failed. (name=%s, version=%s)', name, version[:7])
-        abort(400, 'App %s create failed, maybe token duplicated' % name)
+    app = App.get_or_create(name, data['git'])
 
     v = app.add_version(version)
     if not v:
