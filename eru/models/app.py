@@ -101,7 +101,6 @@ class App(Base):
     name = db.Column(db.CHAR(32), nullable=False, unique=True)
     git = db.Column(db.String(255), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
-    token = db.Column(db.CHAR(32), nullable=False, unique=True)
     update = db.Column(db.DateTime, default=datetime.now)
     _user_id = db.Column(db.Integer, nullable=False, default=0)
 
@@ -109,18 +108,17 @@ class App(Base):
     containers = db.relationship('Container', backref='app', lazy='dynamic')
     tasks = db.relationship('Task', backref='app', lazy='dynamic')
 
-    def __init__(self, name, git, token):
+    def __init__(self, name, git):
         self.name = name
         self.git = git
-        self.token = token
 
     @classmethod
-    def get_or_create(cls, name, git, token):
+    def get_or_create(cls, name, git):
         app = cls.query.filter(cls.name == name).first()
         if app:
             return app
         try:
-            app = cls(name, git, token)
+            app = cls(name, git)
             db.session.add(app)
             db.session.commit()
             return app

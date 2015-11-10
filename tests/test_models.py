@@ -123,7 +123,7 @@ def test_host(test_db):
         assert len(cores['part']) == 1
 
 def test_container(test_db):
-    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
+    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git')
     assert a is not None
     assert a.id == a.user_id
 
@@ -360,7 +360,7 @@ def test_occupy_and_release_cores(test_db):
         assert core.remain == 10
 
 def test_container_release_cores(test_db):
-    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git', '')
+    a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git')
     v = a.add_version(random_sha1())
     g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod', 10, -1)
