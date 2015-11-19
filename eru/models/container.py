@@ -203,5 +203,6 @@ class Container(Base, PropsMixin):
             version=self.version.short_sha,
             networks=self.ips.all(),
             backends=self.get_backends(),
+            appname=self.appname,
         )
         return d
