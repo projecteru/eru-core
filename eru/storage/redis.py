@@ -20,3 +20,7 @@ class RedisStorage(BaseConfigStorage):
 
     def list(self, key):
         return self._client.hkeys(key)
+
+    def delete(self, key):
+        name, key = key.rsplit('/', 1)
+        return self._client.hdel(name, key)
