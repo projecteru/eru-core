@@ -174,6 +174,9 @@ class BaseConfig(object):
         value = yaml.safe_dump(self._data, default_flow_style=False, indent=4)
         config_backend.write(self.path, value)
 
+    def delete(self):
+        config_backend.delete(self.path)
+
     def to_dict(self):
         return self._data
 

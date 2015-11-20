@@ -12,3 +12,5 @@ class BaseConfigStorage(object):
     def list(self, key):
         raise NotImplementedError()
 
+    def delete(self, key):
+        raise NotImplementedError()

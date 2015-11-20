@@ -65,7 +65,7 @@ def register_app_version():
     return {'r': 0, 'msg': 'ok'}
 
 
-@bp.route('/<name>/env/', methods=['PUT', ])
+@bp.route('/<name>/env/', methods=['PUT', 'DELETE'])
 @check_request_json('env')
 def set_app_env(name):
     data = request.get_json()
@@ -73,8 +73,11 @@ def set_app_env(name):
 
     app = _get_app_by_name(name)
     envconfig = app.get_resource_config(env)
-    envconfig.update(**data)
-    envconfig.save()
+    if request.method == 'PUT':
+        envconfig.update(**data)
+        envconfig.save()
+    elif request.method == 'DELETE':
+        envconfig.delete()
     current_app.logger.info('App (name=%s) set env (env=%s) values done', name, env)
     return {'r': 0, 'msg': 'ok'}
 

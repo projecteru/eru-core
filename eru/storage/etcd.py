@@ -22,3 +22,6 @@ class EtcdStorage(BaseConfigStorage):
 
     def list(self, key):
         return [sub.key.strip('/') for sub in self._client.get(key).children]
+
+    def delete(self, key):
+        return self._client.delete(key, recursive=True)
