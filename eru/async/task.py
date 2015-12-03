@@ -81,7 +81,7 @@ def build_docker_image(task_id, base):
         dockerjob.remove_image(version, host)
     except Exception, e:
         task.finish(consts.TASK_FAILED)
-        task.reason = e.message
+        task.reason = str(e.message)
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
@@ -137,7 +137,7 @@ def remove_containers(task_id, cids, rmi=False):
                 current_flask.logger.error('Task<id=%s>: Exception (e=%s), fail to remove image', task_id, e)
     except Exception as e:
         task.finish(consts.TASK_FAILED)
-        task.reason = e.message
+        task.reason = str(e.message)
         notifier.pub_fail()
         current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
