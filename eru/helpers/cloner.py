@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from pygit2 import clone_repository, RemoteCallback
+from pygit2 import clone_repository, RemoteCallbacks
 from pygit2.credentials import Keypair, UserPass
 
 from eru.config import GIT_KEY_PUB, GIT_KEY_PRI, GIT_KEY_USER, GIT_KEY_ENCRYPT
@@ -18,7 +18,7 @@ def _get_credit(url):
 def clone_code(repo_url, clone_path, revision, branch=None):
     """branch 为 None, 默认用远端的 default branch"""
     cred = _get_credit(repo_url)
-    cbs = RemoteCallback(cred, None)
+    cbs = RemoteCallbacks(cred, None)
     repo = clone_repository(repo_url, clone_path,
             bare=False, checkout_branch=branch, callbacks=cbs)
     repo.checkout('HEAD')
