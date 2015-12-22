@@ -10,6 +10,7 @@ from eru.config import ERU_AGENT_API
 
 logger = logging.getLogger(__name__)
 
+
 @retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
 def _bind_container_ip_pubsub(task_id, container, ips, nid=None):
     pub_agent_vlan_key = 'eru:agent:%s:vlan' % container.host.name
@@ -33,27 +34,25 @@ def _bind_container_ip_pubsub(task_id, container, ips, nid=None):
     rds.delete(feedback_key)
     return False
 
+
 @retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
 def _bind_container_ip_http(task_id, container, ips, nid=None):
     agent = get_agent(container.host)
-    feedback_key = 'eru:agent:%s:feedback' % task_id
-
     ip_list = [(nid or ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-    agent.add_container_vlan(container.container_id, str(task_id), ip_list)
+    resp = agent.add_container_vlan(container.container_id, str(task_id), ip_list)
 
-    for _ in ips:
-        rv = rds.blpop(feedback_key, 15)
-        if rv is None:
+    if resp.status_code != 200:
+        return False
+
+    for result in resp.json():
+        if result['succ'] == 0:
             break
-        succ, _, vethname, _ = rv[1].split('|')
-        if succ == '0':
-            break
-        ip.set_vethname(vethname)
+        ip.set_vethname(result['veth'])
     else:
         return True
 
-    rds.delete(feedback_key)
     return False
+
 
 def bind_container_ip(container, ips, nid=None):
     """
@@ -72,6 +71,7 @@ def bind_container_ip(container, ips, nid=None):
     except retrying.RetryError:
         logger.info('still failed after 5 times retry, %s, %s' % (container.container_id, ips))
         pass
+
 
 def rebind_container_ip(container):
     ips = container.ips.all()

@@ -10,7 +10,7 @@ from flask import current_app as current_flask
 from eru import consts
 from eru.async import dockerjob
 from eru.agent import get_agent
-from eru.config import ERU_AGENT_API, DOCKER_REGISTRY
+from eru.config import DOCKER_REGISTRY
 from eru.clients import rds
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network, Image
@@ -154,6 +154,7 @@ def remove_containers(task_id, cids, rmi=False):
     if not version.containers.count():
         falcon_remove_alarms(version)
 
+
 def _iter_cores(cores, ncontainer):
     full_cores, part_cores = cores.get('full', []), cores.get('part', [])
     if not (full_cores or part_cores):
@@ -164,6 +165,15 @@ def _iter_cores(cores, ncontainer):
         chunked(part_cores, len(part_cores)/ncontainer),
         fillvalue=[]
     )
+
+
+def _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips):
+    # 清理掉失败的容器, 释放核, 释放ip
+    current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
+    dockerjob.remove_container_by_cid([cid], host)
+    host.release_cores(cores_for_one_container, nshare)
+    [ip.release() for ip in ips]
+
 
 @current_app.task()
 def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_ids, spec_ips=None):
@@ -195,9 +205,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     callback_url = task.props['callback_url']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
-    pub_agent_vlan_key = 'eru:agent:%s:vlan' % host.name
     pub_agent_route_key = 'eru:agent:%s:route' % host.name
-    feedback_key = 'eru:agent:%s:feedback' % task_id
 
     cids = []
     backends = []
@@ -222,27 +230,23 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         ips = [i for i in ips if i]
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
+        results = []
         if ips:
-            if ERU_AGENT_API == 'pubsub':
-                values = [str(task_id), cid] + ['{0}:{1}'.format(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-                rds.publish(pub_agent_vlan_key, '|'.join(values))
-            elif ERU_AGENT_API == 'http':
-                agent = get_agent(host)
-                ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-                agent.add_container_vlan(cid, str(task_id), ip_list)
+            agent = get_agent(host)
+            ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+            resp = agent.add_container_vlan(cid, str(task_id), ip_list)
 
-        for _ in ips:
-            # timeout 15s
-            rv = rds.blpop(feedback_key, 15)
-            if rv is None:
+            if resp.status_code != 200:
+                _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips)
+                continue
+            results = resp.json()
+
+        for result in results:
+            if result['succ'] == 0:
                 break
-            # rv is like (feedback_key, 'succ|container_id|vethname|ip')
-            succ, _, vethname, vlan_address = rv[1].split('|')
-            if succ == '0':
-                break
-            ip = ip_dict.get(vlan_address, None)
+            ip = ip_dict.get(result['ip'], None)
             if ip:
-                ip.set_vethname(vethname)
+                ip.set_vethname(result['veth'])
 
             if route:
                 rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
@@ -261,13 +265,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             # 略过清理工作
             continue
 
-        # 清理掉失败的容器, 释放核, 释放ip
-        current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
-        dockerjob.remove_container_by_cid([cid], host)
-        host.release_cores(cores_for_one_container, nshare)
-        [ip.release() for ip in ips]
-        # 失败了就得清理掉这个key
-        rds.delete(feedback_key)
+        _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips)
 
     health_check = entry.get('health_check', '')
     if health_check and backends:
