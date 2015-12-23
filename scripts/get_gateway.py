@@ -2,7 +2,7 @@
 
 import sys
 from functools import wraps
-from ipaddress import IPv4Address
+from netaddr import IPAddress
 
 from eru.clients import rds
 from eru.app import create_app_with_celery
@@ -23,7 +23,7 @@ def take_gateway(netspace, ip, host):
     if not net:
         print 'net %s not found' % netspace
         return
-    ipnum = int(IPv4Address(unicode(ip)))
+    ipnum = IPAddress(ip).value
     rds.srem(net.gatekey, ipnum)
     VLanGateway.create(ipnum, net.id, host.id)
     print '%s on %s --> %s done' % (ip, host.ip, netspace)

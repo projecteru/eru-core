@@ -1,7 +1,7 @@
 # coding: utf-8
 
 from flask import abort, request, current_app
-from ipaddress import IPv4Interface, AddressValueError
+from netaddr import IPNetwork, AddrFormatError
 
 from eru import consts
 from eru.models import Network
@@ -47,10 +47,10 @@ def list_networks():
 def check_addr(addr):
     """addr is like 10.20.0.1/16 or 10.100.3.12/24"""
     try:
-        interface = IPv4Interface(addr)
-    except AddressValueError:
+        interface = IPNetwork(addr)
+    except AddrFormatError:
         abort(400, 'Not valid interface')
-    net = Network.get_by_netspace(interface.network.compressed)
+    net = Network.get_by_netspace(str(interface.cidr))
     if not net:
         abort(400, 'Interface not found')
     return {'r': 0, 'msg': consts.OK, 'result': interface.ip in net}

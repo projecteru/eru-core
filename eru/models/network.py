@@ -2,7 +2,7 @@
 
 import more_itertools
 import sqlalchemy.exc
-from ipaddress import IPv4Network, IPv4Address, AddressValueError, ip_address
+from netaddr import IPAddress, IPNetwork, AddrFormatError
 
 from eru.clients import rds
 from eru.models import db
@@ -13,7 +13,7 @@ class IPMixin(object):
 
     @property
     def address(self):
-        return str(IPv4Address(self.ipnum))
+        return str(IPAddress(self.ipnum))
 
     @property
     def hostmask(self):
@@ -156,10 +156,11 @@ class Network(Base):
 
             # create sub IPs
             network = n.network
-            base = int(network.network_address)
+            base = network.first
+
             # 一次写500个吧
             # 写容器可用IP
-            for ipnums in more_itertools.chunked(xrange(base+gateway_count, base+network.num_addresses), 500):
+            for ipnums in more_itertools.chunked(xrange(base+gateway_count, base+network.size), 500):
                 rds.sadd(n.storekey, *ipnums)
 
             # 写宿主机可用IP
@@ -198,7 +199,7 @@ class Network(Base):
 
     @property
     def network(self):
-        return IPv4Network(unicode(self.netspace))
+        return IPNetwork(self.netspace)
 
     @property
     def pool_size(self):
@@ -210,7 +211,7 @@ class Network(Base):
 
     @property
     def used_count(self):
-        return (self.network.num_addresses - self.gateway_count) - self.pool_size
+        return (self.network.size - self.gateway_count) - self.pool_size
 
     @property
     def used_gate_count(self):
@@ -221,13 +222,13 @@ class Network(Base):
 
     @redis_lock('net:acquire_ip:{self.id}')
     def contains_ip(self, ip):
-        """ip is unicode or IPv4Address object"""
+        """ip is unicode or IPAddress object"""
         if isinstance(ip, basestring):
             try:
-                ip = IPv4Address(ip)
-            except AddressValueError:
+                ip = IPAddress(ip)
+            except AddrFormatError:
                 return False
-        return rds.sismember(self.storekey, int(ip))
+        return rds.sismember(self.storekey, ip.value)
 
     @redis_lock('net:acquire_ip:{self.id}')
     def acquire_ip(self):
@@ -239,12 +240,13 @@ class Network(Base):
     def acquire_specific_ip(self, ip_str):
         """take a specific IP from network"""
         try:
-            ip = ip_address(ip_str)
+            ip = IPAddress(ip_str)
         except ValueError:
             return None
-        if rds.sismember(self.storekey, ip._ip):
-            rds.srem(self.storekey, ip._ip)
-            return IP.create(ip._ip, self)
+
+        if rds.sismember(self.storekey, ip.value):
+            rds.srem(self.storekey, ip.value)
+            return IP.create(ip.value, self)
 
     @redis_lock('net:acquire_ip:{self.id}')
     def release_ip(self, ip):
@@ -270,10 +272,10 @@ class Network(Base):
     def add_ip(self, ip):
         if isinstance(ip, basestring):
             try:
-                ip = IPv4Address(ip)
-            except AddressValueError:
+                ip = IPAddress(ip)
+            except AddrFormatError:
                 return False
-        ipnum = int(ip)
+        ipnum = ip.value
         if rds.sismember(self.gatekey, ipnum):
             rds.srem(self.gatekey, ipnum)
         rds.sadd(self.storekey, ipnum)
