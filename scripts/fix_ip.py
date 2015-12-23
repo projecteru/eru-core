@@ -20,7 +20,7 @@ def with_app_context(f):
 def fix_ip(n):
     network = n.network
     base = int(network.network_address)
-    for ipnums in more_itertools.chunked(xrange(base+n.gateway_count, base+network.num_addressed), 500):
+    for ipnums in more_itertools.chunked(xrange(base+n.gateway_count, base+network.num_addresses), 500):
         rds.sadd(n.storekey, *ipnums)
 
     rds.sadd(n.gatekey, *range(base, base+n.gateway_count))
