@@ -46,3 +46,8 @@ class Agent(object):
             'ips': ips,
         }
         return self._request('POST', url, payload)
+
+    def set_default_route(self, container_id, ip):
+        url = '/api/container/%s/setroute/' % container_id
+        payload = {'ip': ip}
+        return self._request('POST', url, payload)
