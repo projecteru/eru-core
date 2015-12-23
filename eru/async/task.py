@@ -205,8 +205,6 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     callback_url = task.props['callback_url']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
 
-    pub_agent_route_key = 'eru:agent:%s:route' % host.name
-
     cids = []
     backends = []
     entry = version.appconfig.entrypoints[entrypoint]
@@ -239,7 +237,10 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             if resp.status_code != 200:
                 _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips)
                 continue
+
             results = resp.json()
+            if route:
+                agent.set_default_route(cid, route)
 
         for result in results:
             if result['succ'] == 0:
@@ -247,9 +248,6 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             ip = ip_dict.get(result['ip'], None)
             if ip:
                 ip.set_vethname(result['veth'])
-
-            if route:
-                rds.publish(pub_agent_route_key, '%s|%s' % (cid, route))
 
         else:
             current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
