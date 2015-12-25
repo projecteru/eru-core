@@ -7,7 +7,6 @@ from eru.agent import get_agent
 from eru.ipam.base import BaseIPAM
 from eru.ipam.structure import WrappedIP, WrappedNetwork
 from eru.models.network import IP, Network
-from eru.models.container import Container
 
 
 class MacVLANIPAM(BaseIPAM):
@@ -43,6 +42,7 @@ class MacVLANIPAM(BaseIPAM):
         if spec_ips is given, then the ip will be in spec_ips.
         note, for history reasons cidrs should always be given.
         """
+        from eru.models.container import Container
 
         def _release_ips(ips):
             for ip in ips:
@@ -87,6 +87,8 @@ class MacVLANIPAM(BaseIPAM):
         refresh ips on container_id.
         first, release all ips container occupied, then bind them as spec_ips.
         """
+        from eru.models.container import Container
+
         container = Container.get_by_container_id(container_id)
         ips = container.ips.all()
         cidrs = [ip.network.netspace for ip in ips]
@@ -98,6 +100,8 @@ class MacVLANIPAM(BaseIPAM):
         return self.allocate_ips(cidrs, container_id, spec_ips)
 
     def get_ip_by_container(self, container_id):
+        from eru.models.container import Container
+
         container = Container.get_by_container_id(container_id)
         if not container:
             return []
@@ -111,6 +115,8 @@ class MacVLANIPAM(BaseIPAM):
         ip.release()
 
     def release_ip_by_container(self, container_id):
+        from eru.models.container import Container
+
         container = Container.get_by_container_id(container_id)
         if not container:
             return
