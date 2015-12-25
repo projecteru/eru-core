@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import six
 from werkzeug.security import gen_salt
 
 from eru.agent import get_agent
@@ -24,7 +25,7 @@ class MacVLANIPAM(BaseIPAM):
         so here cidr may be a name string.
         and for compating, cidr can also be id.
         """
-        if cidr.isdigit():
+        if isinstance(cidr, six.integer_types) or cidr.isdigit():
             return Network.get(cidr)
         return Network.get_by_name(cidr) or Network.get_by_netspace(cidr)
 
