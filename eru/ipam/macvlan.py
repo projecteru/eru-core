@@ -5,6 +5,7 @@ from werkzeug.security import gen_salt
 
 from eru.agent import get_agent
 from eru.ipam.base import BaseIPAM
+from eru.ipam.structure import WrappedIP, WrappedNetwork
 from eru.models.network import IP, Network
 from eru.models.container import Container
 
@@ -12,7 +13,8 @@ from eru.models.container import Container
 class MacVLANIPAM(BaseIPAM):
 
     def add_ip_pool(self, cidr, name):
-        return Network.create(name, cidr)
+        n = Network.create(name, cidr)
+        return n and WrappedNetwork.from_macvlan(n) or None
     
     def remove_ip_pool(self, cidr):
         network = Network.get_by_netspace(cidr)
@@ -26,11 +28,14 @@ class MacVLANIPAM(BaseIPAM):
         and for compating, cidr can also be id.
         """
         if isinstance(cidr, six.integer_types) or cidr.isdigit():
-            return Network.get(cidr)
-        return Network.get_by_name(cidr) or Network.get_by_netspace(cidr)
+            n = Network.get(cidr)
+        else:
+            n = Network.get_by_name(cidr) or Network.get_by_netspace(cidr)
+        return n and WrappedNetwork.from_macvlan(n.netspace) or None
 
     def get_all_pools(self):
-        return Network.list_networks()
+        networks = Network.list_networks()
+        return [WrappedNetwork.from_macvlan(n.netspace) for n in networks if n]
 
     def allocate_ips(self, cidrs, container_id, spec_ips=None):
         """
@@ -91,6 +96,12 @@ class MacVLANIPAM(BaseIPAM):
             ip.release()
 
         return self.allocate_ips(cidrs, container_id, spec_ips)
+
+    def get_ip_by_container(self, container_id):
+        container = Container.get_by_container_id(container_id)
+        if not container:
+            return []
+        return [WrappedIP.from_macvlan(i) for i in container.ips.all()]
 
     def release_ip(self, address):
         ip = IP.get_by_value(address.value)

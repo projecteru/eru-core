@@ -6,7 +6,14 @@ from sqlalchemy.ext.declarative import declared_attr
 from eru.models import db
 from eru.clients import rds
 
-class Base(db.Model):
+
+class Jsonized(object):
+
+    def to_dict(self):
+        return {k: getattr(self, k) for k in dir(self) if not k.startswith('_')}
+
+
+class Base(Jsonized, db.Model):
 
     __abstract__ = True
 

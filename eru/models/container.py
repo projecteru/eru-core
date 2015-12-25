@@ -8,6 +8,7 @@ import sqlalchemy.exc
 from decimal import Decimal as D
 from datetime import datetime
 
+from eru.ipam import ipam
 from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
@@ -50,11 +51,10 @@ class Container(Base, PropsMixin):
     def create(cls, container_id, host, version, name,
             entrypoint, cores, env, nshare=0, callback_url=''):
         """创建一个容器. cores 是 {'full': [core, ...], 'part': [core, ...]}"""
-        from .host import Host
         try:
             container = cls(container_id, host, version, name, entrypoint, env)
             db.session.add(container)
-            host.count = Host.count - \
+            host.count = host.__class__.count - \
                     D(len(cores.get('full', []))) - \
                     D(format(D(nshare) / D(host.core_share), '.3f'))
             db.session.add(host)
@@ -138,29 +138,28 @@ class Container(Base, PropsMixin):
         ports = entry.get('ports', [])
         return [int(p.split('/')[0]) for p in ports]
 
-    def get_ips(self):
-        return [str(ip) for ip in self.ips]
-
     def get_backends(self):
         """daemon的话是个空列表"""
-        ips = self.get_ips()
+        ips = ipam.get_ip_by_container(self.container_id)
+        ips = [str(ip) for ip in ips]
         ports = self.get_ports()
         return ['{0}:{1}'.format(ip, port) for ip, port in itertools.product(ips, ports)]
 
     def delete(self):
         """删除这条记录, 记得要释放自己占用的资源"""
-        from .host import Host
         # release ip
-        [ip.release() for ip in self.ips]
+        ipam.release_ip_by_container(self.container_id)
+
         # release core and increase core count
         host = self.host
         cores = self.cores
         host.release_cores(cores, cores.get('nshare', 0))
         del self.cores
-        host.count = Host.count + \
+        host.count = host.__class__.count + \
                 D(len(cores.get('full', []))) + \
                 D(format(D(cores.get('nshare', 0)) / D(host.core_share), '.3f'))
         db.session.add(host)
+
         # remove container
         db.session.delete(self)
         db.session.commit()
@@ -198,6 +197,7 @@ class Container(Base, PropsMixin):
 
     def to_dict(self):
         d = super(Container, self).to_dict()
+        ips = ipam.get_ip_by_container(self.container_id)
         d.update(
             host=self.host.addr.split(':')[0],
             cores={
@@ -206,7 +206,7 @@ class Container(Base, PropsMixin):
                 'nshare': self.cores.get('nshare', 0),
             },
             version=self.version.short_sha,
-            networks=self.ips.all(),
+            networks=ips,
             backends=self.get_backends(),
             appname=self.appname,
         )
