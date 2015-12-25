@@ -28,7 +28,6 @@ pytz==2014.10
 PyYAML==3.11
 redis==2.10.3
 requests==2.4.3
-six==1.9.0
 SQLAlchemy==0.9.8
 urllib3==1.10
 websocket-client==0.23.0
