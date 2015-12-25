@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import yaml
-import ipaddress
+from netaddr import IPAddress, AddrFormatError
 
 from eru.clients import config_backend
 
@@ -98,8 +98,8 @@ def verify_appconfig(appconfig):
         route = content.get('network_route', '')
         if route:
             try:
-                ipaddress.ip_address(unicode(route))
-            except ValueError:
+                IPAddress(route)
+            except AddrFormatError:
                 raise ValueError('network_route must be IPv4 address')
 
     # check build
