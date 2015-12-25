@@ -21,6 +21,12 @@ class WrappedIP(Jsonized):
     def __getattr__(self, name):
         return getattr(self._raw, name)
 
+    def __str__(self):
+        return str(self._raw)
+
+    def __int__(self):
+        return int(self._raw)
+
     @classmethod
     def from_macvlan(cls, ip):
         return cls(ip.id, ip.ipnum, ip.vethname, ip.network_id,
