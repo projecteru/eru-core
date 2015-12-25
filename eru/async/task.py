@@ -9,9 +9,9 @@ from flask import current_app as current_flask
 
 from eru import consts
 from eru.async import dockerjob
-from eru.agent import get_agent
 from eru.config import DOCKER_REGISTRY
 from eru.clients import rds
+from eru.ipam import ipam
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Network, Image
 
@@ -167,12 +167,15 @@ def _iter_cores(cores, ncontainer):
     )
 
 
-def _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips):
+def _clean_failed_containers(cid):
     # 清理掉失败的容器, 释放核, 释放ip
     current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
-    dockerjob.remove_container_by_cid([cid], host)
-    host.release_cores(cores_for_one_container, nshare)
-    [ip.release() for ip in ips]
+    container = Container.get_by_container_id(cid)
+    if not container:
+        return
+
+    dockerjob.remove_container_by_cid([cid], container.host)
+    container.delete()
 
 
 @current_app.task()
@@ -200,7 +203,6 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     ports = task.props['ports']
     args = task.props['args']
     # use raw
-    route = task.props['route']
     image = task.props['image']
     callback_url = task.props['callback_url']
     cpu_shares = int(float(nshare) / host.pod.core_share * 1024) if nshare else 1024
@@ -211,6 +213,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
 
     for fcores, pcores in _iter_cores(cores, ncontainer):
         cores_for_one_container = {'full': fcores, 'part': pcores}
+        # 在宿主机上创建容器
         try:
             cid, cname = dockerjob.create_one_container(host, version,
                 entrypoint, env, fcores+pcores, ports=ports, args=args,
@@ -221,49 +224,23 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             host.release_cores(cores_for_one_container, nshare)
             continue
 
-        if spec_ips:
-            ips = [n.acquire_specific_ip(ip) for n, ip in zip(networks, spec_ips)]
-        else:
-            ips = [n.acquire_ip() for n in networks]
-        ips = [i for i in ips if i]
-        ip_dict = {ip.vlan_address: ip for ip in ips}
+        # 容器记录下来
+        c = Container.create(cid, host, version, cname, entrypoint, cores_for_one_container, env, nshare, callback_url)
 
-        results = []
-        if ips:
-            agent = get_agent(host)
-            ip_list = [(ip.vlan_seq_id, ip.vlan_address) for ip in ips]
-            resp = agent.add_container_vlan(cid, str(task_id), ip_list)
-
-            if resp.status_code != 200:
-                _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips)
-                continue
-
-            results = resp.json()
-            if route:
-                agent.set_default_route(cid, route)
-
-        for result in results:
-            if result['succ'] == 0:
-                break
-            ip = ip_dict.get(result['ip'], None)
-            if ip:
-                ip.set_vethname(result['veth'])
-
-        else:
-            current_flask.logger.info('Creating container (cid=%s, ips=%s)', cid, ips)
-            c = Container.create(cid, host, version, cname, entrypoint,
-                    cores_for_one_container, env, nshare, callback_url)
-            for ip in ips:
-                ip.assigned_to_container(c)
-            notifier.notify_agent(c)
-            add_container_for_agent(c)
-            add_container_backends(c)
-            cids.append(cid)
-            backends.extend(c.get_backends())
-            # 略过清理工作
+        # 为容器创建网络栈
+        # 同时把各种信息都记录下来
+        # 如果失败, 清除掉所有记录和宿主机上的容器
+        # 循环下一次尝试
+        cidrs = [n.netspace for n in networks]
+        if not ipam.allocate_ips(cidrs, cid, spec_ips):
+            _clean_failed_containers(cid)
             continue
 
-        _clean_failed_containers(host, cid, cores_for_one_container, nshare, ips)
+        notifier.notify_agent(c)
+        add_container_for_agent(c)
+        add_container_backends(c)
+        cids.append(cid)
+        backends.extend(c.get_backends())
 
     health_check = entry.get('health_check', '')
     if health_check and backends:

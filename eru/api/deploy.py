@@ -9,8 +9,9 @@ from eru.utils import is_strict_url
 from eru.utils.decorator import check_request_json
 
 from eru import consts
+from eru.ipam import ipam
 from eru.clients import rds
-from eru.models import App, Group, Pod, Task, Network, Container, Host
+from eru.models import App, Group, Pod, Task, Container, Host
 from eru.async.task import (
     create_containers_with_macvlan,
     build_docker_image,
@@ -19,7 +20,6 @@ from eru.async.task import (
 from eru.helpers.scheduler import average_schedule, centralized_schedule
 
 from .bp import create_api_blueprint
-
 
 bp = create_api_blueprint('deploy', __name__, url_prefix='/api/deploy')
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def create_private(group_name, pod_name, appname):
     if not ncontainer:
         abort(400, 'ncontainer must be > 0')
 
-    networks = Network.get_multi(data.get('networks', []))
+    networks = [ipam.get_pool(n) for n in data.get('networks', [])]
     spec_ips = data.get('spec_ips', [])
     appconfig = version.appconfig
 
@@ -113,7 +113,7 @@ def create_public(group_name, pod_name, appname):
     if callback_url and not is_strict_url(callback_url):
         abort(400, 'callback_url must starts with http:// or https://')
 
-    networks = Network.get_multi(data.get('networks', []))
+    networks = [ipam.get_pool(n) for n in data.get('networks', [])]
     spec_ips = data.get('spec_ips', [])
     appconfig = version.appconfig
 

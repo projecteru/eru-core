@@ -39,7 +39,7 @@ class IP(Base, IPMixin):
 
     __tablename__ = 'ip'
 
-    ipnum = db.Column(db.Integer, nullable=False, default=0)
+    ipnum = db.Column(db.Integer, nullable=False, default=0, unique=True)
     vethname = db.Column(db.String(50), nullable=False, default='')
     network_id = db.Column(db.Integer, db.ForeignKey('network.id'))
     container_id = db.Column(db.Integer, db.ForeignKey('container.id'))
@@ -54,6 +54,19 @@ class IP(Base, IPMixin):
         db.session.add(ip)
         db.session.commit()
         return ip
+
+    @classmethod
+    def get_by_value(cls, value):
+        return cls.query.filter_by(ipnum=value).first()
+
+    @classmethod
+    def get_by_container(cls, container_id):
+        return cls.query.filter_by(container_id=container_id).all()
+
+    @classmethod
+    def delete_by_network(cls, network_id):
+        cls.query.filter_by(network_id=network_id).delete()
+        db.session.commit()
 
     def set_vethname(self, vethname):
         self.vethname = vethname
@@ -280,6 +293,12 @@ class Network(Base):
             rds.srem(self.gatekey, ipnum)
         rds.sadd(self.storekey, ipnum)
         return True
+
+    def delete(self):
+        IP.delete_by_network(self.id)
+        rds.delete(self.storekey, self.gatekey)
+        db.session.delete(self)
+        db.session.commit()
 
     def to_dict(self):
         d = super(Network, self).to_dict()

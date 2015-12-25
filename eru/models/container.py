@@ -79,6 +79,11 @@ class Container(Base, PropsMixin):
     def get_by_container_id(cls, cid):
         return cls.query.filter(cls.container_id.like('{}%'.format(cid))).first()
 
+    @classmethod
+    def delete_by_container_id(cls, cid):
+        cls.query.filter_by(container_id=cid).delete()
+        db.session.commit()
+
     @property
     def appname(self):
         return self.name.rsplit('_', 2)[0]
