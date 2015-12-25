@@ -33,6 +33,11 @@ class MacVLANIPAM(BaseIPAM):
         return Network.list_networks()
 
     def allocate_ips(self, cidrs, container_id, spec_ips=None):
+        """
+        allocate ips for container_id, one ip per one cidr.
+        if spec_ips is given, then the ip will be in spec_ips.
+        note, for history reasons cidrs should always be given.
+        """
 
         def _release_ips(ips):
             for ip in ips:
@@ -71,6 +76,21 @@ class MacVLANIPAM(BaseIPAM):
                 ip.set_vethname(r['veth'])
                 ip.assigned_to_container(container)
         return True
+
+    def reallocate_ips(self, container_id):
+        """
+        refresh ips on container_id.
+        first, release all ips container occupied, then bind them as spec_ips.
+        """
+        container = Container.get_by_container_id(container_id)
+        ips = container.ips.all()
+        cidrs = [ip.network.netspace for ip in ips]
+        spec_ips = [ip.address for ip in ips]
+
+        for ip in ips:
+            ip.release()
+
+        return self.allocate_ips(cidrs, container_id, spec_ips)
 
     def release_ip(self, address):
         ip = IP.get_by_value(address.value)

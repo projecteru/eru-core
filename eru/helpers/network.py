@@ -9,19 +9,26 @@ logger = logging.getLogger(__name__)
 
 
 @retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
-def _bind_container_ip_http(cidrs, container):
-    return ipam.allocate_ips(cidrs, container.container_id)
+def _bind_container_ip(cidrs, container, spec_ips=None):
+    return ipam.allocate_ips(cidrs, container.container_id, spec_ips=spec_ips)
 
 
-def bind_container_ip(container, cidrs):
+def bind_container_ip(container, cidrs, spec_ips=None):
     try:
-        _bind_container_ip_http(cidrs, container)
+        _bind_container_ip(cidrs, container, spec_ips=spec_ips)
     except retrying.RetryError:
         logger.info('still failed after 5 times retry, %s, %s' % (container.container_id, cidrs))
         pass
 
 
+@retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
+def _rebind_container_ip(container):
+    return ipam.reallocate_ips(container.container_id)
+
+
 def rebind_container_ip(container):
-    ips = container.ips.all()
-    cidrs = [ip.network.netspace for ip in ips]
-    bind_container_ip(container, cidrs)
+    try:
+        _rebind_container_ip(container)
+    except retrying.RetryError:
+        logger.info('still failed after 5 times retry, %s' % container.container_id)
+        pass
