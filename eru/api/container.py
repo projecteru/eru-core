@@ -3,13 +3,13 @@
 from flask import current_app, request, abort
 
 from eru import consts
+from eru.ipam import ipam
 from eru.async import dockerjob
 from eru.clients import rds
-from eru.models import Container, Network
+from eru.models import Container
 from eru.helpers.network import rebind_container_ip, bind_container_ip
 
 from .bp import create_api_blueprint
-
 
 bp = create_api_blueprint('container', __name__, url_prefix='/api/container')
 
@@ -109,16 +109,11 @@ def bind_network(cid):
         abort(400, 'Container use host network mode')
 
     network_names = data.get('networks', [])
-    networks = filter(None, [Network.get_by_name(n) for n in network_names])
+    networks = [ipam.get_pool(n) for n in network_names]
     if not networks:
         abort(400, 'network empty')
 
-    ips = filter(None, [n.acquire_ip() for n in networks])
-    if not ips:
-        abort(400, 'no ip available')
+    cidrs = [n.netspace for n in networks if n]
 
-    nid = max([ip.network_id for ip in c.ips.all()] + [-1]) + 1
-    bind_container_ip(c, ips, nid=nid)
-    for ip in ips:
-        ip.assigned_to_container(c)
-    return {'r': 0, 'msg': ips}
+    bind_container_ip(c, cidrs)
+    return {'r': 0, 'msg': cidrs}

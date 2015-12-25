@@ -3,7 +3,8 @@
 from flask import abort, g, current_app, request
 
 from eru import consts
-from eru.models import Host, Network, VLanGateway
+from eru.ipam import ipam
+from eru.models import Host, VLanGateway
 from eru.helpers.docker import save_docker_certs
 
 from .bp import create_api_blueprint
@@ -71,7 +72,7 @@ def macvlan(id_or_name):
 
     data = request.get_json()
     netname = data.get('network', '')
-    network = Network.get_by_name(netname)
+    network = ipam.get_pool(netname)
     if not network:
         abort(404, 'Network not found')
 
