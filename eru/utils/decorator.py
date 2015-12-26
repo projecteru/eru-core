@@ -9,7 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from eru.clients import rds
-from eru.models.base import Base
+from eru.models.base import Jsonized
 
 def redis_lock(fmt):
     def _redis_lock(f):
@@ -57,7 +57,7 @@ def check_request_args(keys):
 class EruJSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
-        if isinstance(obj, Base):
+        if isinstance(obj, Jsonized):
             return obj.to_dict()
         if isinstance(obj, datetime):
             return obj.strftime('%Y-%m-%d %H:%M:%S')

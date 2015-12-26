@@ -18,6 +18,12 @@ class BaseIPAM(object):
         """allocate ip for container_id with cidrs,
         can specify ips with spec_ips"""
 
+    def reallocate_ips(self, container_id):
+        """rebind ips back to container_id"""
+
+    def get_ip_by_container(self, container_id):
+        """get ip assigned to container_id"""
+
     def release_ip(self, address):
         """release an IP and return it to the pool"""
 
