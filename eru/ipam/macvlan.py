@@ -107,13 +107,6 @@ class MacVLANIPAM(BaseIPAM):
             return []
         return [WrappedIP.from_macvlan(i) for i in container.ips.all()]
 
-    def release_ip(self, address):
-        ip = IP.get_by_value(address.value)
-        if not ip:
-            return
-
-        ip.release()
-
     def release_ip_by_container(self, container_id):
         from eru.models.container import Container
 
