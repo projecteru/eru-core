@@ -64,6 +64,7 @@ class CalicoIPAM(BaseIPAM):
         rds.delete(_POOL_NAME_KEY % cidr)
         rds.delete(_POOL_CIDR_KEY % name)
         _ipam.remove_ip_pool(4, cidr)
+        _ipam.remove_profile(name)
 
     def get_pool(self, ip):
         """ip can be either an IP or a CIDR"""
