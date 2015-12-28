@@ -36,6 +36,17 @@ class WrappedIP(Jsonized):
     def from_calico(cls, ip):
         return None
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'ipnum': self.ipnum,
+            'vethname': self.vethname,
+            'network_id': self.network_id,
+            'container_id': self.container_id,
+            'address': self.address,
+            'vlan_address': self.vlan_address,
+        }
+
 
 class WrappedNetwork(Jsonized):
 
@@ -65,3 +76,14 @@ class WrappedNetwork(Jsonized):
     @classmethod
     def from_calico(cls, network):
         return None
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'netspace': self.netspace,
+            'cidr': self.cidr,
+            'gateway_count': self.gateway_count,
+            'pool_size': self.pool_size,
+            'used_count': self.used_count,
+        }
