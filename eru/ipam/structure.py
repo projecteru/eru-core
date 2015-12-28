@@ -81,10 +81,10 @@ class WrappedNetwork(Jsonized):
                 network)
 
     @classmethod
-    def from_calico(cls, network):
+    def from_calico(cls, network, name):
         """network is calico IPPool object"""
         cidr_str = str(network.cidr)
-        return cls(0, cidr_str, cidr_str, cidr_str, 0, 0, 0, network)
+        return cls(0, name, cidr_str, cidr_str, 0, 0, 0, network)
 
     def to_dict(self):
         return {
