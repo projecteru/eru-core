@@ -40,11 +40,7 @@ class Agent(object):
 
     def add_container_vlan(self, container_id, task_id, ip_list):
         url = '/api/container/%s/addvlan/' % container_id
-        ips = [{'nid': n, 'ip': ip} for (n, ip) in ip_list]
-        payload = {
-            'task_id': task_id,
-            'ips': ips,
-        }
+        payload = [{'nid': n, 'ip': ip} for (n, ip) in ip_list]
         return self._request('POST', url, payload)
 
     def set_default_route(self, container_id, ip):
@@ -54,5 +50,6 @@ class Agent(object):
 
     def add_container_calico(self, container_id, ip_list):
         url = '/api/container/%s/addcalico/' % container_id
-        payload = {'ips': ip_list}
+        # TODO 这个profile啊要想下怎么搞, 现在可以这么玩
+        payload = [{'nid': n, 'ip': ip, 'profile': 'eru'} for (n, ip) in ip_list]
         return self._request('POST', url, payload)
