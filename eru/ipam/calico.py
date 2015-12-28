@@ -7,6 +7,7 @@ from pycalico.datastore import ETCD_SCHEME_ENV, ETCD_AUTHORITY_ENV
 from pycalico.datastore_datatypes import IPPool
 
 from eru.agent import get_agent
+from eru.clients import rds
 from eru.config import ETCD
 from eru.ipam.base import BaseIPAM
 from eru.ipam.structure import WrappedIP, WrappedNetwork
@@ -19,6 +20,8 @@ def _get_client():
 
 
 _ipam = _get_client()
+_POOL_NAME_KEY = 'eru:ipam:calico:%s:pool'
+_POOL_CIDR_KEY = 'eru:ipam:calico:%s:cidr'
 
 
 def _get_container_ips(container_id):
@@ -40,16 +43,16 @@ class CalicoIPAM(BaseIPAM):
     """
 
     def add_ip_pool(self, cidr, name):
-        # TODO 这里的name其实没有用上
-        # 但是之后是可以用的, 比如丢在redis里, 用作profile的名字
-        # 可以做到子网隔离.
         try:
             pool = IPPool(cidr, masquerade=True, ipam=True)
         except AddrFormatError:
             return
 
         _ipam.add_ip_pool(4, pool)
-        return WrappedNetwork.from_calico(pool)
+        _ipam.create_profile(name)
+        rds.set(_POOL_NAME_KEY % cidr, name)
+        rds.set(_POOL_CIDR_KEY % name, cidr)
+        return WrappedNetwork.from_calico(pool, name)
 
     def remove_ip_pool(self, cidr):
         try:
@@ -57,20 +60,33 @@ class CalicoIPAM(BaseIPAM):
         except AddrFormatError:
             return
 
+        name = rds.get(_POOL_NAME_KEY % cidr)
+        rds.delete(_POOL_NAME_KEY % cidr)
+        rds.delete(_POOL_CIDR_KEY % name)
         _ipam.remove_ip_pool(4, cidr)
+        _ipam.remove_profile(name)
 
-    def get_pool(self, cidr):
-        try:
-            cidr = IPNetwork(cidr)
-        except AddrFormatError:
-            return
+    def get_pool(self, ip):
+        """ip can be either an IP or a CIDR"""
+        if '/' in ip:
+            try:
+                ip = IPAddress(IPNetwork(ip).first)
+            except AddrFormatError:
+                return
+        else:
+            try:
+                ip = IPAddress(ip)
+            except AddrFormatError:
+                return
 
-        pool = _ipam.get_pool(IPAddress(cidr.first))
-        return WrappedNetwork.from_calico(pool)
+        pool = _ipam.get_pool(ip)
+        name = rds.get(_POOL_NAME_KEY % pool.cidr)
+        return WrappedNetwork.from_calico(pool, name)
 
     def get_all_pools(self):
         pools = _ipam.get_ip_pools(4)
-        return [WrappedNetwork.from_calico(p) for p in pools]
+        names = [rds.get(_POOL_NAME_KEY % p.cidr) for p in pools]
+        return [WrappedNetwork.from_calico(p, name) for p, name in zip(pools, names)]
 
     def allocate_ips(self, cidrs, container_id, spec_ips=None):
         """
@@ -83,19 +99,24 @@ class CalicoIPAM(BaseIPAM):
         from eru.models.container import Container
 
         def _release_ips(ips):
-            ips = set([IPAddress(i) for i in ips])
+            try:
+                ips = set([IPAddress(i) for i in ips])
+            except AddrFormatError:
+                return
             _ipam.release_ips(set(ips))
 
         container = Container.get_by_container_id(container_id)
         agent = get_agent(container.host)
         ip_list = spec_ips or cidrs
 
+        pools = [self.get_pool(ip) for ip in ip_list]
+        profiles = [p.name for p in pools]
+
         count = len(_get_container_ips(container.container_id))
         nstart = count+1 if count > 0 else 0
         nids = range(nstart, nstart+len(ip_list))
-        ip_list = zip(nids, ip_list)
 
-        resp = agent.add_contianer_calico(container_id, ip_list)
+        resp = agent.add_contianer_calico(container_id, zip(nids, ip_list, profiles))
         if resp.status_code != 200:
             _release_ips(ip_list)
             return False

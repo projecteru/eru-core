@@ -50,6 +50,5 @@ class Agent(object):
 
     def add_container_calico(self, container_id, ip_list):
         url = '/api/container/%s/addcalico/' % container_id
-        # TODO 这个profile啊要想下怎么搞, 现在可以这么玩
-        payload = [{'nid': n, 'ip': ip, 'profile': 'eru'} for (n, ip) in ip_list]
+        payload = [{'nid': n, 'ip': ip, 'profile': profile} for (n, ip, profile) in ip_list]
         return self._request('POST', url, payload)
