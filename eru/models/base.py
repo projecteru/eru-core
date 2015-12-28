@@ -10,7 +10,7 @@ from eru.clients import rds
 class Jsonized(object):
 
     def to_dict(self):
-        return {k: getattr(self, k) for k in dir(self) if not k.startswith('_')}
+        return {}
 
 
 class Base(Jsonized, db.Model):
