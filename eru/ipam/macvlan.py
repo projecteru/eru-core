@@ -30,11 +30,11 @@ class MacVLANIPAM(BaseIPAM):
             n = Network.get(cidr)
         else:
             n = Network.get_by_name(cidr) or Network.get_by_netspace(cidr)
-        return n and WrappedNetwork.from_macvlan(n.netspace) or None
+        return n and WrappedNetwork.from_macvlan(n) or None
 
     def get_all_pools(self):
         networks = Network.list_networks()
-        return [WrappedNetwork.from_macvlan(n.netspace) for n in networks if n]
+        return [WrappedNetwork.from_macvlan(n) for n in networks if n]
 
     def allocate_ips(self, cidrs, container_id, spec_ips=None):
         """
