@@ -40,6 +40,9 @@ class CalicoIPAM(BaseIPAM):
     """
 
     def add_ip_pool(self, cidr, name):
+        # TODO 这里的name其实没有用上
+        # 但是之后是可以用的, 比如丢在redis里, 用作profile的名字
+        # 可以做到子网隔离.
         try:
             pool = IPPool(cidr, masquerade=True, ipam=True)
         except AddrFormatError:
@@ -86,6 +89,11 @@ class CalicoIPAM(BaseIPAM):
         container = Container.get_by_container_id(container_id)
         agent = get_agent(container.host)
         ip_list = spec_ips or cidrs
+
+        count = len(_get_container_ips(container.container_id))
+        nstart = count+1 if count > 0 else 0
+        nids = range(nstart, nstart+len(ip_list))
+        ip_list = zip(nids, ip_list)
 
         resp = agent.add_contianer_calico(container_id, ip_list)
         if resp.status_code != 200:
