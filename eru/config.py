@@ -45,6 +45,8 @@ REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 REDIS_POOL_SIZE = int(os.getenv('REDIS_POOL_SIZE', '100'))
 
+ETCD = os.getenv('ETCD', '127.0.0.1:2379')
+
 CELERY_ACCEPT_CONTENT = os.getenv('CELERY_ACCEPT_CONTENT', 'pickle,json,msgpack,yaml').split(',')
 CELERY_ENABLE_UTC = bool(os.getenv('CELERY_ENABLE_UTC', ''))
 CELERY_FORCE_ROOT = bool(os.getenv('CELERY_FORCE_ROOT', ''))

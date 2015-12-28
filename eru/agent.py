@@ -51,3 +51,8 @@ class Agent(object):
         url = '/api/container/%s/setroute/' % container_id
         payload = {'ip': ip}
         return self._request('POST', url, payload)
+
+    def add_container_calico(self, container_id, ip_list):
+        url = '/api/container/%s/addcalico/' % container_id
+        payload = {'ips': ip_list}
+        return self._request('POST', url, payload)

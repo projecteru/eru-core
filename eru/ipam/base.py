@@ -24,8 +24,5 @@ class BaseIPAM(object):
     def get_ip_by_container(self, container_id):
         """get ip assigned to container_id"""
 
-    def release_ip(self, address):
-        """release an IP and return it to the pool"""
-
     def release_ip_by_container(self, container_id):
         """release all IPs with container_id"""

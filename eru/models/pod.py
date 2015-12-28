@@ -77,7 +77,8 @@ class Pod(Base):
                 .order_by(Host.count).limit(limit).all()
 
     def get_random_host(self):
-        return self.hosts.limit(1).all()[0]
+        q = self.hosts.limit(1).all()
+        return q and q[0] or None
 
     def host_count(self):
         return self.hosts.count()

@@ -163,6 +163,9 @@ def build_image(group_name, pod_name, appname):
         base = base + ':latest'
 
     host = Host.get_random_public_host() or pod.get_random_host()
+    if not host:
+        return {'r': 1, 'msg': 'no host is available'}
+
     task = Task.create(consts.TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
         args=(task.id, base),

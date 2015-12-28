@@ -2,6 +2,7 @@
 
 """Some structures used outside ipam as return value."""
 
+from netaddr import IPAddress, AddrFormatError
 from eru.models.base import Jsonized
 
 
@@ -33,8 +34,10 @@ class WrappedIP(Jsonized):
                 ip.container_id, ip.address, ip.vlan_address, ip)
 
     @classmethod
-    def from_calico(cls, ip):
-        return None
+    def from_calico(cls, ip, pool, container_id):
+        hostmask = str(pool).split('/')[-1]
+        vlan_address = '%s/%s' % (ip, hostmask)
+        return cls(0, ip.value, '', 0, container_id, str(ip), vlan_address, ip)
 
     def to_dict(self):
         return {
@@ -62,6 +65,10 @@ class WrappedNetwork(Jsonized):
         self._raw = raw
 
     def __contains__(self, ip):
+        try:
+            ip = IPAddress(ip)
+        except AddrFormatError:
+            return False
         return ip in self._raw
 
     def __getattr__(self, name):
@@ -75,7 +82,9 @@ class WrappedNetwork(Jsonized):
 
     @classmethod
     def from_calico(cls, network):
-        return None
+        """network is calico IPPool object"""
+        cidr_str = str(network.cidr)
+        return cls(0, cidr_str, cidr_str, cidr_str, 0, 0, 0, network)
 
     def to_dict(self):
         return {
