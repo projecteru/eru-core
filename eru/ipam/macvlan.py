@@ -49,7 +49,9 @@ class MacVLANIPAM(BaseIPAM):
                 ip.release()
 
         container = Container.get_by_container_id(container_id)
-        nid = max([ip.network_id for ip in container.ips.all()] + [-1]) + 1
+        count = len(container.ips.all())
+        nstart = count+1 if count > 0 else 0
+        nids = range(nstart, nstart+len(spec_ips or cidrs))
 
         networks = [Network.get_by_netspace(cidr) for cidr in cidrs]
         networks = [n for n in networks if n]
@@ -63,7 +65,7 @@ class MacVLANIPAM(BaseIPAM):
         ip_dict = {ip.vlan_address: ip for ip in ips}
 
         agent = get_agent(container.host)
-        ip_list = [(nid or ip.vlan_seq_id, ip.vlan_address) for ip in ips]
+        ip_list = [(nid, ip.vlan_address) for nid, ip in zip(nids, ips)]
 
         resp = agent.add_container_vlan(container_id, gen_salt(8), ip_list)
         if resp.status_code != 200:
