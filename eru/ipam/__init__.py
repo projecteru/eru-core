@@ -1,12 +1,14 @@
 # coding: utf-8
 
 from eru.config import NETWORK_PROVIDER
-from eru.ipam.macvlan import MacVLANIPAM
-from eru.ipam.calico import CalicoIPAM
 
-_providers = {
-    'macvlan': MacVLANIPAM,
-    'calico': CalicoIPAM,
-}
+ipam = None
 
-ipam = _providers[NETWORK_PROVIDER]()
+if NETWORK_PROVIDER == 'macvlan':
+    from eru.ipam.macvlan import MacVLANIPAM
+    ipam = MacVLANIPAM()
+elif NETWORK_PROVIDER == 'calico':
+    from eru.ipam.calico import CalicoIPAM
+    ipam = CalicoIPAM()
+else:
+    raise ValueError('Network Provider must be either macvlan or calico')

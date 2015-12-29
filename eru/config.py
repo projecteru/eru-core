@@ -81,6 +81,3 @@ except ImportError:
 SQLALCHEMY_DATABASE_URI = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(MYSQL_USER,
         MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE)
 ADMINS = [line.split(':') for line in CELERY_ADMINS.split(',')]
-
-if NETWORK_PROVIDER not in ('macvlan', 'calico'):
-    raise ValueError('Network Provider must be in macvlan / calico')
