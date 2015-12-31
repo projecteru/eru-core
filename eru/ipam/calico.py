@@ -157,7 +157,7 @@ class CalicoIPAM(BaseIPAM):
 
         for endpoint in endpoints:
             ip_set = set([IPAddress(i) for i in endpoint.ipv4_nets])
-            _ipam.release_ip(ip_set)
+            _ipam.release_ips(ip_set)
             _ipam.remove_endpoint(endpoint)
 
         try:
