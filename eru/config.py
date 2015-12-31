@@ -7,7 +7,7 @@ ERU_OPLOG_PATH = os.getenv('ERU_OPLOG_PATH', '/tmp/op.log')
 ERU_TIMEOUT = int(os.getenv('ERU_TIMEOUT', '300'))
 ERU_WORKERS = int(os.getenv('ERU_WORKERS', '4'))
 ERU_WORKER_CLASS = os.getenv('ERU_WORKER_CLASS', 'geventwebsocket.gunicorn.workers.GeventWebSocketWorker')
-ERU_AGENT_PORT = int(os.getenv('ERU_AGENT_PORT', '11234'))
+ERU_AGENT_PORT = int(os.getenv('ERU_AGENT_PORT', '12345'))
 
 NETWORK_PROVIDER = os.getenv('NETWORK_PROVIDER', 'macvlan')
 

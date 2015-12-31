@@ -255,9 +255,9 @@ def _create_task(version, host, ncontainer, cores, nshare, networks,
     # host 模式不允许绑定 vlan
     entry = version.appconfig['entrypoints'][entrypoint]
     if entry.get('network_mode') == 'host':
-        network_ids = []
+        cidrs = []
     else:
-        network_ids = [n.id for n in networks]
+        cidrs = [n.netspace for n in networks]
 
     task_props = {
         'ncontainer': ncontainer,
@@ -268,7 +268,7 @@ def _create_task(version, host, ncontainer, cores, nshare, networks,
         'ports': ports,
         'args': args,
         'nshare': nshare,
-        'networks': network_ids,
+        'networks': cidrs,
         'image': image,
         'route': entry.get('network_route', ''),
         'callback_url': callback_url,
@@ -279,7 +279,7 @@ def _create_task(version, host, ncontainer, cores, nshare, networks,
 
     try:
         create_containers_with_macvlan.apply_async(
-            args=(task.id, ncontainer, nshare, cores, network_ids, spec_ips),
+            args=(task.id, ncontainer, nshare, cores, cidrs, spec_ips),
             task_id='task:%d' % task.id
         )
     except Exception as e:
