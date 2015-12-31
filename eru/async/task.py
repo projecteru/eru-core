@@ -13,7 +13,7 @@ from eru.config import DOCKER_REGISTRY
 from eru.clients import rds
 from eru.ipam import ipam
 from eru.utils.notify import TaskNotifier
-from eru.models import Container, Task, Network, Image
+from eru.models import Container, Task, Image
 
 from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms, falcon_remove_alarms
 from eru.helpers.check import wait_health_check
@@ -193,7 +193,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         spec_ips = []
 
     need_network = bool(network_ids)
-    networks = Network.get_multi(network_ids)
+    networks = [ipam.get_pool(n) for n in network_ids]
 
     notifier = TaskNotifier(task)
     host = task.host
