@@ -71,12 +71,12 @@ class CalicoIPAM(BaseIPAM):
         if '/' in ip:
             try:
                 ip = IPAddress(IPNetwork(ip).first)
-            except AddrFormatError:
+            except (AddrFormatError, ValueError):
                 return
         else:
             try:
                 ip = IPAddress(ip)
-            except AddrFormatError:
+            except (AddrFormatError, ValueError):
                 return
 
         pool = _ipam.get_pool(ip)
@@ -101,7 +101,7 @@ class CalicoIPAM(BaseIPAM):
         def _release_ips(ips):
             try:
                 ips = set([IPAddress(i) for i in ips])
-            except AddrFormatError:
+            except (AddrFormatError, ValueError):
                 return
             _ipam.release_ips(set(ips))
 
