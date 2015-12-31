@@ -45,19 +45,19 @@ class CalicoIPAM(BaseIPAM):
     def add_ip_pool(self, cidr, name):
         try:
             pool = IPPool(cidr, masquerade=True, ipam=True)
-        except AddrFormatError:
+        except (AddrFormatError, ValueError):
             return
 
         _ipam.add_ip_pool(4, pool)
         _ipam.create_profile(name)
-        rds.set(_POOL_NAME_KEY % cidr, name)
-        rds.set(_POOL_CIDR_KEY % name, cidr)
+        rds.set(_POOL_NAME_KEY % pool.cidr, name)
+        rds.set(_POOL_CIDR_KEY % name, pool.cidr)
         return WrappedNetwork.from_calico(pool, name)
 
     def remove_ip_pool(self, cidr):
         try:
             cidr = IPNetwork(cidr)
-        except AddrFormatError:
+        except (AddrFormatError, ValueError):
             return
 
         name = rds.get(_POOL_NAME_KEY % cidr)
