@@ -115,8 +115,11 @@ class CalicoIPAM(BaseIPAM):
         count = len(_get_container_ips(container.container_id))
         nstart = count+1 if count > 0 else 0
         nids = range(nstart, nstart+len(ip_list))
+        appends = [True for _ in nids]
+        if count == 0:
+            appends[0] = False
 
-        resp = agent.add_container_calico(container_id, zip(nids, ip_list, profiles))
+        resp = agent.add_container_calico(container_id, zip(nids, ip_list, profiles, appends))
         if resp.status_code != 200:
             _release_ips(ip_list)
             return False
