@@ -30,11 +30,11 @@ def get_host(id_or_name):
 def create_host():
     """为了文件, 只好不用json了"""
     addr = request.form.get('addr', default='')
-    pod_name = request.form.get('pod_name', default='')
-    if not (addr and pod_name):
-        abort(400, 'Need addr and pod_name')
+    podname = request.form.get('podname', default='')
+    if not (addr and podname):
+        abort(400, 'Need addr and podname')
 
-    pod = Pod.get_by_name(pod_name)
+    pod = Pod.get_by_name(podname)
     if not pod:
         abort(400, 'No pod found')
 
