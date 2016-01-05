@@ -93,6 +93,12 @@ def macvlan(id_or_name):
         return DEFAULT_RETURN_VALUE
 
 
+@bp.route('/<id_or_name>/containers/', methods=['GET'])
+def list_host_containers(id_or_name):
+    host = _get_host(id_or_name)
+    return host.list_containers(g.start, g.limit)
+
+
 @bp.route('/<id_or_name>/<method>/', methods=['PUT'])
 def set_status(id_or_name, method):
     if method not in ('public', 'private', 'cure', 'down', 'kill'):
