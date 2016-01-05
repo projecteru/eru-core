@@ -30,16 +30,13 @@ build: "pip install -r ./req.txt"
     }
     rv = client.post('/api/app/register/', data=json.dumps(data), content_type='application/json')
     r = json.loads(rv.data)
-    assert rv.status_code == 200
-    assert r[u'r'] == 0
-    assert r[u'msg'] == u'ok'
+    assert rv.status_code == 201
     
     rv = client.get('/api/app/test_app/')
     r = json.loads(rv.data)
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
     assert r[u'git'] == data['git']
-    assert r[u'group_id'] is None
 
     rv = client.get('/api/app/random_app_name/')
     r = json.loads(rv.data)
@@ -101,16 +98,12 @@ build: "pip install -r ./req.txt"
     rv = client.put(url, data=json.dumps(envdata), content_type='application/json')
     r = json.loads(rv.data)
     assert rv.status_code == 200
-    assert r[u'r'] == 0
-    assert r[u'msg'] == u'ok'
 
     rv = client.get(url+'?env=prod')
     r = json.loads(rv.data)
     assert rv.status_code == 200
-    assert r[u'r'] == 0
-    assert r[u'msg'] == u'ok'
-    assert r[u'data']['TEST_APP_REDIS'] == 'test_app_redis'
-    assert r[u'data']['TEST_APP_MYSQL'] == 'test_app_mysqldsn'
+    assert r['TEST_APP_REDIS'] == 'test_app_redis'
+    assert r['TEST_APP_MYSQL'] == 'test_app_mysqldsn'
 
     # 没有 env 应该挂
     envdata.pop('env')
@@ -128,4 +121,3 @@ build: "pip install -r ./req.txt"
     rv = client.get(url+'?env=xxx')
     r = json.loads(rv.data)
     assert rv.status_code == 200
-    assert not r['data']

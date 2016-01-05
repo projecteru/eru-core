@@ -17,7 +17,7 @@ from eru.utils.ensure import ensure_dir_absent, ensure_file
 from eru.helpers.cloner import clone_code
 
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -151,7 +151,7 @@ def create_one_container(host, version, entrypoint, env='prod',
     binds = {'/proc/sys': {'bind': '/writable-proc/sys', 'ro': False}}
     binds.update(appconfig.get('binds', {}))
 
-    if config.ERU_CONTAINER_PERMDIR:
+    if config.ERU_CONTAINER_PERMDIR and entry.get('permdir', ''):
         permdir = config.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
         volumes.append(permdir)
@@ -230,7 +230,7 @@ def remove_host_containers(containers, host):
             client.remove_container(c.container_id)
         except docker.errors.APIError as e:
             if 'no such id' in str(e).lower():
-                logger.info('%s not found, just delete it' % c.container_id)
+                _log.info('%s not found, just delete it' % c.container_id)
                 continue
             raise
 
@@ -243,7 +243,7 @@ def remove_container_by_cid(cids, host):
             client.remove_container(cid)
         except docker.errors.APIError as e:
             if 'no such id' in str(e).lower():
-                logger.info('%s not found, just delete it' % cid)
+                _log.info('%s not found, just delete it' % cid)
                 continue
             raise
 
@@ -258,6 +258,6 @@ def remove_image(version, host):
         client.remove_image(image)
     except docker.errors.APIError as e:
         if 'no such image' in str(e).lower():
-            logger.info('%s not found, just delete it' % image)
+            _log.info('%s not found, just delete it' % image)
         else:
             raise

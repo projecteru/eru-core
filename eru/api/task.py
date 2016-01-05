@@ -6,7 +6,6 @@ from eru.models import Task
 from eru.clients import rds
 from .bp import create_api_blueprint
 
-
 bp = create_api_blueprint('task', __name__, url_prefix='/api/task')
 
 

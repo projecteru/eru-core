@@ -2,10 +2,10 @@
 
 import json
 import time
+import logging
 from more_itertools import chunked
 from itertools import izip_longest
 from celery import current_app
-from flask import current_app as current_flask
 
 from eru import consts
 from eru.async import dockerjob
@@ -17,6 +17,9 @@ from eru.models import Container, Task, Image
 
 from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms, falcon_remove_alarms
 from eru.helpers.check import wait_health_check
+
+_log = logging.getLogger(__name__)
+
 
 def add_container_backends(container):
     """单个container所拥有的后端服务
@@ -32,6 +35,7 @@ def add_container_backends(container):
     if backends:
         rds.sadd(entrypoint_key, *backends)
 
+
 def remove_container_backends(container):
     """删除单个container的后端服务
     并不删除有哪些entrypoint, 这些service discovery方便知道哪些没了"""
@@ -39,6 +43,7 @@ def remove_container_backends(container):
     backends = container.get_backends()
     if backends:
         rds.srem(entrypoint_key, *backends)
+
 
 # 删除在下面
 def add_container_for_agent(container):
@@ -50,18 +55,20 @@ def add_container_for_agent(container):
     key = 'eru:agent:{0}:containers:meta'.format(host.name)
     rds.hset(key, container.container_id, json.dumps(container.meta))
 
+
 def publish_to_service_discovery(*appnames):
     for appname in appnames:
         rds.publish('eru:discovery:published', appname)
+
 
 @current_app.task()
 def build_docker_image(task_id, base):
     task = Task.get(task_id)
     if not task:
-        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
+        _log.error('Task (id=%s) not found, quit', task_id)
         return
 
-    current_flask.logger.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
+    _log.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
     notifier = TaskNotifier(task)
 
     app = task.app
@@ -70,20 +77,20 @@ def build_docker_image(task_id, base):
 
     try:
         repo, tag = base.split(':', 1)
-        current_flask.logger.info('Task<id=%s>: Pull base image (base=%s)', task_id, base)
+        _log.info('Task<id=%s>: Pull base image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.pull_image(host, repo, tag))
 
-        current_flask.logger.info('Task<id=%s>: Build image (base=%s)', task_id, base)
+        _log.info('Task<id=%s>: Build image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.build_image(host, version, base))
 
-        current_flask.logger.info('Task<id=%s>: Push image (base=%s)', task_id, base)
+        _log.info('Task<id=%s>: Push image (base=%s)', task_id, base)
         last_line = notifier.store_and_broadcast(dockerjob.push_image(host, version))
         dockerjob.remove_image(version, host)
     except Exception, e:
         task.finish(consts.TASK_FAILED)
         task.reason = str(e.message)
         notifier.pub_fail()
-        current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
+        _log.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         # 粗暴的判断, 如果推送成功说明build成功
         if 'Digest: sha256' in last_line:
@@ -98,18 +105,19 @@ def build_docker_image(task_id, base):
             task.finish(consts.TASK_FAILED)
             task.reason = 'failed to push image to image hub'
             notifier.pub_fail()
-        current_flask.logger.info('Task<id=%s>: Done', task_id)
+        _log.info('Task<id=%s>: Done', task_id)
     finally:
         notifier.pub_build_finish()
+
 
 @current_app.task()
 def remove_containers(task_id, cids, rmi=False):
     task = Task.get(task_id)
     if not task:
-        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
+        _log.error('Task (id=%s) not found, quit', task_id)
         return
 
-    current_flask.logger.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
+    _log.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
     container_ids = [c.container_id for c in containers if c]
@@ -121,7 +129,7 @@ def remove_containers(task_id, cids, rmi=False):
         rds.mset(**flags)
         for c in containers:
             remove_container_backends(c)
-            current_flask.logger.info('Task<id=%s>: Container (cid=%s) backends removed',
+            _log.info('Task<id=%s>: Container (cid=%s) backends removed',
                     task_id, c.container_id[:7])
         appnames = {c.appname for c in containers}
         publish_to_service_discovery(*appnames)
@@ -129,17 +137,17 @@ def remove_containers(task_id, cids, rmi=False):
         time.sleep(3)
 
         dockerjob.remove_host_containers(containers, host)
-        current_flask.logger.info('Task<id=%s>: Containers (cids=%s) removed', task_id, cids)
+        _log.info('Task<id=%s>: Containers (cids=%s) removed', task_id, cids)
         if rmi:
             try:
                 dockerjob.remove_image(task.version, host)
             except Exception as e:
-                current_flask.logger.error('Task<id=%s>: Exception (e=%s), fail to remove image', task_id, e)
+                _log.error('Task<id=%s>: Exception (e=%s), fail to remove image', task_id, e)
     except Exception as e:
         task.finish(consts.TASK_FAILED)
         task.reason = str(e.message)
         notifier.pub_fail()
-        current_flask.logger.error('Task<id=%s>: Exception (e=%s)', task_id, e)
+        _log.error('Task<id=%s>: Exception (e=%s)', task_id, e)
     else:
         for c in containers:
             c.delete()
@@ -149,7 +157,7 @@ def remove_containers(task_id, cids, rmi=False):
         if container_ids:
             rds.hdel('eru:agent:%s:containers:meta' % host.name, *container_ids)
         rds.delete(*flags.keys())
-        current_flask.logger.info('Task<id=%s>: Done', task_id)
+        _log.info('Task<id=%s>: Done', task_id)
 
     if not version.containers.count():
         falcon_remove_alarms(version)
@@ -169,7 +177,7 @@ def _iter_cores(cores, ncontainer):
 
 def _clean_failed_containers(cid):
     # 清理掉失败的容器, 释放核, 释放ip
-    current_flask.logger.info('Cleaning failed container (cid=%s)', cid)
+    _log.info('Cleaning failed container (cid=%s)', cid)
     container = Container.get_by_container_id(cid)
     if not container:
         return
@@ -183,10 +191,10 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     """
     执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
-    current_flask.logger.info('Task<id=%s>: Started', task_id)
+    _log.info('Task<id=%s>: Started', task_id)
     task = Task.get(task_id)
     if not task:
-        current_flask.logger.error('Task (id=%s) not found, quit', task_id)
+        _log.error('Task (id=%s) not found, quit', task_id)
         return
 
     if spec_ips is None:
@@ -247,7 +255,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         urls = [b + health_check for b in backends]
         if not wait_health_check(urls):
             # TODO 这里要么回滚要么报警
-            current_flask.logger.info('Task<id=%s>: Done, but something went error', task_id)
+            _log.info('Task<id=%s>: Done, but something went error', task_id)
             return
 
     publish_to_service_discovery(version.name)
@@ -260,4 +268,4 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     falcon_all_graphs(version)
     falcon_all_alarms(version)
 
-    current_flask.logger.info('Task<id=%s>: Done', task_id)
+    _log.info('Task<id=%s>: Done', task_id)

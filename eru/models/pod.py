@@ -1,11 +1,11 @@
-#!/usr/bin/python
-#coding:utf-8
+# coding:utf-8
 
 import sqlalchemy.exc
 
 from eru.models import db
 from eru.models.base import Base
 from eru.config import DEFAULT_CORE_SHARE, DEFAULT_MAX_SHARE_CORE
+
 
 class Pod(Base):
     __tablename__ = 'pod'
@@ -61,20 +61,12 @@ class Pod(Base):
             q = q.limit(limit)
         return q.all()
 
-    def assigned_to_group(self, group):
-        """这个 pod 就归这个 group 啦."""
-        if not group:
-            return False
-        group.pods.append(self)
-        db.session.add(group)
-        db.session.commit()
-        return True
-
     def get_free_public_hosts(self, limit):
-        """没有被标记给 group 的 hosts"""
         from .host import Host
-        return self.hosts.filter(Host.group_id == None)\
-                .order_by(Host.count).limit(limit).all()
+        return self.hosts.filter(Host.is_public == True).order_by(Host.count).limit(limit).all()
+ 
+    def get_private_hosts(self):
+        return [h for h in self.hosts if not h.is_public]
 
     def get_random_host(self):
         q = self.hosts.limit(1).all()

@@ -1,6 +1,5 @@
 import os
 
-DEBUG = bool(os.getenv('DEBUG', ''))
 ERU_BIND = os.getenv('ERU_BIND', '0.0.0.0:5000')
 ERU_DAEMON = bool(os.getenv('ERU_DAEMON', ''))
 ERU_OPLOG_PATH = os.getenv('ERU_OPLOG_PATH', '/tmp/op.log')
@@ -19,7 +18,7 @@ DOCKER_REGISTRY_USERNAME = os.getenv('DOCKER_REGISTRY_USERNAME', '')
 DOCKER_REGISTRY_PASSWORD = os.getenv('DOCKER_REGISTRY_PASSWORD', '')
 DOCKER_REGISTRY_EMAIL = os.getenv('DOCKER_REGISTRY_EMAIL', '')
 
-DOCKER_LOG_DRIVER = os.getenv('DOCKER_LOG_DRIVER', 'json-file')
+DOCKER_LOG_DRIVER = os.getenv('DOCKER_LOG_DRIVER', 'none')
 DOCKER_NETWORK_MODE = os.getenv('DOCKER_NETWORK_MODE', 'bridge')
 DOCKER_NETWORK_DISABLED = bool(os.getenv('DOCKER_NETWORK_DISABLED', ''))
 

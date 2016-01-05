@@ -3,7 +3,7 @@
 import docker
 from docker.utils import kwargs_from_env
 
-from eru.models import App, Group, Pod, Host, Container
+from eru.models import App, Pod, Host, Container
 from eru.helpers.scheduler import centralized_schedule
 
 from tests.utils import random_sha1, random_string, random_uuid, random_ipv4
@@ -31,18 +31,13 @@ def create_test_suite():
     appconfig.update(**appyaml)
     appconfig.save()
 
-    group = Group.create('group', 'group')
     pod = Pod.create('pod', 'pod')
-    pod.assigned_to_group(group)
 
     hosts = [Host.create(pod, random_ipv4(), random_string(prefix='host'),
         random_uuid(), 4, 4096) for i in range(4)]
 
-    for host in hosts:
-        host.assigned_to_group(group)
-
     containers = []
-    for (host, count), cores in centralized_schedule(group, pod, 4, 4, 0).iteritems():
+    for (host, count), cores in centralized_schedule(pod, 4, 4, 0).iteritems():
         cores_per_container = len(cores) / count
         for i in range(count):
             cid = random_sha1()
@@ -50,7 +45,7 @@ def create_test_suite():
             c = Container.create(cid, host, version, random_string(), 'web', used_cores, 'env')
             containers.append(c)
         host.occupy_cores(cores, 0)
-    return app, version, group, pod, hosts, containers
+    return app, version, pod, hosts, containers
 
 def create_local_test_data(private=False):
     appyaml = {
@@ -75,16 +70,14 @@ def create_local_test_data(private=False):
     appconfig.update(**appyaml)
     appconfig.save()
 
-    group = Group.create('group', 'group')
     pod = Pod.create('pod', 'pod')
-    pod.assigned_to_group(group)
 
     c = docker.Client(**kwargs_from_env(assert_hostname=False))
     r = c.info()
     host = Host.create(pod, '192.168.59.103:2376', r['Name'], r['ID'], r['NCPU'], r['MemTotal'])
 
-    if private:
-        host.assigned_to_group(group)
+    if not private:
+        host.set_public()
 
-    return app, version, group, pod, host
+    return app, version, pod, host
 

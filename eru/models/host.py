@@ -9,6 +9,7 @@ from eru.utils.decorator import redis_lock
 
 _pipeline = rds.pipeline()
 
+
 class Core(object):
 
     def __init__(self, label, host_id, remain=10):
@@ -26,9 +27,11 @@ class Core(object):
     def __hash__(self):
         return hash('%s:%s' % (self.label, self.host_id))
 
+
 def _create_cores_on_host(host, count):
     data = {str(i): host.core_share for i in xrange(count)}
     rds.zadd(host._cores_key, **data)
+
 
 class Host(Base):
     __tablename__ = 'host'
@@ -40,9 +43,9 @@ class Host(Base):
     mem = db.Column(db.BigInteger, nullable=False, default=0)
     # 现在这个count是指free的core数
     count = db.Column(db.Numeric(12, 3), nullable=False, default=0)
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     pod_id = db.Column(db.Integer, db.ForeignKey('pod.id'))
     is_alive = db.Column(db.Boolean, default=True)
+    is_public = db.Column(db.Boolean, default=False)
 
     tasks = db.relationship('Task', backref='host', lazy='dynamic')
     containers = db.relationship('Container', backref='host', lazy='dynamic')
@@ -82,7 +85,7 @@ class Host(Base):
 
     @classmethod
     def get_random_public_host(cls):
-        return cls.query.filter(cls.group_id == None, cls.ncore > 0).limit(1).first()
+        return cls.query.filter(cls.is_public == True, cls.ncore > 0).limit(1).first()
 
     @property
     def ip(self):
@@ -191,14 +194,15 @@ class Host(Base):
     def get_containers_by_app(self, app):
         return self.containers.filter_by(app_id=app.id).all()
 
-    def assigned_to_group(self, group):
-        """分配给 group, 那么这个 host 被标记为这个 group 私有"""
-        if not group:
-            return False
-        group.private_hosts.append(self)
-        db.session.add(group)
+    def set_public(self):
+        self.is_public = True
+        db.session.add(self)
         db.session.commit()
-        return True
+
+    def set_private(self):
+        self.is_public = False
+        db.session.add(self)
+        db.session.commit()
 
     def occupy_cores(self, cores, nshare):
         slice_count = self.pod.core_share

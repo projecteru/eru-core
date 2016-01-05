@@ -3,7 +3,6 @@
 from flask import abort, request
 from netaddr import IPNetwork, AddrFormatError
 
-from eru import consts
 from eru.ipam import ipam
 from eru.utils.decorator import check_request_json
 
@@ -13,16 +12,16 @@ bp = create_api_blueprint('network', __name__, url_prefix='/api/network')
 
 
 @bp.route('/create/', methods=['POST'])
-@check_request_json(['name', 'netspace'])
+@check_request_json(['name', 'cidr'])
 def create_network():
     data = request.get_json()
     try:
-        cidr = IPNetwork(data['netspace'])
+        cidr = IPNetwork(data['cidr'])
     except AddrFormatError:
         abort(400, 'not valid CIDR')
 
     ipam.add_ip_pool(cidr, data['name'])
-    return {'r': 0, 'msg': consts.OK}
+    return {'error': None}
 
 
 @bp.route('/<id_or_name>/', methods=['GET'])
@@ -48,4 +47,4 @@ def check_addr(addr):
     net = ipam.get_pool(str(interface.cidr))
     if not net:
         abort(400, 'Interface not found')
-    return {'r': 0, 'msg': consts.OK, 'result': interface.ip in net}
+    return {'available': interface.ip in net}

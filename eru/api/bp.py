@@ -31,3 +31,6 @@ def patch_blueprint_route(bp):
         return decorator
 
     bp.route = partial(patched_route, bp)
+
+
+DEFAULT_RETURN_VALUE = {'error': None}

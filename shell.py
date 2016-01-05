@@ -37,7 +37,6 @@ def pre_imports():
     from eru.models.base import Base
     from eru.models.host import Core, Host, _create_cores_on_host
     from eru.models.pod import Pod
-    from eru.models.group import Group, GroupPod
     from eru.models.app import App, Version
     from eru.models.appconfig import AppConfig, ResourceConfig
     from eru.models.container import Container

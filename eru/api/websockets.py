@@ -10,7 +10,8 @@ from eru.models import Task, Container
 from eru.utils.notify import TaskNotifier
 
 bp = Blueprint('websockets', __name__, url_prefix='/websockets')
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
+
 
 @bp.route('/tasklog/<int:task_id>/')
 def task_log(task_id):
@@ -19,7 +20,7 @@ def task_log(task_id):
     task = Task.get(task_id)
     if not task:
         ws.close()
-        logger.info('Task %s not found, close websocket' % task_id)
+        _log.info('Task %s not found, close websocket' % task_id)
         return 'websocket closed'
 
     notifier = TaskNotifier(task)
@@ -40,12 +41,13 @@ def task_log(task_id):
                 continue
             ws.send(line['data'])
     except geventwebsocket.WebSocketError, e:
-        logger.exception(e)
+        _log.exception(e)
     finally:
         pub.unsubscribe()
         ws.close()
 
     return ''
+
 
 @bp.route('/containerlog/<cid>/')
 def container_log(cid):
@@ -61,14 +63,14 @@ def container_log(cid):
     container = Container.get_by_container_id(cid)
     if not container:
         ws.close()
-        logger.info('Container %s not found, close websocket' % cid)
+        _log.info('Container %s not found, close websocket' % cid)
         return 'websocket closed'
     try:
         client = get_docker_client(container.host.addr)
         for line in client.logs(cid, stream=True, stderr=bool(stderr), stdout=bool(stdout), tail=tail):
             ws.send(line)
     except geventwebsocket.WebSocketError, e:
-        logger.exception(e)
+        _log.exception(e)
     finally:
         try:
             ws.close()

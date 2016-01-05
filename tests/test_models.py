@@ -4,34 +4,24 @@ import operator
 from decimal import Decimal as D
 from more_itertools import chunked
 
-from eru.models import Group, Pod, Host, App, Container, Network, VLanGateway
+from eru.models import Pod, Host, App, Container, Network, VLanGateway
 from eru.helpers.scheduler import get_max_container_count, centralized_schedule
 
 from tests.utils import random_ipv4, random_string, random_uuid, random_sha1
 
 def test_group_pod(test_db):
-    g1 = Group.create('group1', 'group1')
-    g2 = Group.create('group1', 'group1')
-    assert g1 is not None
-    assert g1.name == 'group1'
-    assert g2 is None
-
     p1 = Pod.create('pod1', 'pod1')
     p2 = Pod.create('pod1', 'pod1')
     assert p1 is not None
     assert p1.name == 'pod1'
     assert p2 is None
 
-    g3 = Group.get_by_name('group1')
-    assert g3.id == g1.id
-
     p3 = Pod.get_by_name('pod1')
     assert p3.id == p1.id
 
-    assert p3.assigned_to_group(g3)
     assert p3.get_free_public_hosts(10) == []
-    assert get_max_container_count(g3, p3, 1, 2) == 0
-    assert centralized_schedule(g3, p3, 1, 1, 2) == {}
+    assert get_max_container_count(p3, 1, 2) == 0
+    assert centralized_schedule(p3, 1, 1, 2) == {}
 
 def test_pod(test_db):
     p1 = Pod.create('p1', 'p1', core_share=10)
@@ -53,30 +43,28 @@ def test_pod(test_db):
     assert p2.get_core_allocation(0.14) == (0, 14)
 
 def test_host(test_db):
-    g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod', 10, -1)
-    assert p.assigned_to_group(g)
     hosts = [Host.create(p, random_ipv4(), random_string(prefix='host'),
         random_uuid(), 4, 4096) for i in range(6)]
     for host in hosts:
+        host.set_public()
         assert host is not None
         assert len(host.cores) == 4
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 4
         assert len(part_cores) == 0
 
-    assert len(g.private_hosts.all()) == 0
-    assert get_max_container_count(g, p, 1, 0) == 0
-    assert centralized_schedule(g, p, 1, 1, 0) == {}
+    assert len(p.get_private_hosts()) == 0
+    assert get_max_container_count(p, 1, 0) == 0
+    assert centralized_schedule(p, 1, 1, 0) == {}
 
     for host in hosts[:3]:
-        host.assigned_to_group(g)
+        host.set_private()
     host_ids1 = {h.id for h in hosts[:3]}
     host_ids2 = {h.id for h in hosts[3:]}
 
-    assert len(g.private_hosts.all()) == 3
-    assert get_max_container_count(g, p, 1, 0) == 12
-    host_cores = centralized_schedule(g, p, 12, 1, 0)
+    assert get_max_container_count(p, 1, 0) == 12
+    host_cores = centralized_schedule(p, 12, 1, 0)
     assert len(host_cores) == 3
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
@@ -84,8 +72,8 @@ def test_host(test_db):
         assert count == 4
         assert len(cores['full']) == 4
 
-    assert get_max_container_count(g, p, 3, 0) == 3
-    host_cores = centralized_schedule(g, p, 3, 3, 0)
+    assert get_max_container_count(p, 3, 0) == 3
+    host_cores = centralized_schedule(p, 3, 3, 0)
     assert len(host_cores) == 3
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
@@ -93,8 +81,8 @@ def test_host(test_db):
         assert count == 1
         assert len(cores['full']) == 3
 
-    assert get_max_container_count(g, p, 2, 0) == 6
-    host_cores = centralized_schedule(g, p, 4, 2, 0)
+    assert get_max_container_count(p, 2, 0) == 6
+    host_cores = centralized_schedule(p, 4, 2, 0)
     assert len(host_cores) == 2
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
@@ -102,8 +90,8 @@ def test_host(test_db):
         assert count == 2
         assert len(cores['full']) == 4
 
-    assert get_max_container_count(g, p, 1, 1) == 9
-    host_cores = centralized_schedule(g, p, 3, 1, 1)
+    assert get_max_container_count(p, 1, 1) == 9
+    host_cores = centralized_schedule(p, 3, 1, 1)
     assert len(host_cores) == 1
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
@@ -112,8 +100,8 @@ def test_host(test_db):
         assert len(cores['full']) == 3
         assert len(cores['part']) == 3
 
-    assert get_max_container_count(g, p, 2, 3) == 3
-    host_cores = centralized_schedule(g, p, 3, 2, 3)
+    assert get_max_container_count(p, 2, 3) == 3
+    host_cores = centralized_schedule(p, 3, 2, 3)
     assert len(host_cores) == 3
     for (host, count), cores in host_cores.iteritems():
         assert host.id in host_ids1
@@ -134,18 +122,16 @@ def test_container(test_db):
     assert len(v.containers.all()) == 0
     assert len(v.tasks.all()) == 0
 
-    g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod', 10, -1)
-    assert p.assigned_to_group(g)
     hosts = [Host.create(p, random_ipv4(), random_string(prefix='host'),
         random_uuid(), 4, 4096) for i in range(6)]
 
-    for host in hosts[:3]:
-        host.assigned_to_group(g)
+    for host in hosts[3:]:
+        host.set_public()
     host_ids1 = {h.id for h in hosts[:3]}
     host_ids2 = {h.id for h in hosts[3:]}
 
-    host_cores = centralized_schedule(g, p, 3, 3, 0)
+    host_cores = centralized_schedule(p, 3, 3, 0)
 
     #测试没有碎片核的情况
     #获取核
@@ -160,7 +146,7 @@ def test_container(test_db):
             assert c is not None
             containers.append(c)
 
-    for host in g.private_hosts.all():
+    for host in p.get_private_hosts():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 1
         assert len(part_cores) == 0
@@ -189,11 +175,11 @@ def test_container(test_db):
         c.delete()
 
     assert len(v.containers.all()) == 0
-    assert get_max_container_count(g, p, 3, 0) == 3
-    host_cores = centralized_schedule(g, p, 3, 3, 0)
+    assert get_max_container_count(p, 3, 0) == 3
+    host_cores = centralized_schedule(p, 3, 3, 0)
     assert len(host_cores) == 3
 
-    for host in g.private_hosts.all():
+    for host in p.get_private_hosts():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 4
         assert len(part_cores) == 0
@@ -202,7 +188,7 @@ def test_container(test_db):
 
     #测试有碎片的情况
     #获取核
-    host_cores = centralized_schedule(g, p, 3, 3, 4)
+    host_cores = centralized_schedule(p, 3, 3, 4)
     containers = []
     for (host, count), cores in host_cores.iteritems():
         cores_per_container = len(cores['full']) / count
@@ -216,7 +202,7 @@ def test_container(test_db):
             assert c is not None
             containers.append(c)
 
-    for host in g.private_hosts.all():
+    for host in p.get_private_hosts():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 0
         assert len(part_cores) == 1
@@ -246,18 +232,18 @@ def test_container(test_db):
         c.delete()
 
     assert len(v.containers.all()) == 0
-    assert get_max_container_count(g, p, 3, 0) == 3
-    host_cores = centralized_schedule(g, p, 3, 3, 0)
+    assert get_max_container_count(p, 3, 0) == 3
+    host_cores = centralized_schedule(p, 3, 3, 0)
     assert len(host_cores) == 3
 
-    for host in g.private_hosts.all():
+    for host in p.get_private_hosts():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 4
         assert len(host.containers.all()) == 0
         assert host.count == 4
 
     #获取
-    host_cores = centralized_schedule(g, p, 6, 1, 5)
+    host_cores = centralized_schedule(p, 6, 1, 5)
     containers = []
     for (host, count), cores in host_cores.iteritems():
         cores_per_container = len(cores['full']) / count
@@ -273,7 +259,7 @@ def test_container(test_db):
             assert c is not None
             containers.append(c)
 
-    for host in g.private_hosts.all():
+    for host in p.get_private_hosts():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 1
         assert len(part_cores) == 0
@@ -297,11 +283,11 @@ def test_container(test_db):
         c.delete()
 
     assert len(v.containers.all()) == 0
-    assert get_max_container_count(g, p, 3, 0) == 3
-    host_cores = centralized_schedule(g, p, 3, 3, 0)
+    assert get_max_container_count(p, 3, 0) == 3
+    host_cores = centralized_schedule(p, 3, 3, 0)
     assert len(host_cores) == 3
 
-    for host in g.private_hosts.all():
+    for host in p.get_private_hosts():
         full_cores, part_cores = host.get_free_cores()
         assert len(full_cores) == 4
         assert len(part_cores) == 0
@@ -309,11 +295,8 @@ def test_container(test_db):
         assert host.count == 4
 
 def test_occupy_and_release_cores(test_db):
-    g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod', 10, -1)
     host = Host.create(p, random_ipv4(), random_string(), random_uuid(), 200, 0)
-    assert p.assigned_to_group(g)
-    assert host.assigned_to_group(g)
 
     for core in host.cores:
         assert core.host_id == host.id
@@ -362,11 +345,8 @@ def test_occupy_and_release_cores(test_db):
 def test_container_release_cores(test_db):
     a = App.get_or_create('app', 'http://git.hunantv.com/group/app.git')
     v = a.add_version(random_sha1())
-    g = Group.create('group', 'group')
     p = Pod.create('pod', 'pod', 10, -1)
     host = Host.create(p, random_ipv4(), random_string(), random_uuid(), 200, 0)
-    assert p.assigned_to_group(g)
-    assert host.assigned_to_group(g)
 
     for core in host.cores:
         assert core.host_id == host.id

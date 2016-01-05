@@ -100,7 +100,6 @@ class App(Base):
 
     name = db.Column(db.CHAR(32), nullable=False, unique=True)
     git = db.Column(db.String(255), nullable=False)
-    group_id = db.Column(db.Integer, db.ForeignKey('group.id'))
     update = db.Column(db.DateTime, default=datetime.now)
     _user_id = db.Column(db.Integer, nullable=False, default=0)
 
@@ -181,11 +180,3 @@ class App(Base):
         db.session.add(self)
         db.session.commit()
         return version
-
-    def assigned_to_group(self, group):
-        if not group:
-            return False
-        group.apps.append(self)
-        db.session.add(group)
-        db.session.commit()
-        return True

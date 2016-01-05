@@ -1,14 +1,16 @@
 # coding: utf-8
 
-from flask import request, g, current_app, abort
+import logging
+from flask import request, g, abort
 
 from eru.models import App
 from eru.models.appconfig import verify_appconfig
 from eru.utils.decorator import check_request_json, check_request_args
 
-from .bp import create_api_blueprint
+from .bp import create_api_blueprint, DEFAULT_RETURN_VALUE
 
 bp = create_api_blueprint('app', __name__, url_prefix='/api/app')
+_log = logging.getLogger(__name__)
 
 
 def _get_app_by_name(name):
@@ -55,14 +57,15 @@ def register_app_version():
 
     v = app.add_version(version)
     if not v:
-        current_app.logger.error('Version create failed. (name=%s, version=%s)', name, version[:7])
+        _log.error('Version create failed. (name=%s, version=%s)', name, version[:7])
         abort(400, 'Version %s create failed' % version[:7])
 
     appconfig = v.appconfig
     appconfig.update(**appyaml)
     appconfig.save()
-    current_app.logger.info('App-Version created. (name=%s, version=%s)', name, version[:7])
-    return {'r': 0, 'msg': 'ok'}
+
+    _log.info('App-Version created. (name=%s, version=%s)', name, version[:7])
+    return 201, DEFAULT_RETURN_VALUE
 
 
 @bp.route('/<name>/env/', methods=['PUT', 'DELETE'])
@@ -78,8 +81,9 @@ def set_app_env(name):
         envconfig.save()
     elif request.method == 'DELETE':
         envconfig.delete()
-    current_app.logger.info('App (name=%s) set env (env=%s) values done', name, env)
-    return {'r': 0, 'msg': 'ok'}
+
+    _log.info('App (name=%s) set env (env=%s) values done', name, env)
+    return DEFAULT_RETURN_VALUE
 
 
 @bp.route('/<name>/env/', methods=['GET', ])
@@ -87,31 +91,31 @@ def set_app_env(name):
 def get_app_env(name):
     app = _get_app_by_name(name)
     envconfig = app.get_resource_config(request.args['env'])
-    return {'r': 0, 'msg': 'ok', 'data': envconfig.to_env_dict()}
+    return envconfig.to_env_dict()
 
 
 @bp.route('/<name>/listenv/', methods=['GET', ])
 def list_app_env(name):
     app = _get_app_by_name(name)
-    return {'r': 0, 'msg': 'ok', 'data': app.list_resource_config()}
+    return app.list_resource_config()
 
 
 @bp.route('/<name>/containers/', methods=['GET', ])
 def list_app_containers(name):
     app = _get_app_by_name(name)
-    return {'r': 0, 'msg': 'ok', 'containers': app.list_containers(g.start, g.limit)}
+    return app.list_containers(g.start, g.limit)
 
 
 @bp.route('/<name>/tasks/', methods=['GET', ])
 def list_app_tasks(name):
     app = _get_app_by_name(name)
-    return {'r': 0, 'msg': 'ok', 'tasks': app.list_tasks(g.start, g.limit)}
+    return app.list_tasks(g.start, g.limit)
 
 
 @bp.route('/<name>/versions/', methods=['GET', ])
 def list_app_versions(name):
     app = _get_app_by_name(name)
-    return {'r': 0, 'msg': 'ok', 'versions': app.list_versions(g.start, g.limit)}
+    return app.list_versions(g.start, g.limit)
 
 
 @bp.route('/<name>/images/', methods=['GET', ])
@@ -126,7 +130,7 @@ def list_version_containers(name, version):
     v = app.get_version(version)
     if not v:
         abort(404, 'Version %s not found' % version)
-    return {'r': 0, 'msg': 'ok', 'containers': v.list_containers(g.start, g.limit)}
+    return v.list_containers(g.start, g.limit)
 
 
 @bp.route('/<name>/<version>/tasks/', methods=['GET', ])
@@ -135,4 +139,4 @@ def list_version_tasks(name, version):
     v = app.get_version(version)
     if not v:
         abort(404, 'Version %s not found' % version)
-    return {'r': 0, 'msg': 'ok', 'tasks': v.list_tasks(g.start, g.limit)}
+    return v.list_tasks(g.start, g.limit)

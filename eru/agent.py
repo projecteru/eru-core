@@ -6,6 +6,7 @@ from eru.config import ERU_AGENT_PORT
 
 _agent_clients = {}
 
+
 def get_agent(host):
     agent = _agent_clients.get(host.ip, None)
     if agent:
@@ -13,6 +14,7 @@ def get_agent(host):
     agent = Agent(host.ip, ERU_AGENT_PORT)
     _agent_clients[host.ip] = agent
     return agent
+
 
 class Agent(object):
 
