@@ -151,7 +151,7 @@ def create_one_container(host, version, entrypoint, env='prod',
     binds = {'/proc/sys': {'bind': '/writable-proc/sys', 'ro': False}}
     binds.update(appconfig.get('binds', {}))
 
-    if config.ERU_CONTAINER_PERMDIR:
+    if config.ERU_CONTAINER_PERMDIR and entry.get('permdir', ''):
         permdir = config.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
         volumes.append(permdir)
