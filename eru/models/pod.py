@@ -1,5 +1,6 @@
 # coding:utf-8
 
+import random
 import sqlalchemy.exc
 
 from eru.models import db
@@ -62,8 +63,9 @@ class Pod(Base):
         return q.all()
 
     def get_free_public_hosts(self, limit):
-        from .host import Host
-        return self.hosts.filter(Host.is_public == True).order_by(Host.count).limit(limit).all()
+        hosts = [h for h in self.hosts if h.is_public]
+        random.shuffle(hosts)
+        return hosts[:limit] if limit is not None else hosts
  
     def get_private_hosts(self):
         return [h for h in self.hosts if not h.is_public]
