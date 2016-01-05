@@ -5,16 +5,13 @@ from collections import Counter
 
 from eru.utils.decorator import redis_lock
 
-def get_max_container_count(group, pod, ncore, nshare=0):
+def get_max_container_count(pod, ncore, nshare=0):
     if nshare and not pod.max_share_core:
         return 0
-    hosts = group.get_private_hosts(pod, limit=None)
-    if not hosts:
-        return 0
-    return sum(host.get_max_container_count(ncore, nshare) for host in hosts)
+    return sum(host.get_max_container_count(ncore, nshare) for host in pod.get_private_hosts())
 
-@redis_lock('asched:{group.id}:{pod.id}')
-def average_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None):
+@redis_lock('asched:{pod.id}')
+def average_schedule(pod, ncontainer, ncore, nshare=0, spec_host=None):
     if nshare and not pod.max_share_core:
         return {}
 
@@ -22,11 +19,11 @@ def average_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None):
         count, rs = spec_host.get_container_cores(ncontainer, ncore, nshare)
         return {(spec_host, count): rs} if count else {}
 
-    if ncontainer > get_max_container_count(group, pod, ncore, nshare):
+    if ncontainer > get_max_container_count(pod, ncore, nshare):
         return {}
 
     result = {}
-    hosts = group.get_private_hosts(pod, limit=None)
+    hosts = pod.get_private_hosts()
 
     host_counter = Counter()
     used_counter = Counter()
@@ -49,8 +46,8 @@ def average_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None):
         result[(host, count)] = host.get_container_cores(count, ncore, nshare)[1]
     return result
 
-@redis_lock('csched:{group.id}:{pod.id}')
-def centralized_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None):
+@redis_lock('csched:{pod.id}')
+def centralized_schedule(pod, ncontainer, ncore, nshare=0, spec_host=None):
     if nshare and not pod.max_share_core:
         return {}
 
@@ -58,11 +55,11 @@ def centralized_schedule(group, pod, ncontainer, ncore, nshare=0, spec_host=None
         count, rs = spec_host.get_container_cores(ncontainer, ncore, nshare)
         return {(spec_host, count): rs} if count else {}
 
-    if ncontainer > get_max_container_count(group, pod, ncore, nshare):
+    if ncontainer > get_max_container_count(pod, ncore, nshare):
         return {}
 
     result = {}
-    hosts = group.get_private_hosts(pod, limit=None)
+    hosts = pod.get_private_hosts()
     sorted(hosts, key=operator.attrgetter('count'))
     still_need = ncontainer
     for host in hosts:

@@ -24,9 +24,6 @@ blueprints = (
     'network',
     'pod',
     'version',
-    'resource',
-    'sys',
-    'scale',
     'task',
     'websockets',
 )

@@ -1,24 +1,26 @@
 # coding: utf-8
 
-from flask import current_app, request, abort
+import logging
+from flask import request, abort
 
-from eru import consts
 from eru.ipam import ipam
 from eru.async import dockerjob
+from eru.consts import ERU_AGENT_DIE_REASON
 from eru.clients import rds
-from eru.models import Container
+from eru.models.container import Container
+from eru.utils.decorator import check_request_json
 from eru.helpers.network import rebind_container_ip, bind_container_ip
 
-from .bp import create_api_blueprint
+from .bp import create_api_blueprint, DEFAULT_RETURN_VALUE
 
 bp = create_api_blueprint('container', __name__, url_prefix='/api/container')
+_log = logging.getLogger(__name__)
 
 
-@bp.route('/<id_or_cid>/', methods=['GET', ])
-def get_container(id_or_cid):
+def _get_container(id_or_cid):
     c = None
     if id_or_cid.isdigit():
-        c = Container.get(int(id_or_cid))
+        c = Container.get(id_or_cid)
     if not c:
         c = Container.get_by_container_id(id_or_cid)
     if not c:
@@ -26,83 +28,84 @@ def get_container(id_or_cid):
     return c
 
 
-@bp.route('/<cid>/', methods=['DELETE', ])
-def remove_container(cid):
-    c = Container.get_by_container_id(cid)
-    if not c:
-        return {'r': 1, 'msg': 'container %s not found' % cid}
-    dockerjob.remove_container_by_cid([cid], c.host)
-    return {'r': 0, 'msg': consts.OK}
+@bp.route('/<id_or_cid>/', methods=['GET', ])
+def get_container(id_or_cid):
+    return _get_container(id_or_cid)
 
 
-@bp.route('/<cid>/kill', methods=['PUT', ])
-def kill_container(cid):
-    c = Container.get_by_container_id(cid)
-    if c:
-        c.kill()
-        key = consts.ERU_AGENT_DIE_REASON % c.container_id
-        r = rds.get(key)
-        rds.delete(key)
-        if r is not None:
-            c.set_props({'oom': 1})
-
-        c.callback_report(status='die')
-
-        current_app.logger.info('Kill container (container_id=%s)', cid[:7])
-    return {'r': 0, 'msg': consts.OK}
+@bp.route('/<id_or_cid>/', methods=['DELETE', ])
+def remove_container(id_or_cid):
+    c = _get_container(id_or_cid)
+    dockerjob.remove_container_by_cid([c.container_id], c.host)
+    return DEFAULT_RETURN_VALUE
 
 
-@bp.route('/<cid>/cure', methods=['PUT', ])
-def cure_container(cid):
-    c = Container.get_by_container_id(cid)
+@bp.route('/<id_or_cid>/kill/', methods=['PUT', ])
+def kill_container(id_or_cid):
+    c = _get_container(id_or_cid)
+    c.kill()
 
-    if c:
-        c.callback_report(status='start')
+    key = ERU_AGENT_DIE_REASON % c.container_id
+    r = rds.get(key)
+    rds.delete(key)
+    if r is not None:
+        c.set_props({'oom': 1})
 
-        if not c.is_alive:
-            rebind_container_ip(c)
-            c.cure()
+    c.callback_report(status='die')
 
-        current_app.logger.info('Cure container (container_id=%s)', cid[:7])
-    return {'r': 0, 'msg': consts.OK}
-
-
-@bp.route('/<cid>/poll', methods=['GET', ])
-def poll_container(cid):
-    c = Container.get_by_container_id(cid)
-    if not c:
-        abort(404, 'Container %s not found' % cid)
-    return {'r': 0, 'container': c.container_id, 'status': c.is_alive}
+    _log.info('Kill container (container_id=%s)', c.container_id)
+    return DEFAULT_RETURN_VALUE
 
 
-@bp.route('/<cid>/start', methods=['PUT', ])
-def start_container(cid):
-    c = Container.get_by_container_id(cid)
-    if c and not c.is_alive:
+@bp.route('/<id_or_cid>/cure/', methods=['PUT', ])
+def cure_container(id_or_cid):
+    c = _get_container(id_or_cid)
+    c.callback_report(status='start')
+
+    if not c.is_alive:
+        rebind_container_ip(c)
+        c.cure()
+
+    _log.info('Cure container (container_id=%s)', c.container_id)
+    return DEFAULT_RETURN_VALUE
+
+
+@bp.route('/<id_or_cid>/poll/', methods=['GET', ])
+def poll_container(id_or_cid):
+    c = _get_container(id_or_cid)
+    return {'container': c.container_id, 'status': c.is_alive}
+
+
+@bp.route('/<id_or_cid>/start/', methods=['PUT', ])
+def start_container(id_or_cid):
+    c = _get_container(id_or_cid)
+    if not c.is_alive:
         c.cure()
         dockerjob.start_containers([c, ], c.host)
         rebind_container_ip(c)
-        current_app.logger.info('Start container (container_id=%s)', cid[:7])
-    return {'r': 0, 'msg': consts.OK}
+        _log.info('Start container (container_id=%s)', c.container_id)
+    return DEFAULT_RETURN_VALUE
 
 
-@bp.route('/<cid>/stop', methods=['PUT', ])
-def stop_container(cid):
-    c = Container.get_by_container_id(cid)
-    if c:
-        c.kill()
-        dockerjob.stop_containers([c,], c.host)
-        current_app.logger.info('Stop container (container_id=%s)', cid[:7])
-    return {'r': 0, 'msg': consts.OK}
+@bp.route('/<id_or_cid>/stop/', methods=['PUT', ])
+def stop_container(id_or_cid):
+    c = _get_container(id_or_cid)
+    c.kill()
+    dockerjob.stop_containers([c,], c.host)
+    _log.info('Stop container (container_id=%s)', c.container_id)
+    return DEFAULT_RETURN_VALUE
 
 
-@bp.route('/<cid>/bind_network', methods=['PUT'])
-def bind_network(cid):
+@bp.route('/<id_or_cid>/bind_network/', methods=['PUT'])
+@check_request_json(['appname', 'networks'])
+def bind_network(id_or_cid):
+    c = _get_container(id_or_cid)
+
     data = request.get_json()
-    appname = data.get('appname')
-    c = Container.get_by_container_id(cid)
-    if not (c and c.is_alive):
-        abort(404, 'Container %s not found' % cid)
+    appname = data['appname']
+
+    if not c.is_alive:
+        abort(404, 'Container %s not alive' % c.container_id)
     if c.appname != appname:
         abort(404, 'Container does not belong to app')
     if c.network_mode == 'host':
@@ -113,7 +116,7 @@ def bind_network(cid):
     if not networks:
         abort(400, 'network empty')
 
-    cidrs = [n.netspace for n in networks if n]
+    cidrs = [n.cidr for n in networks if n]
 
     bind_container_ip(c, cidrs)
-    return {'r': 0, 'msg': cidrs}
+    return {'cidrs': cidrs}

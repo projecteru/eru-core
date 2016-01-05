@@ -39,7 +39,6 @@ build: "pip install -r ./req.txt"
     assert rv.status_code == 200
     assert r[u'name'] == u'test_app'
     assert r[u'git'] == data['git']
-    assert r[u'group_id'] is None
 
     rv = client.get('/api/app/random_app_name/')
     r = json.loads(rv.data)

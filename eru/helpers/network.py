@@ -5,7 +5,7 @@ import retrying
 
 from eru.ipam import ipam
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 @retrying.retry(retry_on_result=lambda r: not r, stop_max_attempt_number=5)
@@ -17,7 +17,7 @@ def bind_container_ip(container, cidrs, spec_ips=None):
     try:
         _bind_container_ip(cidrs, container, spec_ips=spec_ips)
     except retrying.RetryError:
-        logger.info('still failed after 5 times retry, %s, %s' % (container.container_id, cidrs))
+        _log.info('still failed after 5 times retry, %s, %s' % (container.container_id, cidrs))
         pass
 
 
@@ -30,5 +30,5 @@ def rebind_container_ip(container):
     try:
         _rebind_container_ip(container)
     except retrying.RetryError:
-        logger.info('still failed after 5 times retry, %s' % container.container_id)
+        _log.info('still failed after 5 times retry, %s' % container.container_id)
         pass

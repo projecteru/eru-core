@@ -18,7 +18,7 @@ def test_container_poll(client, test_db):
     assert d['error'] == 'Container 12345 not found'
 
 def test_container_status(client, test_db):
-    app, version, group, pod, hosts, containers = create_test_suite()
+    app, version, pod, hosts, containers = create_test_suite()
     for c in containers:
         rv = client.get('/api/container/%s/poll' % c.container_id)
         assert rv.status_code == 200

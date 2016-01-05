@@ -7,7 +7,6 @@ db = SQLAlchemy()
 from eru.models.base import Base
 from eru.models.host import Core, Host
 from eru.models.pod import Pod
-from eru.models.group import Group, GroupPod
 from eru.models.app import App, Version
 from eru.models.appconfig import AppConfig, ResourceConfig
 from eru.models.container import Container
@@ -21,8 +20,6 @@ __all__ = [
     'Pod',
     'Core',
     'Host',
-    'Group',
-    'GroupPod',
     'App',
     'Version',
     'Image',
