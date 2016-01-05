@@ -105,9 +105,12 @@ class CalicoIPAM(BaseIPAM):
                 return
             _ipam.release_ips(set(ips))
 
+        ip_list = spec_ips or cidrs
+        if not ip_list:
+            return True
+
         container = Container.get_by_container_id(container_id)
         agent = get_agent(container.host)
-        ip_list = spec_ips or cidrs
 
         pools = [self.get_pool(ip) for ip in ip_list]
         profiles = [p.name for p in pools]
