@@ -48,6 +48,9 @@ class MacVLANIPAM(BaseIPAM):
             for ip in ips:
                 ip.release()
 
+        if not (cidrs or spec_ips):
+            return True
+
         container = Container.get_by_container_id(container_id)
         count = len(container.ips.all())
         nstart = count+1 if count > 0 else 0
