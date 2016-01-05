@@ -21,7 +21,7 @@ def create_network():
         abort(400, 'not valid CIDR')
 
     ipam.add_ip_pool(cidr, data['name'])
-    return {'error': None}
+    return 201, {'error': None}
 
 
 @bp.route('/<id_or_name>/', methods=['GET'])
