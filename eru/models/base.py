@@ -3,14 +3,9 @@
 import json
 from sqlalchemy.ext.declarative import declared_attr
 
+from eru.utils import Jsonized
 from eru.models import db
 from eru.clients import rds
-
-
-class Jsonized(object):
-
-    def to_dict(self):
-        return {}
 
 
 class Base(Jsonized, db.Model):

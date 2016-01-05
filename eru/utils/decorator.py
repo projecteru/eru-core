@@ -9,7 +9,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from eru.clients import rds
-from eru.models.base import Jsonized
+from eru.utils import Jsonized
 
 def redis_lock(fmt):
     def _redis_lock(f):

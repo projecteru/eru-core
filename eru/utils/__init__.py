@@ -8,3 +8,9 @@ def is_strict_url(u):
         return p and p.scheme and p.netloc
     except:
         return False
+
+
+class Jsonized(object):
+
+    def to_dict(self):
+        return {}
