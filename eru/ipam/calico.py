@@ -140,13 +140,13 @@ class CalicoIPAM(BaseIPAM):
         # if it goes well
         # add inbound profile for ports
         # allow all IPs, if already exists, ignore
-        entry = container.get_entry()
-        if 'inbound' in entry:
+        if 'publish' in container.get_entry():
             ports = container.get_ports()
             for profile_name in profiles:
                 add_inbound(profile_name, ports)
 
-        if 'publish' in entry:
+            # and publish this container
+            # try to bind it to eip
             agent.publish_container(container)
 
         return True
