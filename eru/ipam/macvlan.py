@@ -132,3 +132,8 @@ class MacVLANIPAM(BaseIPAM):
     def get_eip(self, eip=None):
         eip = eip and IPAddress(eip) or None
         return eip_pool.get_eip(eip)
+
+    def release_eip(self, *eips):
+        eips = [IPAddress(eip) for eip in eips]
+        for eip in eips:
+            eip_pool.release_eip(eip)

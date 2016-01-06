@@ -32,3 +32,6 @@ class BaseIPAM(object):
 
     def get_eip(self, eip=None):
         """get random or specified eip from eip pool"""
+
+    def release_eip(self, *eips):
+        """release eips and return them back to eip pool"""

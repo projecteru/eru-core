@@ -1,13 +1,16 @@
 # coding:utf-8
 
 import sqlalchemy.exc
+from netaddr import IPAddress
 
+from eru.ipam import ipam
 from eru.models import db
 from eru.models.base import Base
 from eru.clients import rds
 from eru.utils.decorator import redis_lock
 
 _pipeline = rds.pipeline()
+_HOST_EIP_KEY = 'eru:host:%s:eip'
 
 
 class Core(object):
@@ -235,3 +238,28 @@ class Host(Base):
             db.session.add(c)
         db.session.add(self)
         db.session.commit()
+
+    def bind_eip(self, eip=None):
+        eip_value = rds.get(_HOST_EIP_KEY % self.id)
+        if eip_value is not None:
+            return IPAddress(int(eip_value))
+
+        eip = ipam.get_eip(eip)
+        if eip is None:
+            return None
+
+        rds.set(_HOST_EIP_KEY % self.id, eip.value)
+        return eip
+
+    def get_eip(self):
+        eip_value = rds.get(_HOST_EIP_KEY % self.id)
+        return eip_value and IPAddress(int(eip_value)) or None
+
+    def release_eip(self):
+        eip_value = rds.get(_HOST_EIP_KEY % self.id)
+        if eip_value is None:
+            return
+
+        eip = IPAddress(int(eip_value))
+        ipam.release_eip(eip)
+        rds.delete(_HOST_EIP_KEY * self.id)

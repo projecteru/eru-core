@@ -146,6 +146,9 @@ class CalicoIPAM(BaseIPAM):
             for profile_name in profiles:
                 add_inbound(profile_name, ports)
 
+        if 'publish' in entry:
+            agent.publish_container(container)
+
         return True
 
     def reallocate_ips(self, container_id):
@@ -185,6 +188,12 @@ class CalicoIPAM(BaseIPAM):
         except KeyError:
             pass
 
+        # call unpublish to remove container
+        # from the eip that the host has
+        agent = get_agent(container.host)
+        if 'publish' in container.get_entry():
+            agent.unpublish_container(container)
+
         # TODO we should call remove_inbound here
         # but since we add inbound for all IPs
         # just don't remove it now
@@ -197,6 +206,11 @@ class CalicoIPAM(BaseIPAM):
     def get_eip(self, eip=None):
         eip = eip and IPAddress(eip) or None
         return eip_pool.get_eip(eip)
+
+    def release_eip(self, *eips):
+        eips = [IPAddress(eip) for eip in eips]
+        for eip in eips:
+            eip_pool.release_eip(eip)
 
 
 def add_inbound(profile_name, ports):

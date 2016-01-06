@@ -54,3 +54,31 @@ class Agent(object):
         url = '/api/container/%s/addcalico/' % container_id
         payload = [{'nid': n, 'ip': ip, 'profile': profile, 'append': append} for (n, ip, profile, append) in ip_list]
         return self._request('POST', url, payload)
+
+    def _publish_container(self, url, container):
+        eip = container.host.get_eip()
+        if not eip:
+            return
+
+        backends = container.get_backends()
+        if not backends:
+            return
+
+        payload = {'eip': str(eip), 'protocol': 'tcp'}
+        for backend in backends:
+            ip, port = backend.split(':', 1)
+            payload['port'] = port,
+            payload['dest'] = ip,
+            payload['ident'] = '%s_%s' % (container.name, port),
+            self._request('POST', url, payload)
+
+        # we don't care the return value
+        # just ignore this...
+
+    def publish_container(self, container):
+        url = '/api/container/publish/'
+        return self._publish_container(url, container)
+
+    def unpublish_container(self, container):
+        url = '/api/container/disable/'
+        return self._publish_container(url, container)
