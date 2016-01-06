@@ -1,9 +1,10 @@
 # coding: utf-8
 
 import os
+import logging
 from netaddr import IPAddress, IPNetwork, AddrFormatError
 from pycalico.ipam import IPAMClient
-from pycalico.datastore import ETCD_SCHEME_ENV, ETCD_AUTHORITY_ENV
+from pycalico.datastore import ETCD_SCHEME_ENV, ETCD_AUTHORITY_ENV, Rule
 from pycalico.datastore_datatypes import IPPool
 
 from eru.agent import get_agent
@@ -20,6 +21,7 @@ def _get_client():
     return IPAMClient()
 
 
+_log = logging.getLogger(__name__)
 _ipam = _get_client()
 _POOL_NAME_KEY = 'eru:ipam:calico:%s:pool'
 _POOL_CIDR_KEY = 'eru:ipam:calico:%s:cidr'
@@ -123,6 +125,8 @@ class CalicoIPAM(BaseIPAM):
         if count == 0:
             appends[0] = False
 
+        # call agent to add network
+        # and add container to profile
         resp = agent.add_container_calico(container_id, zip(nids, ip_list, profiles, appends))
         if resp.status_code != 200:
             _release_ips(ip_list)
@@ -132,6 +136,15 @@ class CalicoIPAM(BaseIPAM):
         if not all(r['succ'] for r in rv):
             _release_ips(ip_list)
             return False
+
+        # if it goes well
+        # add inbound profile for ports
+        # allow all IPs, if already exists, ignore
+        entry = container.get_entry()
+        if 'inbound' in entry:
+            ports = container.get_ports()
+            for profile_name in profiles:
+                add_inbound(profile_name, ports)
 
         return True
 
@@ -172,6 +185,11 @@ class CalicoIPAM(BaseIPAM):
         except KeyError:
             pass
 
+        # TODO we should call remove_inbound here
+        # but since we add inbound for all IPs
+        # just don't remove it now
+        # will call it when inbound is only applied to one IP
+
     def add_eip(self, *eips):
         eips = [IPAddress(eip) for eip in eips]
         eip_pool.add_eip(*eips)
@@ -179,3 +197,87 @@ class CalicoIPAM(BaseIPAM):
     def get_eip(self, eip=None):
         eip = eip and IPAddress(eip) or None
         return eip_pool.get_eip(eip)
+
+
+def add_inbound(profile_name, ports):
+    return profile_rule_add_remove('add', profile_name, None, 'allow', 'inbound', dst_ports=ports)
+
+
+def remove_inbound(profile_name, ports):
+    return profile_rule_add_remove('remove', profile_name, None, 'allow', 'inbound', dst_ports=ports)
+
+
+def profile_rule_add_remove(
+        operation,
+        name, position, action, direction,
+        protocol=None,
+        icmp_type=None, icmp_code=None,
+        src_net=None, src_tag=None, src_ports=None,
+        dst_net=None, dst_tag=None, dst_ports=None):
+    """
+    Add or remove a rule from a profile.
+
+    Arguments not documented below are passed through to the rule.
+
+    :param operation: "add" or "remove".
+    :param name: Name of the profile.
+    :param position: Position to insert/remove rule or None for the default.
+    :param action: Rule action: "allow" or "deny".
+    :param direction: "inbound" or "outbound".
+
+    :return:
+    """
+    if icmp_type is not None:
+        icmp_type = int(icmp_type)
+    if icmp_code is not None:
+        icmp_code = int(icmp_code)
+
+    # Convert the input into a Rule.
+    rule_dict = {k: v for (k, v) in locals().iteritems() if k in Rule.ALLOWED_KEYS and v is not None}
+    rule_dict["action"] = action
+    if (protocol not in ("tcp", "udp")) and (src_ports is not None or dst_ports is not None):
+        _log.error('Ports are not valid with protocol %r', protocol)
+        return
+
+    rule = Rule(**rule_dict)
+    # Get the profile.
+    try:
+        profile = _ipam.get_profile(name)
+    except KeyError:
+        _log.error("Profile %s not found.", name)
+        return
+
+    if direction == "inbound":
+        rules = profile.rules.inbound_rules
+    else:
+        rules = profile.rules.outbound_rules
+
+    if operation == "add":
+        if position is None:
+            # Default to append.
+            position = len(rules) + 1
+        if not 0 < position <= len(rules) + 1:
+            _log.errur("Position %s is out-of-range.", position)
+        if rule in rules:
+            _log.error("Rule already present, skipping.")
+            return
+
+        rules.insert(position - 1, rule)  # Accepts 0 and len(rules).
+    else:
+        # Remove.
+        if position is not None:
+            # Position can only be used on its own so no need to examine the
+            # rule.
+            if 0 < position <= len(rules):  # 1-indexed
+                rules.pop(position - 1)
+            else:
+                _log.error("Rule position out-of-range.")
+        else:
+            # Attempt to match the rule.
+            try:
+                rules.remove(rule)
+            except ValueError:
+                _log.error("Rule not found.")
+                return
+
+    _ipam.profile_update_rules(profile)
