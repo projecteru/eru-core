@@ -105,10 +105,10 @@ def bind_eip(id_or_name):
     if request.method == 'POST':
         return {'eip': str(host.bind_eip())}
     elif request.method == 'GET':
-        return {'eip': str(host.get_eip())}
-    else:
-        host.release_eip()
-        return DEFAULT_RETURN_VALUE
+        return [str(eip) for eip in host.eips]
+
+    host.release_eip()
+    return DEFAULT_RETURN_VALUE
 
 
 @bp.route('/<id_or_name>/<method>/', methods=['PUT'])

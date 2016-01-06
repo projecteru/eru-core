@@ -1,13 +1,15 @@
 # coding: utf-8
 
 import logging
+from netaddr import IPAddress
 from flask import request, abort
 
 from eru.ipam import ipam
 from eru.async import dockerjob
+from eru.agent import get_agent
 from eru.consts import ERU_AGENT_DIE_REASON
 from eru.clients import rds
-from eru.models.container import Container
+from eru.models.container import Container, check_eip_bound, set_eip_bound, clean_eip_bound
 from eru.utils.decorator import check_request_json
 from eru.helpers.network import rebind_container_ip, bind_container_ip
 
@@ -120,3 +122,45 @@ def bind_network(id_or_cid):
 
     bind_container_ip(c, cidrs)
     return {'cidrs': cidrs}
+
+
+@bp.route('/<id_or_cid>/bind_eip/', methods=['PUT'])
+@check_request_json(['eip'])
+def bind_eip(id_or_cid):
+    c = _get_container(id_or_cid)
+
+    data = request.get_json()
+    eip = IPAddress(data['eip'])
+
+    if not c.is_alive:
+        abort(404, 'Container %s not alive' % c.container_id)
+    if check_eip_bound(eip):
+        abort(400, 'EIP already been taken')
+    if eip not in c.host.eips:
+        abort(404, 'Wrong EIP belonging')
+
+    agent = get_agent(c.host)
+    agent.publish_container(eip, c)
+    c.eip = str(eip)
+    set_eip_bound(eip, c.container_id)
+
+    return DEFAULT_RETURN_VALUE
+
+
+@bp.route('/<id_or_cid>/release_eip/', methods=['PUT'])
+def release_eip(id_or_cid):
+    c = _get_container(id_or_cid)
+
+    if not c.is_alive:
+        abort(404, 'Container %s not alive' % c.container_id)
+
+    eip = c.eip
+    if not eip:
+        abort(400, 'Container %s is not bound to EIP' % c.container_id)
+
+    agent = get_agent(c.host)
+    agent.unpublish_container(eip, c)
+    c.eip = ''
+    clean_eip_bound(eip)
+
+    return DEFAULT_RETURN_VALUE

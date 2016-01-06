@@ -4,8 +4,9 @@ import sqlalchemy.exc
 from netaddr import IPAddress
 
 from eru.ipam import ipam
+from eru.agent import get_agent
 from eru.models import db
-from eru.models.base import Base
+from eru.models.base import Base, PropsMixin, PropsItem
 from eru.clients import rds
 from eru.utils.decorator import redis_lock
 
@@ -36,7 +37,11 @@ def _create_cores_on_host(host, count):
     rds.zadd(host._cores_key, **data)
 
 
-class Host(Base):
+def _ip_address_filter(values):
+    return [IPAddress(value) for value in values]
+
+
+class Host(Base, PropsMixin):
     __tablename__ = 'host'
 
     addr = db.Column(db.CHAR(30), nullable=False, unique=True)
@@ -54,6 +59,8 @@ class Host(Base):
     containers = db.relationship('Container', backref='host', lazy='dynamic')
     vlans = db.relationship('VLanGateway', backref='host', lazy='dynamic')
 
+    eips = PropsItem('eips', default=[], type=_ip_address_filter)
+
     def __init__(self, addr, name, uid, ncore, mem, pod_id, count):
         self.addr = addr
         self.name = name
@@ -62,6 +69,9 @@ class Host(Base):
         self.mem = mem
         self.pod_id = pod_id
         self.count = count
+
+    def get_uuid(self):
+        return '/eru/host/%s' % self.id
 
     @classmethod
     def create(cls, pod, addr, name, uid, ncore, mem):
@@ -240,26 +250,33 @@ class Host(Base):
         db.session.commit()
 
     def bind_eip(self, eip=None):
-        eip_value = rds.get(_HOST_EIP_KEY % self.id)
-        if eip_value is not None:
-            return IPAddress(int(eip_value))
-
         eip = ipam.get_eip(eip)
         if eip is None:
             return None
+        
+        eips = [ip.value for ip in self.eips] + [eip.value]
+        ids = [e & 0xFFFF for e in eips]
 
-        rds.set(_HOST_EIP_KEY % self.id, eip.value)
+        ip_list = ['%s/16' % IPAddress(e) for e in eips]
+        agent = get_agent(self)
+        agent.bind_eip(zip(ip_list, ids))
+
+        self.eips = eips
         return eip
 
-    def get_eip(self):
-        eip_value = rds.get(_HOST_EIP_KEY % self.id)
-        return eip_value and IPAddress(int(eip_value)) or None
+    def release_eip(self, eip=None):
+        if eip is not None:
+            to_release = [IPAddress(eip)]
+        else:
+            to_release = self.eips
 
-    def release_eip(self):
-        eip_value = rds.get(_HOST_EIP_KEY % self.id)
-        if eip_value is None:
-            return
+        eips = [ip for ip in self.eips if ip not in to_release]
 
-        eip = IPAddress(int(eip_value))
-        ipam.release_eip(eip)
-        rds.delete(_HOST_EIP_KEY * self.id)
+        ip_list = [('%s/16', e.value & 0xFFFF) % e for e in to_release]
+        agent = get_agent(self)
+        agent.bind_eip(ip_list)
+
+        for eip in to_release:
+            ipam.release_eip(eip)
+
+        self.eips = [e.value for e in eips]

@@ -55,16 +55,12 @@ class Agent(object):
         payload = [{'nid': n, 'ip': ip, 'profile': profile, 'append': append} for (n, ip, profile, append) in ip_list]
         return self._request('POST', url, payload)
 
-    def _publish_container(self, url, container):
-        eip = container.host.get_eip()
-        if not eip:
-            return
-
+    def _publish_container(self, url, eip, container):
         backends = container.get_backends()
         if not backends:
             return
 
-        payload = {'eip': str(eip), 'protocol': 'tcp'}
+        payload = {'eip': '%s/16' % eip, 'protocol': 'tcp'}
         for backend in backends:
             ip, port = backend.split(':', 1)
             payload['port'] = port,
@@ -75,10 +71,20 @@ class Agent(object):
         # we don't care the return value
         # just ignore this...
 
-    def publish_container(self, container):
+    def publish_container(self, eip, container):
         url = '/api/container/publish/'
-        return self._publish_container(url, container)
+        return self._publish_container(url, eip, container)
 
-    def unpublish_container(self, container):
+    def unpublish_container(self, eip, container):
         url = '/api/container/disable/'
-        return self._publish_container(url, container)
+        return self._publish_container(url, eip, container)
+
+    def bind_eip(self, ip_list):
+        url = '/api/eip/bind/'
+        payload = [{'ip': ip, 'id': id} for ip, id in ip_list]
+        return self._request('POST', url, payload)
+
+    def unbind_eip(self, ip_list):
+        url = '/api/eip/release/'
+        payload = [{'ip': ip, 'id': id} for ip, id in ip_list]
+        return self._request('POST', url, payload)

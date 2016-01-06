@@ -15,6 +15,7 @@ from eru.models.base import Base, PropsMixin, PropsItem
 from eru.utils.decorator import EruJSONEncoder
 
 _CONTAINER_PUB_KEY = 'container:%s'
+_EIP_BOUND_KEY = 'eip:%s:container'
 
 class Container(Base, PropsMixin):
     __tablename__ = 'container'
@@ -34,6 +35,7 @@ class Container(Base, PropsMixin):
     ips = db.relationship('IP', backref='container', lazy='dynamic')
 
     callback_url = PropsItem('callback_url')
+    eip = PropsItem('eip')
 
     def __init__(self, container_id, host, version, name, entrypoint, env):
         self.container_id = container_id
@@ -213,5 +215,18 @@ class Container(Base, PropsMixin):
             networks=ips,
             backends=self.get_backends(),
             appname=self.appname,
+            eip=self.eip,
         )
         return d
+
+
+def check_eip_bound(eip):
+    return rds.get(_EIP_BOUND_KEY % eip) is not None
+
+
+def set_eip_bound(eip, container_id):
+    rds.set(_EIP_BOUND_KEY % eip, container_id)
+
+
+def clean_eip_bound(eip):
+    rds.delete(_EIP_BOUND_KEY % eip)
