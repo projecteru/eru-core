@@ -68,7 +68,7 @@ def build_docker_image(task_id, base):
         _log.error('Task (id=%s) not found, quit', task_id)
         return
 
-    _log.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
+    _log.info('Task<id=%s>: Start on host %s', task_id, task.host.ip)
     notifier = TaskNotifier(task)
 
     app = task.app
@@ -90,7 +90,8 @@ def build_docker_image(task_id, base):
         task.finish(consts.TASK_FAILED)
         task.reason = str(e.message)
         notifier.pub_fail()
-        _log.error('Task<id=%s>: Exception (e=%s)', task_id, e)
+        _log.error('Task<id=%s>, exception', task_id)
+        _log.exception(e)
     else:
         # 粗暴的判断, 如果推送成功说明build成功
         if 'Digest: sha256' in last_line:
@@ -117,7 +118,7 @@ def remove_containers(task_id, cids, rmi=False):
         _log.error('Task (id=%s) not found, quit', task_id)
         return
 
-    _log.info('Task<id=%s>: Start on host %s' % (task_id, task.host.ip))
+    _log.info('Task<id=%s>: Start on host %s', task_id, task.host.ip)
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
     container_ids = [c.container_id for c in containers if c]
@@ -142,12 +143,14 @@ def remove_containers(task_id, cids, rmi=False):
             try:
                 dockerjob.remove_image(task.version, host)
             except Exception as e:
-                _log.error('Task<id=%s>: Exception (e=%s), fail to remove image', task_id, e)
+                _log.error('Task<id=%s>, fail to remove image', task_id)
+                _log.exception(e)
     except Exception as e:
         task.finish(consts.TASK_FAILED)
         task.reason = str(e.message)
         notifier.pub_fail()
-        _log.error('Task<id=%s>: Exception (e=%s)', task_id, e)
+        _log.error('Task<id=%s> exception', task_id)
+        _log.exception(e)
     else:
         for c in containers:
             c.delete()

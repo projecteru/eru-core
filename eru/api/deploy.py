@@ -176,7 +176,7 @@ def build_image():
 
     host = Host.get_random_public_host() or pod.get_random_host()
     if not host:
-        return 406, {'error': 'no host is available'}
+        abort(406, 'no host is available')
 
     task = Task.create(TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
