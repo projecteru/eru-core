@@ -11,6 +11,7 @@ from eru.clients import rds
 from eru.config import ETCD
 from eru.ipam.base import BaseIPAM
 from eru.ipam.structure import WrappedIP, WrappedNetwork
+from eru.models.eip_pool import eip_pool
 
 
 def _get_client():
@@ -170,3 +171,11 @@ class CalicoIPAM(BaseIPAM):
             _ipam.remove_workload(hostname, 'docker', container.container_id)
         except KeyError:
             pass
+
+    def add_eip(self, *eips):
+        eips = [IPAddress(eip) for eip in eips]
+        eip_pool.add_eip(*eips)
+
+    def get_eip(self, eip=None):
+        eip = eip and IPAddress(eip) or None
+        return eip_pool.get_eip(eip)

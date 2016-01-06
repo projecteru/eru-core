@@ -228,7 +228,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
                 cpu_shares=cpu_shares, image=image, need_network=need_network)
         except Exception as e:
             # 写给celery日志看
-            print e
+            _log.exception(e)
             host.release_cores(cores_for_one_container, nshare)
             continue
 

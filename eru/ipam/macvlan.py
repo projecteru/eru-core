@@ -1,12 +1,14 @@
 # coding: utf-8
 
 import six
+from netaddr import IPAddress
 from werkzeug.security import gen_salt
 
 from eru.agent import get_agent
 from eru.ipam.base import BaseIPAM
 from eru.ipam.structure import WrappedIP, WrappedNetwork
 from eru.models.network import IP, Network
+from eru.models.eip_pool import eip_pool
 
 
 class MacVLANIPAM(BaseIPAM):
@@ -122,3 +124,11 @@ class MacVLANIPAM(BaseIPAM):
         ips = IP.get_by_container(container.id)
         for ip in ips:
             ip.release()
+
+    def add_eip(self, *eips):
+        eips = [IPAddress(eip) for eip in eips]
+        eip_pool.add_eip(*eips)
+
+    def get_eip(self, eip=None):
+        eip = eip and IPAddress(eip) or None
+        return eip_pool.get_eip(eip)
