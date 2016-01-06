@@ -26,3 +26,9 @@ class BaseIPAM(object):
 
     def release_ip_by_container(self, container_id):
         """release all IPs with container_id"""
+
+    def add_eip(self, *eips):
+        """add eips to eip pool"""
+
+    def get_eip(self, eip=None):
+        """get random or specified eip from eip pool"""

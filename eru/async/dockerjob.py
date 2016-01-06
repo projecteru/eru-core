@@ -5,9 +5,10 @@ import docker
 import logging
 import tempfile
 import contextlib
-from docker.utils import create_host_config, LogConfig, Ulimit
+
 from retrying import retry
 from werkzeug.security import gen_salt
+from docker.utils import create_host_config, LogConfig, Ulimit
 
 from eru import config
 from eru.clients import get_docker_client
@@ -15,7 +16,6 @@ from eru.templates import template
 from eru.async.utils import replace_ports
 from eru.utils.ensure import ensure_dir_absent, ensure_file
 from eru.helpers.cloner import clone_code
-
 
 _log = logging.getLogger(__name__)
 
@@ -133,9 +133,8 @@ def create_one_container(host, version, entrypoint, env='prod',
 
     if image not in local_images:
         repo, tag = image.split(':', 1)
-        for line in client.pull(repo, tag, stream=True,
-                insecure_registry=config.DOCKER_REGISTRY_INSECURE):
-            print line
+        for line in client.pull(repo, tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE):
+            _log.info(line)
 
     env_dict = {
         'APP_NAME': appname,
