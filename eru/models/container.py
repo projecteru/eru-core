@@ -129,6 +129,10 @@ class Container(Base, PropsMixin):
     def part_cores(self):
         return self.cores.get('part', [])
 
+    def get_entry(self):
+        appconfig = self.version.appconfig
+        return appconfig.entrypoints.get(self.entrypoint, {})
+
     def get_ports(self):
         appconfig = self.version.appconfig
         if self.entrypoint not in appconfig.entrypoints:

@@ -19,6 +19,9 @@ class EIPPool(object):
         value = rds.srem(self.EIP_POOL_KEY, eip.value)
         return value and eip or None
 
+    def release_eip(self, eip):
+        rds.sadd(self.EIP_POOL_KEY, eip.value)
+
     def __len__(self):
         return rds.scard(self.EIP_POOL_KEY)
 
