@@ -215,6 +215,7 @@ class Container(Base, PropsMixin):
             networks=ips,
             backends=self.get_backends(),
             appname=self.appname,
+            eip=self.eip,
         )
         return d
 

@@ -22,8 +22,7 @@ class Agent(object):
         self.host = host
         self.port = port
         self.session = requests.Session()
-        self.host_url = '%s:%s' % (host.replace('http://', ''), port)
-        self.base_url = 'http://' + self.host_url
+        self.base_url = 'http://%s:%s' % (host.replace('http://', ''), port)
 
     def _request(self, method, url, payload):
         headers = {'content-type': 'application/json'}
