@@ -145,10 +145,6 @@ class CalicoIPAM(BaseIPAM):
             for profile_name in profiles:
                 add_inbound(profile_name, ports)
 
-            # and publish this container
-            # try to bind it to eip
-            agent.publish_container(container)
-
         return True
 
     def reallocate_ips(self, container_id):
@@ -187,12 +183,6 @@ class CalicoIPAM(BaseIPAM):
             _ipam.remove_workload(hostname, 'docker', container.container_id)
         except KeyError:
             pass
-
-        # call unpublish to remove container
-        # from the eip that the host has
-        agent = get_agent(container.host)
-        if 'publish' in container.get_entry():
-            agent.unpublish_container(container)
 
         # TODO we should call remove_inbound here
         # but since we add inbound for all IPs
