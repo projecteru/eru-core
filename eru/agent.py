@@ -60,7 +60,7 @@ class Agent(object):
         if not backends:
             return
 
-        payload = {'eip': '%s/16' % eip, 'protocol': 'tcp'}
+        payload = {'eip': str(eip), 'protocol': 'tcp'}
         for backend in backends:
             ip, port = backend.split(':', 1)
             payload['port'] = port
