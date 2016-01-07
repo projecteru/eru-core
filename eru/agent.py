@@ -63,9 +63,9 @@ class Agent(object):
         payload = {'eip': '%s/16' % eip, 'protocol': 'tcp'}
         for backend in backends:
             ip, port = backend.split(':', 1)
-            payload['port'] = port,
-            payload['dest'] = ip,
-            payload['ident'] = '%s_%s' % (container.name, port),
+            payload['port'] = port
+            payload['dest'] = ip
+            payload['ident'] = '%s_%s' % (container.name, port)
             self._request('POST', url, payload)
 
         # we don't care the return value
@@ -81,7 +81,7 @@ class Agent(object):
 
     def bind_eip(self, ip_list):
         url = '/api/eip/bind/'
-        payload = [{'ip': ip, 'id': id} for ip, id in ip_list]
+        payload = [{'ip': ip, 'id': id, 'broadcast': b} for ip, id, b in ip_list]
         return self._request('POST', url, payload)
 
     def unbind_eip(self, ip_list):
