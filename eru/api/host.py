@@ -106,7 +106,7 @@ def bind_eip(id_or_name):
     if request.method == 'POST':
         return {'eip': str(host.bind_eip())}
     elif request.method == 'GET':
-        return [{str(eip): check_eip_bound(eip)} for eip in host.eips]
+        return {str(eip): check_eip_bound(eip) for eip in host.eips}
 
     host.release_eip()
     return DEFAULT_RETURN_VALUE
