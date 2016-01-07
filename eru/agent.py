@@ -76,7 +76,7 @@ class Agent(object):
         return self._publish_container(url, eip, container)
 
     def unpublish_container(self, eip, container):
-        url = '/api/container/disable/'
+        url = '/api/container/unpublish/'
         return self._publish_container(url, eip, container)
 
     def bind_eip(self, ip_list):
