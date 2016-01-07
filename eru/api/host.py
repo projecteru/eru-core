@@ -5,6 +5,7 @@ from flask import abort, g, request
 
 from eru.ipam import ipam
 from eru.models import Pod, Host, VLanGateway
+from eru.models.container import check_eip_bound
 from eru.clients import get_docker_client
 from eru.helpers.docker import save_docker_certs
 
@@ -105,7 +106,7 @@ def bind_eip(id_or_name):
     if request.method == 'POST':
         return {'eip': str(host.bind_eip())}
     elif request.method == 'GET':
-        return [str(eip) for eip in host.eips]
+        return [{str(eip): check_eip_bound(eip)} for eip in host.eips]
 
     host.release_eip()
     return DEFAULT_RETURN_VALUE
