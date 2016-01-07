@@ -256,7 +256,7 @@ class Host(Base, PropsMixin):
         
         mask = IPAddress(0xFFFF)
         ids = [eip.value & 0xFFFF]
-        broadcasts = [eip | mask]
+        broadcasts = [str(eip | mask)]
         ip_list = ['%s/16' % eip]
 
         agent = get_agent(self)
