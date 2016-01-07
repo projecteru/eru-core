@@ -206,6 +206,7 @@ class Container(Base, PropsMixin):
         ips = ipam.get_ip_by_container(self.container_id)
         d.update(
             host=self.host.addr.split(':')[0],
+            hostname=self.host.name,
             cores={
                 'full': [c.label for c in self.full_cores],
                 'part': [c.label for c in self.part_cores],
