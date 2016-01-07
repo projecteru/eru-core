@@ -8,7 +8,7 @@ import contextlib
 
 from retrying import retry
 from werkzeug.security import gen_salt
-from docker.utils import create_host_config, LogConfig, Ulimit
+from docker.utils import LogConfig, Ulimit
 
 from eru import config
 from eru.clients import get_docker_client
@@ -161,7 +161,7 @@ def create_one_container(host, version, entrypoint, env='prod',
     # cpuset: '0,1,2,3'
     cpuset = ','.join([c.label for c in cores])
     # host_config, include log_config
-    host_config = create_host_config(
+    host_config = client.create_host_config(
         binds=binds,
         network_mode=network_mode,
         log_config=LogConfig(type=config.DOCKER_LOG_DRIVER),
