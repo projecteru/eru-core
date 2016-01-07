@@ -254,13 +254,15 @@ class Host(Base, PropsMixin):
         if eip is None:
             return None
         
-        eips = [ip.value for ip in self.eips] + [eip.value]
-        ids = [e & 0xFFFF for e in eips]
+        mask = IPAddress(0xFFFF)
+        ids = [eip.value & 0xFFFF]
+        broadcasts = [eip | mask]
+        ip_list = ['%s/16' % eip]
 
-        ip_list = ['%s/16' % IPAddress(e) for e in eips]
         agent = get_agent(self)
-        agent.bind_eip(zip(ip_list, ids))
+        agent.bind_eip(zip(ip_list, ids, broadcasts))
 
+        eips = [ip.value for ip in self.eips] + [eip.value]
         self.eips = eips
         return eip
 
