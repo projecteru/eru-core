@@ -140,10 +140,17 @@ class CalicoIPAM(BaseIPAM):
         # if it goes well
         # add inbound profile for ports
         # allow all IPs, if already exists, ignore
-        if 'publish' in container.get_entry():
-            ports = container.get_ports()
+        entry = container.get_entry()
+        if 'publish' in entry:
+            ports = entry.get('ports', [])
+            protocol_dict = {}
+            for port in ports:
+                p, protocol = port.split('/', 1)
+                protocol_dict.setdefault(protocol, []).append(int(p))
+
             for profile_name in profiles:
-                add_inbound(profile_name, ports)
+                for protocol, ports in protocol_dict.iteritems():
+                    add_inbound(profile_name, protocol, ports)
 
         return True
 
@@ -203,12 +210,14 @@ class CalicoIPAM(BaseIPAM):
             eip_pool.release_eip(eip)
 
 
-def add_inbound(profile_name, ports):
-    return profile_rule_add_remove('add', profile_name, None, 'allow', 'inbound', dst_ports=ports)
+def add_inbound(profile_name, protocol, ports):
+    return profile_rule_add_remove('add', profile_name,
+            None, 'allow', 'inbound', protocol, dst_ports=ports)
 
 
-def remove_inbound(profile_name, ports):
-    return profile_rule_add_remove('remove', profile_name, None, 'allow', 'inbound', dst_ports=ports)
+def remove_inbound(profile_name, protocol, ports):
+    return profile_rule_add_remove('remove', profile_name,
+            None, 'allow', 'inbound', protocol, dst_ports=ports)
 
 
 def profile_rule_add_remove(
