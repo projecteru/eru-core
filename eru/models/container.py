@@ -146,8 +146,11 @@ class Container(Base, PropsMixin):
 
     def get_backends(self):
         """daemon的话是个空列表"""
-        ips = ipam.get_ip_by_container(self.container_id)
-        ips = [str(ip) for ip in ips]
+        if self.network_mode == 'host':
+            ips = [self.host.ip]
+        else:
+            ips = ipam.get_ip_by_container(self.container_id)
+            ips = [str(ip) for ip in ips]
         ports = self.get_ports()
         return ['{0}:{1}'.format(ip, port) for ip, port in itertools.product(ips, ports)]
 
