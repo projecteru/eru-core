@@ -6,10 +6,9 @@ from flask import request, abort
 
 from eru.ipam import ipam
 from eru.async import dockerjob
-from eru.agent import get_agent
 from eru.consts import ERU_AGENT_DIE_REASON
 from eru.clients import rds
-from eru.models.container import Container, check_eip_bound, set_eip_bound, clean_eip_bound
+from eru.models.container import Container, check_eip_bound
 from eru.utils.decorator import check_request_json
 from eru.helpers.network import rebind_container_ip, bind_container_ip
 
@@ -139,10 +138,7 @@ def bind_eip(id_or_cid):
     if eip not in c.host.eips:
         abort(404, 'Wrong EIP belonging')
 
-    agent = get_agent(c.host)
-    agent.publish_container(eip, c)
-    c.eip = str(eip)
-    set_eip_bound(eip, c.container_id)
+    c.bind_eip(str(eip))
 
     return DEFAULT_RETURN_VALUE
 
@@ -158,9 +154,6 @@ def release_eip(id_or_cid):
     if not eip:
         abort(400, 'Container %s is not bound to EIP' % c.container_id)
 
-    agent = get_agent(c.host)
-    agent.unpublish_container(eip, c)
-    c.eip = ''
-    clean_eip_bound(eip)
+    c.release_eip()
 
     return DEFAULT_RETURN_VALUE

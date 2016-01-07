@@ -9,6 +9,7 @@ from decimal import Decimal as D
 from datetime import datetime
 
 from eru.ipam import ipam
+from eru.agent import get_agent
 from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
@@ -158,6 +159,8 @@ class Container(Base, PropsMixin):
         """删除这条记录, 记得要释放自己占用的资源"""
         # release ip
         ipam.release_ip_by_container(self.container_id)
+        # release eip
+        self.release_eip()
 
         # release core and increase core count
         host = self.host
@@ -222,6 +225,22 @@ class Container(Base, PropsMixin):
             eip=self.eip,
         )
         return d
+
+    def bind_eip(self, eip):
+        if self.eip:
+            return
+        agent = get_agent(self.host)
+        agent.publish_container(eip, self)
+        self.eip = eip
+        set_eip_bound(eip, self.container_id)
+
+    def release_eip(self):
+        if not self.eip:
+            return
+        agent = get_agent(self.host)
+        agent.unpublish_container(self.eip, self)
+        self.eip = ''
+        clean_eip_bound(self.eip)
 
 
 def check_eip_bound(eip):
