@@ -51,8 +51,16 @@ class CalicoIPAM(BaseIPAM):
         except (AddrFormatError, ValueError):
             return
 
+        # create pool
         _ipam.add_ip_pool(4, pool)
+
+        # create profile for pool
         _ipam.create_profile(name)
+        # add rules for profile
+        profile_rule_add_remove('add', name, None, 'allow', 'inbound', 'icmp')
+        profile_rule_add_remove('add', name, None, 'allow', 'inbound', 'tcp')
+        profile_rule_add_remove('add', name, None, 'allow', 'inbound', 'udp')
+
         rds.set(_POOL_NAME_KEY % pool.cidr, name)
         rds.set(_POOL_CIDR_KEY % name, pool.cidr)
         return WrappedNetwork.from_calico(pool, name)
@@ -140,17 +148,19 @@ class CalicoIPAM(BaseIPAM):
         # if it goes well
         # add inbound profile for ports
         # allow all IPs, if already exists, ignore
-        entry = container.get_entry()
-        if 'publish' in entry:
-            ports = entry.get('ports', [])
-            protocol_dict = {}
-            for port in ports:
-                p, protocol = port.split('/', 1)
-                protocol_dict.setdefault(protocol, []).append(int(p))
 
-            for profile_name in profiles:
-                for protocol, ports in protocol_dict.iteritems():
-                    add_inbound(profile_name, protocol, ports)
+        # currently disabled
+        # entry = container.get_entry()
+        # if 'publish' in entry:
+        #     ports = entry.get('ports', [])
+        #     protocol_dict = {}
+        #     for port in ports:
+        #         p, protocol = port.split('/', 1)
+        #         protocol_dict.setdefault(protocol, []).append(int(p))
+
+        #     for profile_name in profiles:
+        #         for protocol, ports in protocol_dict.iteritems():
+        #             add_inbound(profile_name, protocol, ports)
 
         return True
 
