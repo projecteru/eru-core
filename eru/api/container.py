@@ -1,14 +1,13 @@
 # coding: utf-8
 
 import logging
-from netaddr import IPAddress
 from flask import request, abort
 
 from eru.ipam import ipam
 from eru.async import dockerjob
 from eru.consts import ERU_AGENT_DIE_REASON
 from eru.clients import rds
-from eru.models.container import Container, check_eip_bound
+from eru.models.container import Container
 from eru.utils.decorator import check_request_json
 from eru.helpers.network import rebind_container_ip, bind_container_ip
 
@@ -124,21 +123,14 @@ def bind_network(id_or_cid):
 
 
 @bp.route('/<id_or_cid>/bind_eip/', methods=['PUT'])
-@check_request_json(['eip'])
 def bind_eip(id_or_cid):
     c = _get_container(id_or_cid)
 
-    data = request.get_json()
-    eip = IPAddress(data['eip'])
-
     if not c.is_alive:
         abort(404, 'Container %s not alive' % c.container_id)
-    if check_eip_bound(eip):
-        abort(400, 'EIP already been taken')
-    if eip not in c.host.eips:
-        abort(404, 'Wrong EIP belonging')
 
-    c.bind_eip(str(eip))
+    if not c.bind_eip():
+        abort(400, 'No EIP available')
 
     return DEFAULT_RETURN_VALUE
 

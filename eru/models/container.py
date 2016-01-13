@@ -226,25 +226,37 @@ class Container(Base, PropsMixin):
         )
         return d
 
-    def bind_eip(self, eip):
+    def bind_eip(self):
         if self.eip:
             return
+
+        eip = None
+        for e in self.host.eips:
+            if not check_eip_bound(e):
+                eip = e
+                break
+
+        if eip is None:
+            return
+
         agent = get_agent(self.host)
         agent.publish_container(eip, self)
         self.eip = eip
         set_eip_bound(eip, self.container_id)
+        return True
 
     def release_eip(self):
         if not self.eip:
             return
         agent = get_agent(self.host)
         agent.unpublish_container(self.eip, self)
-        self.eip = ''
+        del self.eip
         clean_eip_bound(self.eip)
+        return True
 
 
 def check_eip_bound(eip):
-    return rds.get(_EIP_BOUND_KEY % eip) is not None
+    return bool(rds.get(_EIP_BOUND_KEY % eip))
 
 
 def set_eip_bound(eip, container_id):
