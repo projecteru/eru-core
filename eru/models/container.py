@@ -241,7 +241,7 @@ class Container(Base, PropsMixin):
 
         agent = get_agent(self.host)
         agent.publish_container(eip, self)
-        self.eip = eip
+        self.eip = str(eip)
         set_eip_bound(eip, self.container_id)
         return True
 
