@@ -226,15 +226,15 @@ class Container(Base, PropsMixin):
         )
         return d
 
-    def bind_eip(self):
+    def bind_eip(self, eip=None):
         if self.eip:
             return
 
-        eip = None
-        for e in self.host.eips:
-            if not check_eip_bound(e):
-                eip = e
-                break
+        if eip is None:
+            for e in self.host.eips:
+                if not check_eip_bound(e):
+                    eip = e
+                    break
 
         if eip is None:
             return

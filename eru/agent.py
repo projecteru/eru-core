@@ -62,10 +62,9 @@ class Agent(object):
 
         payload = {'eip': str(eip), 'protocol': 'tcp'}
         for backend in backends:
-            _, port = backend.split(':', 1)
-            payload['port'] = port
-            payload['dest'] = backend
-            payload['ident'] = '%s_%s' % (container.name, port)
+            ip, _ = backend.split(':', 1)
+            payload['dest'] = ip
+            payload['ident'] = container.name
             self._request('POST', url, payload)
 
         # we don't care the return value
