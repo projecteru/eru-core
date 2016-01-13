@@ -1,7 +1,7 @@
 # coding: utf-8
 
 import logging
-from netaddr import IPAdress
+from netaddr import IPAddress
 from flask import request, abort
 
 from eru.ipam import ipam
@@ -129,7 +129,7 @@ def bind_eip(id_or_cid):
 
     data = request.get_json()
     eip = data.get('eip', '')
-    eip = IPAdress(eip) if eip else None
+    eip = IPAddress(eip) if eip else None
 
     if not c.is_alive:
         abort(404, 'Container %s not alive' % c.container_id)
