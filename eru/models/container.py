@@ -250,8 +250,8 @@ class Container(Base, PropsMixin):
             return
         agent = get_agent(self.host)
         agent.unpublish_container(self.eip, self)
-        del self.eip
         clean_eip_bound(self.eip)
+        del self.eip
         return True
 
 
