@@ -253,6 +253,8 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
         cids.append(cid)
         backends.extend(c.get_backends())
 
+        c.callback_report(status='start')
+
     health_check = entry.get('health_check', '')
     if health_check and backends:
         urls = [b + health_check for b in backends]
