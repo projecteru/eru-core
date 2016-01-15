@@ -1,5 +1,10 @@
 # coding:utf-8
 
+import sys
+if sys.version_info < (2, 7, 10):
+    import requests.packages.urllib3
+    requests.packages.urllib3.disable_warnings()
+
 import logging
 from flask import Flask, request, g
 from werkzeug.utils import import_string
