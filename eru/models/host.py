@@ -33,6 +33,7 @@ class Core(object):
 
 
 def _create_cores_on_host(host, count):
+    rds.delete(host._cores_key)
     data = {str(i): host.core_share for i in xrange(count)}
     rds.zadd(host._cores_key, **data)
 
@@ -78,6 +79,25 @@ class Host(Base, PropsMixin):
         """创建必须挂在一个 pod 下面"""
         if not pod:
             return None
+
+        # 如果已经存在, 就覆盖
+        host = cls.get_by_addr(addr)
+        if host:
+            override = host.containers.count() == 0
+            host.uid = uid
+            if override:
+                host.ncore = ncore
+                host.mem = mem
+                host.count = ncore
+            db.session.add(host)
+            db.session.commit()
+
+            if override:
+                _create_cores_on_host(host, ncore)
+
+            return host
+
+        # 不存在就创建
         try:
             host = cls(addr, name, uid, ncore, mem, pod.id, ncore)
             db.session.add(host)
@@ -90,11 +110,11 @@ class Host(Base, PropsMixin):
 
     @classmethod
     def get_by_addr(cls, addr):
-        return cls.query.filter(cls.addr == addr).first()
+        return cls.query.filter_by(addr=addr).first()
 
     @classmethod
     def get_by_name(cls, name):
-        return cls.query.filter(cls.name == name).first()
+        return cls.query.filter_by(name=name).first()
 
     @classmethod
     def get_random_public_host(cls):
