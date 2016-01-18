@@ -22,7 +22,6 @@ def fix_core(host):
 
     # 没有的话, 直接销毁重建
     if not containers:
-        rds.delete(host._cores_key)
         _create_cores_on_host(host, host.ncore)
         return
 
