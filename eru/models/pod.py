@@ -63,16 +63,12 @@ class Pod(Base):
         return q.all()
 
     def get_free_public_hosts(self, limit):
-        hosts = [h for h in self.hosts if h.is_public]
+        hosts = [h for h in self.hosts if h.is_public and h.is_alive]
         random.shuffle(hosts)
         return hosts[:limit] if limit is not None else hosts
  
     def get_private_hosts(self):
-        return [h for h in self.hosts if not h.is_public]
-
-    def get_random_host(self):
-        q = self.hosts.limit(1).all()
-        return q and q[0] or None
+        return [h for h in self.hosts if not h.is_public and h.is_alive]
 
     def host_count(self):
         return self.hosts.count()

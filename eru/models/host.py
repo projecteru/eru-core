@@ -98,7 +98,7 @@ class Host(Base, PropsMixin):
 
     @classmethod
     def get_random_public_host(cls):
-        return cls.query.filter(cls.is_public == True, cls.ncore > 0).limit(1).first()
+        return cls.query.filter(cls.is_public == True, cls.is_alive == True, cls.ncore > 0).limit(1).first()
 
     @property
     def ip(self):
