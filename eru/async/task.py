@@ -94,7 +94,7 @@ def build_docker_image(task_id, base):
         _log.exception(e)
     else:
         # 粗暴的判断, 如果推送成功说明build成功
-        if 'Digest: sha256' in last_line:
+        if 'digest: sha256' in last_line.lower():
             task.finish(consts.TASK_SUCCESS)
             task.reason = 'ok'
 
