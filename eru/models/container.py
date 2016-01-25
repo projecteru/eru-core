@@ -37,6 +37,7 @@ class Container(Base, PropsMixin):
 
     callback_url = PropsItem('callback_url')
     eip = PropsItem('eip')
+    in_removal = PropsItem('in_removal', default=0)
 
     def __init__(self, container_id, host, version, name, entrypoint, env):
         self.container_id = container_id
@@ -172,6 +173,9 @@ class Container(Base, PropsMixin):
                 D(format(D(cores.get('nshare', 0)) / D(host.core_share), '.3f'))
         db.session.add(host)
 
+        # remove property
+        self.destroy_props()
+
         # remove container
         db.session.delete(self)
         db.session.commit()
@@ -223,6 +227,7 @@ class Container(Base, PropsMixin):
             backends=self.get_backends(),
             appname=self.appname,
             eip=self.eip,
+            in_removal=self.in_removal,
         )
         return d
 
