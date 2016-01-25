@@ -121,6 +121,10 @@ def remove_containers(task_id, cids, rmi=False):
     _log.info('Task<id=%s>: Start on host %s', task_id, task.host.ip)
     notifier = TaskNotifier(task)
     containers = Container.get_multi(cids)
+
+    for c in containers:
+        c.in_removal = 1
+
     container_ids = [c.container_id for c in containers if c]
     host = task.host
     version = task.version
