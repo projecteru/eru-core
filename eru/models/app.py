@@ -7,6 +7,7 @@ from werkzeug.utils import cached_property
 from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base
+from eru.models.image import Image
 from eru.models.appconfig import AppConfig, ResourceConfig
 
 
@@ -88,10 +89,14 @@ class Version(Base):
         ports = entry.get('ports', [])
         return [int(p.split('/')[0]) for p in ports]
 
+    def get_image(self):
+        return Image.get_by_app_and_version(self.app_id, self.id)
+
     def to_dict(self):
         d = super(Version, self).to_dict()
         d['name'] = self.name
         d['appconfig'] = self.appconfig.to_dict()
+        d['image'] = self.get_image()
         return d
 
 
