@@ -77,3 +77,20 @@ def container_log(cid):
         except:
             pass
     return ''
+
+
+@bp.route('/echo')
+def echo():
+    ws = request.environ['wsgi.websocket']
+    try:
+        while True:
+            message = ws.receive()
+            ws.send(message)
+    except geventwebsocket.WebSocketError, e:
+        _log.exception(e)
+    finally:
+        try:
+            ws.close()
+        except:
+            pass
+    return 'echo'
