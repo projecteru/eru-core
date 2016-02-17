@@ -156,6 +156,8 @@ def create_one_container(host, version, entrypoint, env='prod',
         volumes.append(permdir)
         binds[config.ERU_HOST_PERMDIR % appname] =  {'bind': permdir, 'ro': False}
 
+    extra_hosts = entry.get('hosts', None)
+
     # container name: {appname}_{entrypoint}_{ident_id}
     container_name = '_'.join([appname, entrypoint, gen_salt(6)])
     # cpuset: '0,1,2,3'
@@ -169,6 +171,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         restart_policy=restart_policy,
         mem_limit=mem_limit,
         port_bindings=port_bindings,
+        extra_hosts=extra_hosts,
     )
     container = client.create_container(
         image=image,
