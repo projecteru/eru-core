@@ -27,6 +27,9 @@ Example of app.yaml:
             cmd: "python daemon.py --interval 5"
             network_mode: "host"
             network_route: "10.100.1.254"
+            hosts:
+                - "host1:ip1"
+                - "host2:ip2"
         service:
             cmd: "python service.py"
     build: "pip install -r ./req.txt"
