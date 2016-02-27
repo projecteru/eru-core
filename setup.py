@@ -26,6 +26,13 @@ INSTALL_REQUIRES = [
     'requests',
     'paramiko',
     'Flask-Testing',
+    'docker-py',
+    'Flask-SQLAlchemy',
+    'gunicorn',
+    'netaddr',
+    'more_itertools',
+    'retrying',
+    'pygit2',
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
