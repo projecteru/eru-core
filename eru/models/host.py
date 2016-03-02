@@ -60,7 +60,7 @@ class Host(Base, PropsMixin):
     containers = db.relationship('Container', backref='host', lazy='dynamic')
     vlans = db.relationship('VLanGateway', backref='host', lazy='dynamic')
 
-    eips = PropsItem('eips', default=[], type=_ip_address_filter)
+    eips = PropsItem('eips', default=list, type=_ip_address_filter)
 
     def __init__(self, addr, name, uid, ncore, mem, pod_id, count):
         self.addr = addr

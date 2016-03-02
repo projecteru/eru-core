@@ -33,6 +33,9 @@ class Base(Jsonized, db.Model):
         return '{0}({1})'.format(self.__class__.__name__, attrs)
 
 
+_missing = object()
+
+
 class PropsMixin(object):
     """丢redis里"""
 
@@ -61,7 +64,12 @@ class PropsMixin(object):
         self.props = props
 
     def get_props_item(self, key, default=None):
-        return self.props.get(key, default)
+        r = self.props.get(key, _missing)
+        if r is not _missing:
+            return r
+        if callable(default):
+            return default()
+        return default
 
     def set_props_item(self, key, value):
         props = self.props
