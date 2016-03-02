@@ -24,7 +24,7 @@ class Task(Base, PropsMixin):
     created = db.Column(db.DateTime, default=datetime.now)
 
     reason = PropsItem('reason', default='')
-    container_ids = PropsItem('container_ids', default=[])
+    container_ids = PropsItem('container_ids', default=list)
 
     def __init__(self, host_id, app_id, version_id, type_):
         self.host_id = host_id
