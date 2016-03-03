@@ -174,7 +174,7 @@ def build_image():
     if ':' not in base:
         base = base + ':latest'
 
-    host = Host.get_random_public_host() or pod.get_random_host()
+    host = Host.get_random_public_host()
     if not host:
         abort(406, 'no host is available')
 
