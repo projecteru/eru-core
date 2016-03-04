@@ -3,3 +3,4 @@ eru.egg-info/*
 local_settings.py
 local_config.py
 tests/__pycache__/*
+.ropeproject
