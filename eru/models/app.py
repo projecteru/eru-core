@@ -3,6 +3,8 @@
 import sqlalchemy.exc
 from datetime import datetime
 from werkzeug.utils import cached_property
+from sqlalchemy import event
+from sqlalchemy import DDL
 
 from eru.clients import rds
 from eru.models import db
@@ -185,3 +187,10 @@ class App(Base):
         db.session.add(self)
         db.session.commit()
         return version
+
+
+event.listen(
+    App.__table__,
+    "after_create",
+    DDL("ALTER TABLE %(table)s AUTO_INCREMENT = 10001;")
+)
