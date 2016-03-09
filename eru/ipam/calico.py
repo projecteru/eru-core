@@ -136,7 +136,7 @@ class CalicoIPAM(BaseIPAM):
         # call agent to add network
         # and add container to profile
         resp = agent.add_container_calico(container_id, zip(nids, ip_list, profiles, appends))
-        if resp.status_code != 200:
+        if not resp or resp.status_code != 200:
             _release_ips(ip_list)
             return False
 

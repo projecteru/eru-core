@@ -73,7 +73,7 @@ class MacVLANIPAM(BaseIPAM):
         ip_list = [(nid, ip.vlan_address) for nid, ip in zip(nids, ips)]
 
         resp = agent.add_container_vlan(container_id, gen_salt(8), ip_list)
-        if resp.status_code != 200:
+        if not resp or resp.status_code != 200:
             _release_ips(ips)
             return False
 
