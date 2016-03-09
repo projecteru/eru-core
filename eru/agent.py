@@ -28,8 +28,11 @@ class Agent(object):
         headers = {'content-type': 'application/json'}
         data = json.dumps(payload)
         target_url = self.base_url + url
-        return self.session.request(method=method, url=target_url,
-                data=data, headers=headers)
+        try:
+            return self.session.request(method=method, url=target_url,
+                    data=data, headers=headers)
+        except requests.exceptions.RequestException:
+            return None
 
     def add_container(self, container):
         url = '/api/container/add/'

@@ -280,7 +280,9 @@ class Host(Base, PropsMixin):
         ip_list = ['%s/16' % eip]
 
         agent = get_agent(self)
-        agent.bind_eip(zip(ip_list, ids, broadcasts))
+        if not agent.bind_eip(zip(ip_list, ids, broadcasts)):
+            ipam.release_eip(eip)
+            return None
 
         eips = [ip.value for ip in self.eips] + [eip.value]
         self.eips = eips
@@ -296,7 +298,8 @@ class Host(Base, PropsMixin):
 
         ip_list = [('%s/16' % e, e.value & 0xFFFF) for e in to_release]
         agent = get_agent(self)
-        agent.unbind_eip(ip_list)
+        if not agent.unbind_eip(ip_list):
+            return
 
         for eip in to_release:
             ipam.release_eip(eip)
