@@ -62,7 +62,7 @@ def publish_to_service_discovery(*appnames):
 
 
 @current_app.task()
-def build_docker_image(task_id, base):
+def build_docker_image(task_id, base, file_path):
     task = Task.get(task_id)
     if not task:
         _log.error('Task (id=%s) not found, quit', task_id)
@@ -81,7 +81,7 @@ def build_docker_image(task_id, base):
         notifier.store_and_broadcast(dockerjob.pull_image(host, repo, tag))
 
         _log.info('Task<id=%s>: Build image (base=%s)', task_id, base)
-        notifier.store_and_broadcast(dockerjob.build_image(host, version, base))
+        notifier.store_and_broadcast(dockerjob.build_image(host, version, base, file_path))
 
         _log.info('Task<id=%s>: Push image (base=%s)', task_id, base)
         last_line = notifier.store_and_broadcast(dockerjob.push_image(host, version))

@@ -3,6 +3,7 @@
 import os
 import docker
 import logging
+import zipfile
 import tempfile
 import contextlib
 
@@ -56,7 +57,42 @@ def build_image_environment(version, base, rev):
     ensure_dir_absent(build_path)
 
 
-def build_image(host, version, base):
+@contextlib.contextmanager
+def build_image_environment_v2(version, base, archive_file):
+    appname = version.appconfig.appname
+    build_cmds = version.appconfig.build
+
+    if not isinstance(build_cmds, list):
+        build_cmds = [build_cmds,]
+
+    build_path = os.path.dirname(archive_file)
+    content_path = os.path.join(build_path, appname)
+    f = zipfile.ZipFile(archive_file)
+    f.extractall(content_path)
+    # remove git history
+    ensure_dir_absent(os.path.join(content_path, '.git'))
+    
+    # launcher script
+    entry = 'exec sudo -E -u %s $@' % appname
+    entry_root = 'exec $@'
+    launcher = template.render_template('launcher.jinja', entrypoint=entry)
+    launcheroot = template.render_template('launcher.jinja', entrypoint=entry_root)
+    ensure_file(os.path.join(build_path, 'launcher'), content=launcher, mode=0755)
+    ensure_file(os.path.join(build_path, 'launcheroot'), content=launcheroot, mode=0755)
+    
+    # build dockerfile
+    dockerfile = template.render_template(
+        'dockerfile.jinja', base=base, appname=appname,
+        build_cmds=build_cmds, user_id=version.user_id)
+    ensure_file(os.path.join(build_path, 'Dockerfile'), content=dockerfile)
+
+    yield build_path
+
+    # clean build dir
+    ensure_dir_absent(build_path)
+
+
+def build_image(host, version, base, file_path=None):
     """
     用 host 机器, 以 base 为基础镜像, 为 version 构建
     一个稍后可以运行的镜像.
@@ -67,8 +103,12 @@ def build_image(host, version, base):
     rev = version.short_sha
     tag = '{0}:{1}'.format(repo, rev)
 
-    with build_image_environment(version, base, rev) as build_path:
-        return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
+    if file_path:
+        with build_image_environment_v2(version, base, file_path) as build_path:
+            return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
+    else:
+        with build_image_environment(version, base, rev) as build_path:
+            return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
 
 
 def push_image(host, version):

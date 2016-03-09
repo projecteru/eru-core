@@ -1,9 +1,12 @@
 # coding:utf-8
 
+import os
 import logging
+import tempfile
 import itertools
 
 from flask import abort, request
+from werkzeug import secure_filename
 
 from eru.consts import TASK_BUILD, TASK_REMOVE, TASK_CREATE
 from eru.utils import is_strict_url
@@ -34,11 +37,7 @@ def _get_strategy(name):
     abort(400, 'strategy %s not supported' % name)
 
 
-def _get_instances(podname, appname, version, **kwargs):
-    pod = Pod.get_by_name(podname)
-    if not pod:
-        abort(400, 'Pod `%s` not found' % podname)
-
+def _get_app_and_version(appname, version, **kwargs):
     app = App.get_by_name(appname)
     if not app:
         abort(400, 'App `%s` not found' % appname)
@@ -46,7 +45,14 @@ def _get_instances(podname, appname, version, **kwargs):
     version = app.get_version(version)
     if not version:
         abort(400, 'Version `%s` not found' % version)
+    return app, version
 
+
+def _get_instances(podname, appname, version, **kwargs):
+    pod = Pod.get_by_name(podname)
+    if not pod:
+        abort(400, 'Pod `%s` not found' % podname)
+    app, version = _get_app_and_version(appname, version)
     return pod, app, version
 
 
@@ -168,7 +174,7 @@ def create_public():
 @check_request_json(['podname', 'appname', 'base', 'version'])
 def build_image():
     data = request.get_json()
-    pod, _, version = _get_instances(**data)
+    _, version = _get_app_and_version(**data)
 
     base = data['base']
     if ':' not in base:
@@ -180,7 +186,34 @@ def build_image():
 
     task = Task.create(TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(
-        args=(task.id, base),
+        args=(task.id, base, None),
+        task_id='task:%d' % task.id
+    )
+    return {'task': task.id, 'watch_key': task.result_key}
+
+
+@bp.route('/buildv2/', methods=['POST'])
+def build_image_v2():
+    # form post
+    appname = request.form.get('appname', default='')
+    version = request.form.get('version', default='')
+    base = request.form.get('base', default='')
+    _, version = _get_app_and_version(appname, version)
+
+    if ':' not in base:
+        base = base + ':latest'
+
+    host = Host.get_random_public_host()
+    if not host:
+        abort(406, 'no host is available')
+
+    f = request.files['artifacts.zip']
+    file_path = os.path.join(tempfile.mkdtemp(), secure_filename(f.filename))
+    f.save(file_path)
+
+    task = Task.create(TASK_BUILD, version, host, {'base': base})
+    build_docker_image.apply_async(
+        args=(task.id, base, file_path),
         task_id='task:%d' % task.id
     )
     return {'task': task.id, 'watch_key': task.result_key}
