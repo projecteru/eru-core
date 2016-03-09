@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import yaml
 import logging
 from flask import request, g, abort
 
@@ -46,6 +47,12 @@ def register_app_version():
     version = data['version']
 
     appyaml = data['appyaml']
+    if isinstance(appyaml, basestring):
+        try:
+            appyaml = yaml.load(appyaml)
+        except yaml.error.YAMLError:
+            abort(400, 'Error in app.yaml')
+
     try:
         verify_appconfig(appyaml)
     except (ValueError, KeyError) as e:
