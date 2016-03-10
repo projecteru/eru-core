@@ -4,7 +4,6 @@ import sqlalchemy.exc
 from datetime import datetime
 from werkzeug.utils import cached_property
 
-from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base
 from eru.models.image import Image
@@ -55,17 +54,6 @@ class Version(Base):
     @property
     def user_id(self):
         return self.app.user_id
-
-    def _get_falcon(self):
-        return rds.smembers('eru:falcon:version:%s:expression' % self.id) or set()
-    def _set_falcon(self, expr_ids):
-        rds.delete('eru:falcon:version:%s:expression' % self.id)
-        for i in expr_ids:
-            rds.sadd('eru:falcon:version:%s:expression' % self.id, i)
-    def _del_falcon(self):
-        rds.delete('eru:falcon:version:%s:expression' % self.id)
-    falcon_expression_ids = property(_get_falcon, _set_falcon, _del_falcon)
-    del _get_falcon, _set_falcon, _del_falcon
 
     def list_containers(self, start=0, limit=20):
         from .container import Container

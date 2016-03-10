@@ -15,7 +15,6 @@ from eru.ipam import ipam
 from eru.utils.notify import TaskNotifier
 from eru.models import Container, Task, Image
 
-from eru.helpers.falcon import falcon_all_graphs, falcon_all_alarms, falcon_remove_alarms
 from eru.helpers.check import wait_health_check
 
 _log = logging.getLogger(__name__)
@@ -127,7 +126,6 @@ def remove_containers(task_id, cids, rmi=False):
 
     container_ids = [c.container_id for c in containers if c]
     host = task.host
-    version = task.version
     try:
         # flag, don't report these
         flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
@@ -165,9 +163,6 @@ def remove_containers(task_id, cids, rmi=False):
             rds.hdel('eru:agent:%s:containers:meta' % host.name, *container_ids)
         rds.delete(*flags.keys())
         _log.info('Task<id=%s>: Done', task_id)
-
-    if not version.containers.count():
-        falcon_remove_alarms(version)
 
 
 def _iter_cores(cores, ncontainer):
@@ -272,9 +267,5 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     task.reason = 'ok'
     task.container_ids = cids
     notifier.pub_success()
-
-    # 有IO, 丢最后面算了
-    falcon_all_graphs(version)
-    falcon_all_alarms(version)
 
     _log.info('Task<id=%s>: Done', task_id)
