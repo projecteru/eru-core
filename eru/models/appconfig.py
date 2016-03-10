@@ -46,10 +46,6 @@ Example of app.yaml:
     meta:
         meta_key1: meta_value1
         meta_key2: meta_value2
-    falcon-index: "MPP"
-    falcon-alarm:
-        - "cpu_usage_rate"
-        - "mem_usage"
 """
 
 REQUIRED_KEYS = ['appname', 'entrypoints', 'build']
@@ -124,10 +120,6 @@ def verify_appconfig(appconfig):
     meta = appconfig.get('meta', {})
     if not isinstance(meta, dict):
         raise ValueError('meta must be dictionary')
-
-    falcon_alarm_key = appconfig.get('falcon-alarm', [])
-    if falcon_alarm_key and not all([key in FALCON_ALARM_KEY for key in falcon_alarm_key]):
-        raise ValueError('invalid falcon alarm key')
 
     return True
 
