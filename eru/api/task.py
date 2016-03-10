@@ -1,10 +1,12 @@
 # coding: utf-8
-
 import json
+
 from flask import abort
-from eru.models import Task
-from eru.clients import rds
+
 from .bp import create_api_blueprint
+from eru.models import Task
+from eru.redis_client import rds
+
 
 bp = create_api_blueprint('task', __name__, url_prefix='/api/task')
 

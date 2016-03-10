@@ -1,9 +1,9 @@
 # coding: utf-8
-
 import yaml
 from netaddr import IPAddress, AddrFormatError
 
-from eru.clients import config_backend
+from eru.redis_client import config_backend
+
 
 __all__ = ['AppConfig', 'ResourceConfig', 'verify_appconfig', ]
 

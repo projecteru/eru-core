@@ -1,11 +1,11 @@
 # coding: utf-8
-
 import json
+
 from sqlalchemy.ext.declarative import declared_attr
 
-from eru.utils import Jsonized
 from eru.models import db
-from eru.clients import rds
+from eru.redis_client import rds
+from eru.utils import Jsonized
 
 
 class Base(Jsonized, db.Model):

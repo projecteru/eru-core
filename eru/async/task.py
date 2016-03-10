@@ -1,21 +1,21 @@
 # coding:utf-8
-
 import json
-import time
 import logging
-from more_itertools import chunked
+import time
 from itertools import izip_longest
+
 from celery import current_app
+from more_itertools import chunked
 
 from eru import consts
 from eru.async import dockerjob
 from eru.config import DOCKER_REGISTRY
-from eru.clients import rds
-from eru.ipam import ipam
-from eru.utils.notify import TaskNotifier
-from eru.models import Container, Task, Image
-
 from eru.helpers.check import wait_health_check
+from eru.ipam import ipam
+from eru.models import Container, Task, Image
+from eru.redis_client import rds
+from eru.utils.notify import TaskNotifier
+
 
 _log = logging.getLogger(__name__)
 

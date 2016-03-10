@@ -1,13 +1,15 @@
 # coding: utf-8
-
 import logging
+
 import geventwebsocket
+from eru.docker_client import get_docker_client
 from flask import Blueprint, request
 
 from eru import consts
-from eru.clients import rds, get_docker_client
 from eru.models import Task, Container
+from eru.redis_client import rds
 from eru.utils.notify import TaskNotifier
+
 
 bp = Blueprint('websockets', __name__, url_prefix='/websockets')
 _log = logging.getLogger(__name__)

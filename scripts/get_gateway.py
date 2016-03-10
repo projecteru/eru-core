@@ -1,12 +1,12 @@
 # coding: utf-8
-
 import sys
 from functools import wraps
+
 from netaddr import IPAddress
 
-from eru.clients import rds
 from eru.app import create_app_with_celery
 from eru.models import Network, VLanGateway, Host
+from eru.redis_client import rds
 
 
 def with_app_context(f):

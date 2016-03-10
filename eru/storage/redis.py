@@ -1,6 +1,6 @@
 # coding: utf-8
-
 from eru.storage.base import BaseConfigStorage
+
 
 class RedisStorage(BaseConfigStorage):
 

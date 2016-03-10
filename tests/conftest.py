@@ -1,10 +1,9 @@
 # coding: utf-8
-
 import pytest
 
 from eru.app import create_app_with_celery
-from eru.clients import rds
 from eru.models import db
+from eru.redis_client import rds
 
 
 @pytest.fixture

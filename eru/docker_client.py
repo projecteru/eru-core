@@ -1,7 +1,6 @@
 # coding: utf-8
-
 import os
-import redis
+
 import docker
 from docker.tls import TLSConfig
 
@@ -11,11 +10,8 @@ from eru.config import (
     DOCKER_REGISTRY_EMAIL,
     DOCKER_REGISTRY_USERNAME,
     DOCKER_REGISTRY_PASSWORD,
-    REDIS_HOST,
-    REDIS_PORT,
-    REDIS_POOL_SIZE,
 )
-from eru.storage.redis import RedisStorage
+
 
 _docker_clients = {}
 
@@ -55,10 +51,3 @@ def get_docker_client(addr, force_flush=False):
         )
     _docker_clients[addr] = client
     return client
-
-def get_redis_client(host, port , max_connections):
-    pool = redis.ConnectionPool(host=host, port=port, max_connections=max_connections)
-    return redis.Redis(connection_pool=pool)
-
-rds = get_redis_client(REDIS_HOST, REDIS_PORT, REDIS_POOL_SIZE)
-config_backend = RedisStorage(rds)

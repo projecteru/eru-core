@@ -1,19 +1,20 @@
 # coding:utf-8
-
-import json
 import cPickle
-import requests
 import itertools
-import sqlalchemy.exc
-from decimal import Decimal as D
+import json
 from datetime import datetime
+from decimal import Decimal as D
 
-from eru.ipam import ipam
+import requests
+import sqlalchemy.exc
+
 from eru.agent import get_agent
-from eru.clients import rds
+from eru.ipam import ipam
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
+from eru.redis_client import rds
 from eru.utils.decorator import EruJSONEncoder
+
 
 _CONTAINER_PUB_KEY = 'container:%s'
 _EIP_BOUND_KEY = 'eip:%s:container'

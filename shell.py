@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+import atexit
 import os
 import sys
-import atexit
+
 import IPython
 
 from eru.app import create_app_with_celery
+
 
 def hook_readline_hist():
     try:
@@ -43,7 +44,8 @@ def pre_imports():
     from eru.models.task import Task
     from eru.models.network import Network, IP
     from eru.models import db
-    from eru.clients import rds, get_docker_client
+    from eru.docker_client import get_docker_client
+    from eru.redis_client import rds
     return locals()
 
 def ipython_shell(user_ns):

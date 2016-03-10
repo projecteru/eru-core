@@ -1,18 +1,18 @@
 # coding: utf-8
-
-import os
 import logging
+import os
+
 from netaddr import IPAddress, IPNetwork, AddrFormatError
-from pycalico.ipam import IPAMClient
 from pycalico.datastore import ETCD_SCHEME_ENV, ETCD_AUTHORITY_ENV, Rule
 from pycalico.datastore_datatypes import IPPool
+from pycalico.ipam import IPAMClient
 
 from eru.agent import get_agent
-from eru.clients import rds
 from eru.config import ETCD
 from eru.ipam.base import BaseIPAM
 from eru.ipam.structure import WrappedIP, WrappedNetwork
 from eru.models.eip_pool import eip_pool
+from eru.redis_client import rds
 
 
 def _get_client():

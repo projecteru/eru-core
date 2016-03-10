@@ -1,6 +1,5 @@
 # coding:utf-8
-
-from eru.clients import rds
+from eru.agent import get_agent
 from eru.consts import (
     ERU_TASK_PUBKEY,
     ERU_TASK_LOGKEY,
@@ -9,7 +8,8 @@ from eru.consts import (
     TASK_RESULT_FAILED,
     PUB_END_MESSAGE,
 )
-from eru.agent import get_agent
+from eru.redis_client import rds
+
 
 class TaskNotifier(object):
 
