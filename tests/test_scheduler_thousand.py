@@ -1,62 +1,49 @@
 # coding: utf-8
-
+import logging
 import time
+
+from eru.helpers.scheduler import get_max_container_count, average_schedule, centralized_schedule
 from eru.models import Pod, Host
-from eru.helpers.scheduler import get_max_container_count
-from eru.helpers.scheduler import average_schedule
-from eru.helpers.scheduler import centralized_schedule
 from tests.utils import random_ipv4, random_uuid, random_string
+
+
+_log = logging.getLogger(__name__)
+
 
 def _create_data(core_share, max_share_core, host_count):
     pod = Pod.create('pod', 'pod', core_share, max_share_core)
     for _ in range(host_count):
         Host.create(pod, random_ipv4(), random_string(), random_uuid(), 16, 4096)
+
     return pod
+
 
 def test_scheduler(test_db):
     # 10000个16核, 不限制共享数
     pod = _create_data(10, -1, 10000)
 
+    def test_max_container_count(ncore, nshare, expected):
+        start = time.time()
+        assert get_max_container_count(pod, ncore, nshare) == expected
+        delta = time.time() - start
+        _log.debug('test_max_container_count with ncore={}, nshare={}, expected={} takes {}'.format(ncore, nshare, expected, delta))
 
-    start = time.time()
-    assert get_max_container_count(pod, ncore=1, nshare=0) == 160000
-    print time.time() - start
 
-    start = time.time()
-    assert get_max_container_count(pod, ncore=2, nshare=0) == 80000
-    print time.time() - start
+    test_max_container_count_cases = (
+        (1, 0, 160000),
+        (2, 0, 80000),
+        (3, 0, 50000),
+        (4, 0, 40000),
+        (5, 0, 30000),
+        (1, 5, 100000),
+        (2, 5, 60000),
+        (3, 5, 40000),
+        (1, 1, 140000),
+        (2, 1, 70000),
+    )
 
-    start = time.time()
-    assert get_max_container_count(pod, ncore=3, nshare=0) == 50000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=4, nshare=0) == 40000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=5, nshare=0) == 30000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=1, nshare=5) == 100000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=2, nshare=5) == 60000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=3, nshare=5) == 40000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=1, nshare=1) == 140000
-    print time.time() - start
-
-    start = time.time()
-    assert get_max_container_count(pod, ncore=2, nshare=1) == 70000
-    print time.time() - start
+    for case in test_max_container_count_cases:
+        test_max_container_count(*case)
 
     start = time.time()
     assert len(average_schedule(pod, ncontainer=100, ncore=2)) == 100
@@ -91,7 +78,7 @@ def test_scheduler(test_db):
     assert len(r) == 10000
     assert sum(i[1] for i in r.keys()) == 10000
     for (host, count), cores in r.iteritems():
-        assert count == 1 
+        assert count == 1
         assert len(cores['full']) == 1
         assert len(cores['part']) == 1
 
