@@ -14,6 +14,9 @@ from eru.models.appconfig import AppConfig, ResourceConfig
 
 class Version(Base):
     __tablename__ = 'version'
+    __table_args__ = (
+        db.UniqueConstraint('app_id', 'sha'),
+    )
 
     sha = db.Column(db.CHAR(40), index=True, nullable=False)
     app_id = db.Column(db.Integer, db.ForeignKey('app.id'))
@@ -168,6 +171,10 @@ class App(Base):
         return Image.list_by_app_id(self.id, start, limit)
 
     def add_version(self, sha):
+        version = self.get_version(sha)
+        if version:
+            return version
+
         version = Version.create(sha, self.id)
         if not version:
             return None
