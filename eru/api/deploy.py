@@ -207,9 +207,13 @@ def build_image_v2():
     if not host:
         abort(406, 'no host is available')
 
-    f = request.files['artifacts.zip']
-    file_path = os.path.join(tempfile.mkdtemp(), secure_filename(f.filename))
-    f.save(file_path)
+    # if no artifacts.zip is set
+    # ignore and just do the cloning and building
+    file_path = None
+    if 'artifacts.zip' in request.files:
+        f = request.files['artifacts.zip']
+        file_path = os.path.join(tempfile.mkdtemp(), secure_filename(f.filename))
+        f.save(file_path)
 
     task = Task.create(TASK_BUILD, version, host, {'base': base})
     build_docker_image.apply_async(

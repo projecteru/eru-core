@@ -22,20 +22,27 @@ _log = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
-def build_image_environment(version, base, rev):
+def build_image_environment(version, base, archive_file=None):
     appname = version.appconfig.appname
     build_cmds = version.appconfig.build
 
     if not isinstance(build_cmds, list):
         build_cmds = [build_cmds,]
 
-    # checkout code of version @ rev
-    build_path = tempfile.mkdtemp()
-    clone_path = os.path.join(build_path, appname)
-    clone_code(version.app.git, clone_path, rev, branch=None)
+    if archive_file and os.path.isfile(archive_file):
+        # if archive_file is passed
+        build_path = os.path.dirname(archive_file)
+        code_path = os.path.join(build_path, appname)
+        f = zipfile.ZipFile(archive_file)
+        f.extractall(code_path)
+    else:
+        # checkout code of version @ version.short_sha
+        build_path = tempfile.mkdtemp()
+        code_path = os.path.join(build_path, appname)
+        clone_code(version.app.git, code_path, version.short_sha, branch=None)
 
     # remove git history
-    ensure_dir_absent(os.path.join(clone_path, '.git'))
+    ensure_dir_absent(os.path.join(code_path, '.git'))
 
     # launcher script
     entry = 'exec sudo -E -u %s $@' % appname
@@ -45,41 +52,6 @@ def build_image_environment(version, base, rev):
     ensure_file(os.path.join(build_path, 'launcher'), content=launcher, mode=0755)
     ensure_file(os.path.join(build_path, 'launcheroot'), content=launcheroot, mode=0755)
 
-    # build dockerfile
-    dockerfile = template.render_template(
-        'dockerfile.jinja', base=base, appname=appname,
-        build_cmds=build_cmds, user_id=version.user_id)
-    ensure_file(os.path.join(build_path, 'Dockerfile'), content=dockerfile)
-
-    yield build_path
-
-    # clean build dir
-    ensure_dir_absent(build_path)
-
-
-@contextlib.contextmanager
-def build_image_environment_v2(version, base, archive_file):
-    appname = version.appconfig.appname
-    build_cmds = version.appconfig.build
-
-    if not isinstance(build_cmds, list):
-        build_cmds = [build_cmds,]
-
-    build_path = os.path.dirname(archive_file)
-    content_path = os.path.join(build_path, appname)
-    f = zipfile.ZipFile(archive_file)
-    f.extractall(content_path)
-    # remove git history
-    ensure_dir_absent(os.path.join(content_path, '.git'))
-    
-    # launcher script
-    entry = 'exec sudo -E -u %s $@' % appname
-    entry_root = 'exec $@'
-    launcher = template.render_template('launcher.jinja', entrypoint=entry)
-    launcheroot = template.render_template('launcher.jinja', entrypoint=entry_root)
-    ensure_file(os.path.join(build_path, 'launcher'), content=launcher, mode=0755)
-    ensure_file(os.path.join(build_path, 'launcheroot'), content=launcheroot, mode=0755)
-    
     # build dockerfile
     dockerfile = template.render_template(
         'dockerfile.jinja', base=base, appname=appname,
@@ -100,15 +72,10 @@ def build_image(host, version, base, file_path=None):
     client = get_docker_client(host.addr)
     appname = version.app.name
     repo = '{0}/{1}'.format(config.DOCKER_REGISTRY, appname)
-    rev = version.short_sha
-    tag = '{0}:{1}'.format(repo, rev)
+    tag = '{0}:{1}'.format(repo, version.short_sha)
 
-    if file_path:
-        with build_image_environment_v2(version, base, file_path) as build_path:
-            return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
-    else:
-        with build_image_environment(version, base, rev) as build_path:
-            return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
+    with build_image_environment(version, base, file_path) as build_path:
+        return client.build(path=build_path, rm=True, forcerm=True, tag=tag)
 
 
 def push_image(host, version):
