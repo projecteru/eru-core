@@ -33,7 +33,7 @@ class Container(Base, PropsMixin):
     created = db.Column(db.DateTime, default=datetime.now)
     is_alive = db.Column(db.Integer, default=1)
 
-    ips = db.relationship('IP', backref='container', lazy='dynamic')
+    ips = db.relationship('IP', backref='container', lazy='dynamic', cascade='save-update, merge, delete')
 
     callback_url = PropsItem('callback_url')
     eip = PropsItem('eip')

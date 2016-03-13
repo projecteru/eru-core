@@ -16,7 +16,7 @@ class Pod(Base):
     max_share_core = db.Column(db.Integer, nullable=False, default=DEFAULT_MAX_SHARE_CORE)
     description = db.Column(db.Text)
 
-    hosts = db.relationship('Host', backref='pod', lazy='dynamic')
+    hosts = db.relationship('Host', backref='pod', lazy='dynamic', cascade='save-update, merge, delete')
 
     def __init__(self, name, description, core_share, max_share_core):
         self.name = name
@@ -66,7 +66,7 @@ class Pod(Base):
         hosts = [h for h in self.hosts if h.is_public and h.is_alive]
         random.shuffle(hosts)
         return hosts[:limit] if limit is not None else hosts
- 
+
     def get_private_hosts(self):
         return [h for h in self.hosts if not h.is_public and h.is_alive]
 
