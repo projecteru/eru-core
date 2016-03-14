@@ -22,8 +22,8 @@ class Version(Base):
     app_id = db.Column(db.Integer, db.ForeignKey('app.id'))
     created = db.Column(db.DateTime, default=datetime.now)
 
-    containers = db.relationship('Container', backref='version', lazy='dynamic')
-    tasks = db.relationship('Task', backref='version', lazy='dynamic')
+    containers = db.relationship('Container', backref='version', lazy='dynamic', cascade='save-update, merge, delete')
+    tasks = db.relationship('Task', backref='version', lazy='dynamic', cascade='save-update, merge, delete')
 
     def __init__(self, sha, app_id):
         self.sha = sha
@@ -101,9 +101,9 @@ class App(Base):
     update = db.Column(db.DateTime, default=datetime.now)
     _user_id = db.Column(db.Integer, nullable=False, default=0)
 
-    versions = db.relationship('Version', backref='app', lazy='dynamic')
-    containers = db.relationship('Container', backref='app', lazy='dynamic')
-    tasks = db.relationship('Task', backref='app', lazy='dynamic')
+    versions = db.relationship('Version', backref='app', lazy='dynamic', cascade='save-update, merge, delete')
+    containers = db.relationship('Container', backref='app', lazy='dynamic', cascade='save-update, merge, delete')
+    tasks = db.relationship('Task', backref='app', lazy='dynamic', cascade='save-update, merge, delete')
 
     def __init__(self, name, git):
         self.name = name

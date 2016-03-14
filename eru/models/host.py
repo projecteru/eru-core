@@ -56,9 +56,9 @@ class Host(Base, PropsMixin):
     is_alive = db.Column(db.Boolean, default=True)
     is_public = db.Column(db.Boolean, default=False)
 
-    tasks = db.relationship('Task', backref='host', lazy='dynamic')
-    containers = db.relationship('Container', backref='host', lazy='dynamic')
-    vlans = db.relationship('VLanGateway', backref='host', lazy='dynamic')
+    tasks = db.relationship('Task', backref='host', lazy='dynamic', cascade='save-update, merge, delete')
+    containers = db.relationship('Container', backref='host', lazy='dynamic', cascade='save-update, merge, delete')
+    vlans = db.relationship('VLanGateway', backref='host', lazy='dynamic', cascade='save-update, merge, delete')
 
     eips = PropsItem('eips', default=list, type=_ip_address_filter)
 
@@ -273,7 +273,7 @@ class Host(Base, PropsMixin):
         eip = ipam.get_eip(eip)
         if eip is None:
             return None
-        
+
         mask = IPAddress(0xFFFF)
         ids = [eip.value & 0xFFFF]
         broadcasts = [str(eip | mask)]

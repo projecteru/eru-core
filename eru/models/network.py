@@ -151,8 +151,8 @@ class Network(Base):
     netspace = db.Column(db.CHAR(40), nullable=False, default='', index=True)
     gateway_count = db.Column(db.Integer, nullable=False, default=100)
 
-    ips = db.relationship('IP', backref='network', lazy='dynamic')
-    gates = db.relationship('VLanGateway', backref='network', lazy='dynamic')
+    ips = db.relationship('IP', backref='network', lazy='dynamic', cascade='save-update, merge, delete')
+    gates = db.relationship('VLanGateway', backref='network', lazy='dynamic', cascade='save-update, merge, delete')
 
     def __init__(self, name, netspace, gateway_count):
         self.name = name
