@@ -5,7 +5,7 @@ from functools import wraps
 from eru.app import create_app_with_celery
 from eru.models import Host
 from eru.config import DOCKER_REGISTRY
-from eru.clients import get_docker_client
+from eru.docker_client import get_docker_client
 
 
 def with_app_context(f):

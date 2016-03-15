@@ -1,14 +1,13 @@
 # coding:utf-8
-
 import sqlalchemy.exc
-from netaddr import IPAddress
-
-from eru.ipam import ipam
 from eru.agent import get_agent
+from eru.ipam import ipam
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
-from eru.clients import rds
+from eru.redis_client import rds
 from eru.utils.decorator import redis_lock
+from netaddr import IPAddress
+
 
 _pipeline = rds.pipeline()
 _HOST_EIP_KEY = 'eru:host:%s:eip'
@@ -62,7 +61,7 @@ class Host(Base, PropsMixin):
 
     eips = PropsItem('eips', default=list, type=_ip_address_filter)
 
-    def __init__(self, addr, name, uid, ncore, mem, pod_id, count):
+    def __init__(self, addr, name, uid, ncore, mem, pod_id, count, is_public=False):
         self.addr = addr
         self.name = name
         self.uid = uid
@@ -70,12 +69,13 @@ class Host(Base, PropsMixin):
         self.mem = mem
         self.pod_id = pod_id
         self.count = count
+        self.is_public = is_public
 
     def get_uuid(self):
         return '/eru/host/%s' % self.id
 
     @classmethod
-    def create(cls, pod, addr, name, uid, ncore, mem):
+    def create(cls, pod, addr, name, uid, ncore, mem, is_public=False):
         """创建必须挂在一个 pod 下面"""
         if not pod:
             return None
@@ -89,8 +89,12 @@ class Host(Base, PropsMixin):
                 host.ncore = ncore
                 host.mem = mem
                 host.count = ncore
-            db.session.add(host)
-            db.session.commit()
+
+            if is_public:
+                host.set_public()
+            else:
+                db.session.add(host)
+                db.session.commit()
 
             if override:
                 _create_cores_on_host(host, ncore)
@@ -99,7 +103,7 @@ class Host(Base, PropsMixin):
 
         # 不存在就创建
         try:
-            host = cls(addr, name, uid, ncore, mem, pod.id, ncore)
+            host = cls(addr, name, uid, ncore, mem, pod.id, ncore, is_public=is_public)
             db.session.add(host)
             db.session.commit()
             _create_cores_on_host(host, ncore)

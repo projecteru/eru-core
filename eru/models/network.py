@@ -1,13 +1,13 @@
 # coding: utf-8
-
 import more_itertools
 import sqlalchemy.exc
 from netaddr import IPAddress, IPNetwork, AddrFormatError
 
-from eru.clients import rds
 from eru.models import db
 from eru.models.base import Base
+from eru.redis_client import rds
 from eru.utils.decorator import redis_lock
+
 
 class IPMixin(object):
 

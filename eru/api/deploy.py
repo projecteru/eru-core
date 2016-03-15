@@ -1,28 +1,26 @@
 # coding:utf-8
-
-import os
-import logging
-import tempfile
 import itertools
+import logging
+import os
+import tempfile
 
 from flask import abort, request
 from werkzeug import secure_filename
 
-from eru.consts import TASK_BUILD, TASK_REMOVE, TASK_CREATE
-from eru.utils import is_strict_url
-from eru.utils.decorator import check_request_json
-
-from eru.ipam import ipam
-from eru.clients import rds
-from eru.models import App, Pod, Task, Container, Host
+from .bp import create_api_blueprint
 from eru.async.task import (
     create_containers_with_macvlan,
     build_docker_image,
     remove_containers,
 )
+from eru.consts import TASK_BUILD, TASK_REMOVE, TASK_CREATE
 from eru.helpers.scheduler import average_schedule, centralized_schedule
+from eru.ipam import ipam
+from eru.models import App, Pod, Task, Container, Host
+from eru.redis_client import rds
+from eru.utils import is_strict_url
+from eru.utils.decorator import check_request_json
 
-from .bp import create_api_blueprint
 
 bp = create_api_blueprint('deploy', __name__, url_prefix='/api/deploy')
 _log = logging.getLogger(__name__)

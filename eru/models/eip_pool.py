@@ -1,12 +1,12 @@
 # coding: utf-8
-
 from netaddr import IPAddress
-from eru.clients import rds
+
+from eru.redis_client import rds
 
 
 class EIPPool(object):
 
-    EIP_POOL_KEY = 'eru:eip:pool' 
+    EIP_POOL_KEY = 'eru:eip:pool'
 
     def add_eip(self, *eips):
         rds.sadd(self.EIP_POOL_KEY, *[eip.value for eip in eips])

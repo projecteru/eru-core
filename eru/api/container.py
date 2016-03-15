@@ -1,18 +1,18 @@
 # coding: utf-8
-
 import logging
-from netaddr import IPAddress
-from flask import request, abort
 
-from eru.ipam import ipam
-from eru.async import dockerjob
-from eru.consts import ERU_AGENT_DIE_REASON
-from eru.clients import rds
-from eru.models.container import Container, check_eip_bound
-from eru.utils.decorator import check_request_json
-from eru.helpers.network import rebind_container_ip, bind_container_ip
+from flask import request, abort
+from netaddr import IPAddress
 
 from .bp import create_api_blueprint, DEFAULT_RETURN_VALUE
+from eru.async import dockerjob
+from eru.consts import ERU_AGENT_DIE_REASON
+from eru.helpers.network import rebind_container_ip, bind_container_ip
+from eru.ipam import ipam
+from eru.models.container import Container, check_eip_bound
+from eru.redis_client import rds
+from eru.utils.decorator import check_request_json
+
 
 bp = create_api_blueprint('container', __name__, url_prefix='/api/container')
 _log = logging.getLogger(__name__)

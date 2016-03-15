@@ -1,11 +1,10 @@
 # coding: utf-8
-
 from functools import wraps
 
 from eru.app import create_app_with_celery
-from eru.clients import rds
-from eru.models import Host
 from eru.async.task import add_container_for_agent
+from eru.models import Host
+from eru.redis_client import rds
 
 
 def with_app_context(f):

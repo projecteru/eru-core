@@ -1,15 +1,15 @@
 # coding: utf-8
-
-import json
-import inspect
 import functools
-
-from flask import request, Response, abort
+import inspect
+import json
 from datetime import datetime
 from decimal import Decimal
 
-from eru.clients import rds
+from flask import request, Response, abort
+
+from eru.redis_client import rds
 from eru.utils import Jsonized
+
 
 def redis_lock(fmt):
     def _redis_lock(f):
