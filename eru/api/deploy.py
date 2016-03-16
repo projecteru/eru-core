@@ -196,6 +196,8 @@ def build_image_v2():
     appname = request.form.get('appname', default='')
     version = request.form.get('version', default='')
     base = request.form.get('base', default='')
+    if not base:
+        abort(400, 'base image must be set')
     _, version = _get_app_and_version(appname, version)
 
     if ':' not in base:
