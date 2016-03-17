@@ -1,6 +1,4 @@
 # coding: utf-8
-import os
-
 import docker
 from docker.tls import TLSConfig
 
@@ -11,6 +9,7 @@ from eru.config import (
     DOCKER_REGISTRY_USERNAME,
     DOCKER_REGISTRY_PASSWORD,
 )
+from eru.helpers.docker import get_docker_certs
 
 
 _docker_clients = {}
@@ -24,22 +23,21 @@ def get_docker_client(addr, force_flush=False):
     if client and not force_flush:
         return client
 
-    host = 'tcp://%s' % addr
-    tls = None
-
     if DOCKER_CERT_PATH:
-        cert_path = os.path.join(DOCKER_CERT_PATH, addr.split(':', 1)[0])
+        ip = addr.split(':', 1)[0]
+        ca_path, cer_path, key_path = get_docker_certs(ip)
         host = 'https://%s' % addr
         tls = TLSConfig(
-            client_cert=(
-                os.path.join(cert_path, 'cert.pem'),
-                os.path.join(cert_path, 'key.pem')
-            ),
-            ca_cert=os.path.join(cert_path, 'ca.pem'),
+            client_cert=(cer_path, key_path),
+            ca_cert=ca_path,
             verify=True,
             ssl_version=None,
             assert_hostname=False,
         )
+    else:
+        host = 'tcp://%s' % addr
+        tls = None
+
     client = docker.Client(base_url=host, tls=tls)
 
     if DOCKER_REGISTRY_USERNAME:
