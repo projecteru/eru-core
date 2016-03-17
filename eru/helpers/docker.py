@@ -19,6 +19,7 @@ def save_docker_certs(ip, *certs):
     if not DOCKER_CERT_PATH:
         _log.warn('DOCKER_CERT_PATH not set')
         return
+
     certs_dir = make_certs_dir(ip)
     for fname, content in zip(needed_cert_files, certs):
         key = make_redis_cert_file_key(ip, fname)
@@ -37,10 +38,11 @@ def get_docker_certs(ip):
     for fname in needed_cert_files:
         file_path = make_cert_path(ip, fname)
         key = make_redis_cert_file_key(ip, fname)
-        if key in rds:
-            # respect redis file first, if not found, provide with local copy,
-            # this could make things easier when changing certificate files
-            content = rds.get(key)
+
+        # respect redis file first, if not found, provide with local copy,
+        # this could make things easier when changing certificate files
+        content = rds.get(key)
+        if content:
             ensure_file(file_path, mode=0444, content=content)
         else:
             with open(file_path) as f:
@@ -64,7 +66,7 @@ def make_cert_path(ip, file_name):
 
 
 def make_redis_cert_file_key(ip, file_name):
-    return 'cert_file_{}_{}'.format(ip, file_name)
+    return 'docker:certfile:{}:{}'.format(ip, file_name)
 
 
 def make_certs_dir(ip):
