@@ -84,4 +84,3 @@ def ensure_link(path, target, owner=None, group=None):
 
     if not os.path.lexists(path):
         os.symlink(target, path)
-
