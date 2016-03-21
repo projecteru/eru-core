@@ -1,12 +1,15 @@
 # coding:utf-8
 import sqlalchemy.exc
+from netaddr import IPAddress
+
 from eru.agent import get_agent
 from eru.ipam import ipam
+from eru.redis_client import rds
+from eru.publish import (add_container_backends,
+        remove_container_backends, publish_to_service_discovery)
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
-from eru.redis_client import rds
 from eru.utils.decorator import redis_lock
-from netaddr import IPAddress
 
 
 _pipeline = rds.pipeline()
@@ -259,19 +262,33 @@ class Host(Base, PropsMixin):
 
     def kill(self):
         self.is_alive = False
+        appnames = set()
         for c in self.containers.all():
             c.is_alive = 0
             db.session.add(c)
+
+            remove_container_backends(c)
+            appnames.add(c.appname)
+
         db.session.add(self)
         db.session.commit()
 
+        publish_to_service_discovery(*appnames)
+
     def cure(self):
         self.is_alive = True
+        appnames = set()
         for c in self.containers.all():
             c.is_alive = 1
             db.session.add(c)
+
+            add_container_backends(c)
+            appnames.add(c.appname)
+
         db.session.add(self)
         db.session.commit()
+
+        publish_to_service_discovery(*appnames)
 
     def bind_eip(self, eip=None):
         eip = ipam.get_eip(eip)

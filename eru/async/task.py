@@ -1,5 +1,4 @@
 # coding:utf-8
-import json
 import logging
 import time
 from itertools import izip_longest
@@ -13,51 +12,13 @@ from eru.config import DOCKER_REGISTRY
 from eru.helpers.check import wait_health_check
 from eru.ipam import ipam
 from eru.models import Container, Task, Image
-from eru.redis_client import rds
 from eru.utils.notify import TaskNotifier
+from eru.publish import (add_container_backends, remove_container_backends,
+        add_container_for_agent, remove_container_for_agent,
+        set_flag_for_agent, remove_flag_for_agent, publish_to_service_discovery)
 
 
 _log = logging.getLogger(__name__)
-
-
-def add_container_backends(container):
-    """单个container所拥有的后端服务
-    HKEYS app_key 可以知道有哪些后端
-    HGET 上面的结果可以知道后端都从哪里拿
-    SMEMBERS entrypoint_key 可以拿出所有的后端
-    """
-    app_key = 'eru:app:{0}:backends'.format(container.appname)
-    entrypoint_key = 'eru:app:{0}:entrypoint:{1}:backends'.format(container.appname, container.entrypoint)
-    rds.hset(app_key, container.entrypoint, entrypoint_key)
-
-    backends = container.get_backends()
-    if backends:
-        rds.sadd(entrypoint_key, *backends)
-
-
-def remove_container_backends(container):
-    """删除单个container的后端服务
-    并不删除有哪些entrypoint, 这些service discovery方便知道哪些没了"""
-    entrypoint_key = 'eru:app:{0}:entrypoint:{1}:backends'.format(container.appname, container.entrypoint)
-    backends = container.get_backends()
-    if backends:
-        rds.srem(entrypoint_key, *backends)
-
-
-# 删除在下面
-def add_container_for_agent(container):
-    """agent需要从key里取值出来去跟踪
-    **改成了hashtable, agent需要更多的信息**
-    另外key也改了, agent需要改下
-    """
-    host = container.host
-    key = 'eru:agent:{0}:containers:meta'.format(host.name)
-    rds.hset(key, container.container_id, json.dumps(container.meta))
-
-
-def publish_to_service_discovery(*appnames):
-    for appname in appnames:
-        rds.publish('eru:discovery:published', appname)
 
 
 @current_app.task()
@@ -119,7 +80,11 @@ def remove_containers(task_id, cids, rmi=False):
 
     _log.info('Task<id=%s>: Start on host %s', task_id, task.host.ip)
     notifier = TaskNotifier(task)
+
     containers = Container.get_multi(cids)
+    if not containers:
+        _log.error('Task (id=%s) no container found, quit')
+        return
 
     for c in containers:
         c.in_removal = 1
@@ -127,13 +92,11 @@ def remove_containers(task_id, cids, rmi=False):
     container_ids = [c.container_id for c in containers if c]
     host = task.host
     try:
-        # flag, don't report these
-        flags = {'eru:agent:%s:container:flag' % cid: 1 for cid in container_ids}
-        rds.mset(**flags)
+        set_flag_for_agent(container_ids)
         for c in containers:
             remove_container_backends(c)
-            _log.info('Task<id=%s>: Container (cid=%s) backends removed',
-                    task_id, c.container_id[:7])
+            _log.info('Task<id=%s>: Container (cid=%s) backends removed', task_id, c.short_id)
+
         appnames = {c.appname for c in containers}
         publish_to_service_discovery(*appnames)
 
@@ -141,12 +104,12 @@ def remove_containers(task_id, cids, rmi=False):
 
         dockerjob.remove_host_containers(containers, host)
         _log.info('Task<id=%s>: Containers (cids=%s) removed', task_id, cids)
+
         if rmi:
             try:
                 dockerjob.remove_image(task.version, host)
             except Exception as e:
-                _log.error('Task<id=%s>, fail to remove image', task_id)
-                _log.exception(e)
+                _log.error('Task<id=%s>, fail to remove image', task_id, e)
     except Exception as e:
         task.finish(consts.TASK_FAILED)
         task.reason = str(e.message)
@@ -159,9 +122,8 @@ def remove_containers(task_id, cids, rmi=False):
         task.finish(consts.TASK_SUCCESS)
         task.reason = 'ok'
         notifier.pub_success()
-        if container_ids:
-            rds.hdel('eru:agent:%s:containers:meta' % host.name, *container_ids)
-        rds.delete(*flags.keys())
+        remove_container_for_agent(host, container_ids)
+        remove_flag_for_agent(container_ids)
         _log.info('Task<id=%s>: Done', task_id)
 
 
@@ -247,7 +209,7 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
             continue
 
         notifier.notify_agent(c)
-        add_container_for_agent(c)
+        add_container_for_agent(host, c)
         add_container_backends(c)
         cids.append(cid)
         backends.extend(c.get_backends())

@@ -10,10 +10,13 @@ import sqlalchemy.exc
 
 from eru.agent import get_agent
 from eru.ipam import ipam
+from eru.redis_client import rds
+
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
-from eru.redis_client import rds
 from eru.utils.decorator import EruJSONEncoder
+from eru.publish import (add_container_backends,
+        remove_container_backends, publish_to_service_discovery)
 
 
 _CONTAINER_PUB_KEY = 'container:%s'
@@ -92,6 +95,10 @@ class Container(Base, PropsMixin):
     @property
     def appname(self):
         return self.name.rsplit('_', 2)[0]
+
+    @property
+    def short_id(self):
+        return self.container_id[:7]
 
     @property
     def network_mode(self):
@@ -190,12 +197,18 @@ class Container(Base, PropsMixin):
         rds.publish(_CONTAINER_PUB_KEY % self.appname,
             json.dumps({'container': self.container_id, 'status': 'down'}))
 
+        remove_container_backends(self)
+        publish_to_service_discovery(self.appname)
+
     def cure(self):
         self.is_alive = 1
         db.session.add(self)
         db.session.commit()
         rds.publish(_CONTAINER_PUB_KEY % self.appname,
             json.dumps({'container': self.container_id, 'status': 'up'}))
+
+        add_container_backends(self)
+        publish_to_service_discovery(self.appname)
 
     def callback_report(self, **kwargs):
         """调用创建的时候设置的回调url, 失败就不care了"""
@@ -229,6 +242,7 @@ class Container(Base, PropsMixin):
             appname=self.appname,
             eip=self.eip,
             in_removal=self.in_removal,
+            short_id=self.short_id,
         )
         return d
 
