@@ -60,9 +60,7 @@ class EtcdPublisher(object):
         return r and json.loads(r.value) or None
 
     def add_container(self, container):
-        app = self.get_app(container.appname)
-        if not app:
-            return
+        app = self.get_app(container.appname) or {}
 
         addresses = container.get_ips()
         backends = container.get_backends()
