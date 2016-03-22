@@ -68,8 +68,8 @@ class EtcdPublisher(object):
         current_addresses = app.get(container.short_sha, {}).get(container.entrypoint, {}).get('addresses', [])
         current_backends = app.get(container.short_sha, {}).get(container.entrypoint, {}).get('backends', [])
 
-        new_addresses = list(set(current_addresses) + set(addresses))
-        new_backends = list(set(current_backends) + set(backends))
+        new_addresses = list(set(current_addresses) | set(addresses))
+        new_backends = list(set(current_backends) | set(backends))
 
         entrypoint = app.setdefault(container.short_sha, {}).setdefault(container.entrypoint, {})
         entrypoint['addresses'] = new_addresses
@@ -89,8 +89,8 @@ class EtcdPublisher(object):
         current_addresses = app.get(container.short_sha, {}).get(container.entrypoint, {}).get('addresses', [])
         current_backends = app.get(container.short_sha, {}).get(container.entrypoint, {}).get('backends', [])
 
-        new_addresses = list(set(current_addresses) - set(addresses))
-        new_backends = list(set(current_backends) - set(backends))
+        new_addresses = list(set(current_addresses).difference(set(addresses)))
+        new_backends = list(set(current_backends).difference(set(backends)))
 
         entrypoint = app.setdefault(container.short_sha, {}).setdefault(container.entrypoint, {})
         entrypoint['addresses'] = new_addresses
