@@ -4,7 +4,7 @@ from netaddr import IPAddress
 
 from eru.agent import get_agent
 from eru.ipam import ipam
-from eru.redis_client import rds
+from eru.connection import rds
 from eru.publish import (add_container_backends,
         remove_container_backends, publish_to_service_discovery)
 from eru.models import db

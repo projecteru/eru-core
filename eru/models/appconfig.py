@@ -2,10 +2,14 @@
 import yaml
 from netaddr import IPAddress, AddrFormatError
 
-from eru.redis_client import config_backend
+from eru.connection import rds
+from eru.storage.redis import RedisStorage
 
 
 __all__ = ['AppConfig', 'ResourceConfig', 'verify_appconfig', ]
+
+
+config_backend = RedisStorage(rds)
 
 """
 Example of app.yaml:
@@ -51,9 +55,6 @@ Example of app.yaml:
 REQUIRED_KEYS = ['appname', 'entrypoints', 'build']
 OPTIONAL_KEYS = ['volumes', 'binds']
 
-FALCON_ALARM_KEY = ['cpu_system_rate', 'cpu_usage_rate', 'cpu_user_rate',
-    'mem_max_usage', 'mem_usage', 'mem_rss', 'inbytes', 'outbytes',
-]
 
 def verify_appconfig(appconfig):
     if not isinstance(appconfig, dict):
@@ -123,6 +124,7 @@ def verify_appconfig(appconfig):
 
     return True
 
+
 class BaseConfig(object):
 
     list_names = []
@@ -175,6 +177,7 @@ class BaseConfig(object):
     def to_dict(self):
         return self._data
 
+
 class AppConfig(BaseConfig):
 
     dict_names = ['entrypoints', ]
@@ -183,6 +186,7 @@ class AppConfig(BaseConfig):
     def get_by_name_and_version(cls, name, version):
         path = '/ERU/{0}/{1}/app.yaml'.format(name, version)
         return cls._get_by_path(path)
+
 
 class ResourceConfig(BaseConfig):
 

@@ -12,7 +12,7 @@ from eru.config import ETCD
 from eru.ipam.base import BaseIPAM
 from eru.ipam.structure import WrappedIP, WrappedNetwork
 from eru.models.eip_pool import eip_pool
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 def _get_client():

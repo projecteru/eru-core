@@ -2,12 +2,11 @@
 import logging
 
 import geventwebsocket
-from eru.docker_client import get_docker_client
 from flask import Blueprint, request
 
 from eru import consts
 from eru.models import Task, Container
-from eru.redis_client import rds
+from eru.connection import get_docker_client, rds
 from eru.utils.notify import TaskNotifier
 
 

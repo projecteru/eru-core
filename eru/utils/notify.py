@@ -8,7 +8,7 @@ from eru.consts import (
     TASK_RESULT_FAILED,
     PUB_END_MESSAGE,
 )
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 class TaskNotifier(object):

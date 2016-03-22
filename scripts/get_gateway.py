@@ -6,7 +6,7 @@ from netaddr import IPAddress
 
 from eru.app import create_app_with_celery
 from eru.models import Network, VLanGateway, Host
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 def with_app_context(f):

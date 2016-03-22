@@ -2,7 +2,7 @@ import logging
 import os
 
 from eru.config import DOCKER_CERT_PATH
-from eru.redis_client import rds
+from eru.connection import rds
 from eru.utils.ensure import ensure_file, ensure_dir
 
 

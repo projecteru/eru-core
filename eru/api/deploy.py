@@ -17,7 +17,7 @@ from eru.consts import TASK_BUILD, TASK_REMOVE, TASK_CREATE
 from eru.helpers.scheduler import average_schedule, centralized_schedule
 from eru.ipam import ipam
 from eru.models import App, Pod, Task, Container, Host
-from eru.redis_client import rds
+from eru.connection import rds
 from eru.utils import is_strict_url
 from eru.utils.decorator import check_request_json
 

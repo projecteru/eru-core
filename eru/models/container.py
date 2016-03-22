@@ -10,7 +10,7 @@ import sqlalchemy.exc
 
 from eru.agent import get_agent
 from eru.ipam import ipam
-from eru.redis_client import rds
+from eru.connection import rds
 
 from eru.models import db
 from eru.models.base import Base, PropsMixin, PropsItem
@@ -101,6 +101,10 @@ class Container(Base, PropsMixin):
         return self.container_id[:7]
 
     @property
+    def short_sha(self):
+        return self.version.short_sha
+
+    @property
     def network_mode(self):
         appconfig = self.version.appconfig
         return appconfig.entrypoints.get(self.entrypoint, {}).get('network_mode', 'bridge')
@@ -154,13 +158,15 @@ class Container(Base, PropsMixin):
         ports = entry.get('ports', [])
         return [int(p.split('/')[0]) for p in ports]
 
+    def get_ips(self):
+        if self.network_mode == 'host':
+            return [self.host.ip]
+        ips = ipam.get_ip_by_container(self.container_id)
+        return [str(ip) for ip in ips]
+
     def get_backends(self):
         """daemon的话是个空列表"""
-        if self.network_mode == 'host':
-            ips = [self.host.ip]
-        else:
-            ips = ipam.get_ip_by_container(self.container_id)
-            ips = [str(ip) for ip in ips]
+        ips = self.get_ips()
         ports = self.get_ports()
         return ['{0}:{1}'.format(ip, port) for ip, port in itertools.product(ips, ports)]
 
@@ -236,7 +242,7 @@ class Container(Base, PropsMixin):
                 'part': [c.label for c in self.part_cores],
                 'nshare': self.cores.get('nshare', 0),
             },
-            version=self.version.short_sha,
+            version=self.short_sha,
             networks=ips,
             backends=self.get_backends(),
             appname=self.appname,
