@@ -58,5 +58,10 @@ def get_docker_client(addr, force_flush=False):
     return client
 
 
+def get_etcd_client(url):
+    host, port = ETCD.split(':')
+    return EtcdClient(host=host, port=int(port))
+
+
 rds = get_redis_client(REDIS_HOST, REDIS_PORT, REDIS_POOL_SIZE)
-etcd = EtcdClient(ETCD)
+etcd = get_etcd_client(ETCD)
