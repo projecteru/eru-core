@@ -1,24 +1,31 @@
 # coding: utf-8
+
+import redis
 import docker
+from etcd import Client as EtcdClient
 from docker.tls import TLSConfig
 
 from eru.config import (
-    DOCKER_CERT_PATH,
-    DOCKER_REGISTRY_URL,
-    DOCKER_REGISTRY_EMAIL,
-    DOCKER_REGISTRY_USERNAME,
-    DOCKER_REGISTRY_PASSWORD,
+    ETCD, REDIS_HOST, REDIS_PORT, REDIS_POOL_SIZE,
+    DOCKER_CERT_PATH, DOCKER_REGISTRY_URL, DOCKER_REGISTRY_EMAIL,
+    DOCKER_REGISTRY_USERNAME, DOCKER_REGISTRY_PASSWORD,
 )
-from eru.helpers.docker import get_docker_certs
+
+
+def get_redis_client(host, port , max_connections):
+    pool = redis.ConnectionPool(host=host, port=port, max_connections=max_connections)
+    return redis.Redis(connection_pool=pool)
 
 
 _docker_clients = {}
+
 
 def get_docker_client(addr, force_flush=False):
     """
     如果设置了 DOCKER_CERT_PATH, 那么证书需要位于 $DOCKER_CERT_PATH/${ip} 目录下.
     没有设置 DOCKER_CERT_PATH, 那么就简单连接就可以了.
     """
+    from eru.helpers.docker import get_docker_certs
     client = _docker_clients.get(addr, None)
     if client and not force_flush:
         return client
@@ -49,3 +56,7 @@ def get_docker_client(addr, force_flush=False):
         )
     _docker_clients[addr] = client
     return client
+
+
+rds = get_redis_client(REDIS_HOST, REDIS_PORT, REDIS_POOL_SIZE)
+etcd = EtcdClient(ETCD)

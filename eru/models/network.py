@@ -5,7 +5,7 @@ from netaddr import IPAddress, IPNetwork, AddrFormatError
 
 from eru.models import db
 from eru.models.base import Base
-from eru.redis_client import rds
+from eru.connection import rds
 from eru.utils.decorator import redis_lock
 
 

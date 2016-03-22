@@ -3,7 +3,7 @@ import pytest
 
 from eru.app import create_app_with_celery
 from eru.models import db
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 @pytest.fixture

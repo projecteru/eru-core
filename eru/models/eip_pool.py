@@ -1,7 +1,7 @@
 # coding: utf-8
 from netaddr import IPAddress
 
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 class EIPPool(object):

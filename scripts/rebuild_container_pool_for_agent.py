@@ -4,7 +4,7 @@ from functools import wraps
 from eru.app import create_app_with_celery
 from eru.async.task import add_container_for_agent
 from eru.models import Host
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 def with_app_context(f):

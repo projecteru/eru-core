@@ -5,7 +5,7 @@ import more_itertools
 
 from eru.app import create_app_with_celery
 from eru.models import Network
-from eru.redis_client import rds
+from eru.connection import rds
 
 
 def with_app_context(f):

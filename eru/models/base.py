@@ -4,7 +4,7 @@ import json
 from sqlalchemy.ext.declarative import declared_attr
 
 from eru.models import db
-from eru.redis_client import rds
+from eru.connection import rds
 from eru.utils import Jsonized
 
 

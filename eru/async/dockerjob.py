@@ -12,7 +12,7 @@ from werkzeug.security import gen_salt
 from docker.utils import LogConfig, Ulimit
 
 from eru import config
-from eru.docker_client import get_docker_client
+from eru.connection import get_docker_client
 from eru.templates import template
 from eru.async.utils import replace_ports
 from eru.utils.ensure import ensure_dir_absent, ensure_file

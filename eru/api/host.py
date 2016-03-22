@@ -4,9 +4,10 @@ import logging
 from flask import abort, g, request
 
 from .bp import create_api_blueprint, DEFAULT_RETURN_VALUE
-from eru.docker_client import get_docker_client
-from eru.helpers.docker import save_docker_certs
+
 from eru.ipam import ipam
+from eru.connection import get_docker_client
+from eru.helpers.docker import save_docker_certs
 from eru.models import Pod, Host, VLanGateway
 from eru.models.container import check_eip_bound
 

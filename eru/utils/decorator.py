@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from flask import request, Response, abort
 
-from eru.redis_client import rds
+from eru.connection import rds
 from eru.utils import Jsonized
 
 
@@ -22,6 +22,7 @@ def redis_lock(fmt):
                 return f(*args, **kwargs)
         return _
     return _redis_lock
+
 
 def check_request_json(keys):
     if not isinstance(keys, list):
@@ -41,6 +42,7 @@ def check_request_json(keys):
         return _
     return deco
 
+
 def check_request_args(keys):
     if not isinstance(keys, list):
         keys = [keys, ]
@@ -54,6 +56,7 @@ def check_request_args(keys):
         return _
     return deco
 
+
 class EruJSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
@@ -64,6 +67,7 @@ class EruJSONEncoder(json.JSONEncoder):
         if isinstance(obj, Decimal):
             return float(obj)
         return super(EruJSONEncoder, self).default(obj)
+
 
 def jsonize(f):
     @functools.wraps(f)
