@@ -107,9 +107,8 @@ class EtcdPublisher(object):
 
         data = {}
         for c in app.list_containers(limit=None):
-            entrypoint = data.setdefault(c.short_sha, {}).setdefault(c.entrypoint, {})
-            entrypoint['addresses'] = c.get_ips()
-            entrypoint['backends'] = c.get_backends()
+            data.setdefault(c.short_sha, {}).setdefault(c.entrypoint, {}).setdefault('addresses', []).extend(c.get_ips())
+            data.setdefault(c.short_sha, {}).setdefault(c.entrypoint, {}).setdefault('backends', []).extend(c.get_ips())
 
         path = self.APP_PATH % appname
         self.write(path, json.dumps(squash_dict(data)))
