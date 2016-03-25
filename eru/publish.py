@@ -6,6 +6,7 @@ import functools
 from etcd import EtcdException
 
 from eru.connection import rds, etcd
+from eru.models.app import App
 
 
 _log = logging.getLogger(__name__)
@@ -99,6 +100,20 @@ class EtcdPublisher(object):
         path = self.APP_PATH % container.appname
         self.write(path, json.dumps(squash_dict(app)))
 
+    def publish_app(self, appname):
+        app = App.get_by_name(appname)
+        if not app:
+            return
+
+        data = {}
+        for c in app.list_containers(limit=None):
+            entrypoint = data.setdefault(c.short_sha, {}).setdefault(c.entrypoint, {})
+            entrypoint['addresses'] = c.get_ips()
+            entrypoint['backends'] = c.get_backends()
+
+        path = self.APP_PATH % appname
+        self.write(path, json.dumps(squash_dict(data)))
+
 
 etcd_publisher = EtcdPublisher()
 
@@ -121,7 +136,7 @@ def add_container_backends(container):
     if backends:
         rds.sadd(_entrypoint_key(container), *backends)
 
-    etcd_publisher.add_container(container)
+    #etcd_publisher.add_container(container)
 
 
 def remove_container_backends(container):
@@ -129,7 +144,7 @@ def remove_container_backends(container):
     if backends:
         rds.srem(_entrypoint_key(container), *backends)
 
-    etcd_publisher.remove_container(container)
+    #etcd_publisher.remove_container(container)
 
 
 def add_container_for_agent(host, container):
@@ -143,6 +158,7 @@ def remove_container_for_agent(host, container_ids):
 def publish_to_service_discovery(*appnames):
     for appname in appnames:
         rds.publish(_APP_DISCOVERY_KEY, appname)
+        etcd_publisher.publish_app(appname)
 
 
 def set_flag_for_agent(container_ids):
