@@ -107,6 +107,8 @@ class EtcdPublisher(object):
 
         data = {}
         for c in app.list_containers(limit=None):
+            if not c.is_alive:
+                continue
             data.setdefault(c.short_sha, {}).setdefault(c.entrypoint, {}).setdefault('addresses', []).extend(c.get_ips())
             data.setdefault(c.short_sha, {}).setdefault(c.entrypoint, {}).setdefault('backends', []).extend(c.get_backends())
 
