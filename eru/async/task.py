@@ -242,12 +242,12 @@ def migrate_container(container_id, need_to_remove=True):
         _log.error('container %s is not found, ignore migration', container_id)
         return
 
-    host_cores = average_schedule(container.host.pod, 1, container.ncore, container.nshare, None)
+    ncore, nshare= container.pod.get_core_allocation(container.ncore)
+    host_cores = average_schedule(container.host.pod, 1, ncore, nshare, None)
     if not host_cores:
         _log.error('not enough cores to migrate')
         return
 
-    nshare = container.nshare
     cids = [container.id]
     spec_ips = cidrs = container.get_ips()
     (host, container_count), cores = next(host_cores.iteritems())
@@ -260,7 +260,7 @@ def migrate_container(container_id, need_to_remove=True):
         'part_cores': [c.label for c in cores.get('part', [])],
         'ports': None,
         'args': None,
-        'nshare': container.nshare,
+        'nshare': nshare,
         'networks': cidrs,
         'image': None,
         'route': '',
