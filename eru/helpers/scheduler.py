@@ -5,12 +5,14 @@ from collections import Counter
 
 from eru.utils.decorator import redis_lock
 
+
 def get_max_container_count(pod, ncore, nshare=0):
     if nshare and not pod.max_share_core:
         return 0
     return sum(host.get_max_container_count(ncore, nshare) for host in pod.get_private_hosts())
 
-@redis_lock('asched:{pod.id}')
+
+@redis_lock('scheduler:{pod.id}')
 def average_schedule(pod, ncontainer, ncore, nshare=0, spec_host=None):
     if nshare and not pod.max_share_core:
         return {}
@@ -46,7 +48,8 @@ def average_schedule(pod, ncontainer, ncore, nshare=0, spec_host=None):
         result[(host, count)] = host.get_container_cores(count, ncore, nshare)[1]
     return result
 
-@redis_lock('csched:{pod.id}')
+
+@redis_lock('scheduler:{pod.id}')
 def centralized_schedule(pod, ncontainer, ncore, nshare=0, spec_host=None):
     if nshare and not pod.max_share_core:
         return {}

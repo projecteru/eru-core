@@ -7,6 +7,7 @@ from netaddr import IPAddress
 from .bp import create_api_blueprint, DEFAULT_RETURN_VALUE
 
 from eru.async import dockerjob
+from eru.async.task import migrate_container
 from eru.consts import ERU_AGENT_DIE_REASON
 from eru.helpers.network import rebind_container_ip, bind_container_ip
 from eru.ipam import ipam
@@ -54,6 +55,8 @@ def kill_container(id_or_cid):
         c.set_props({'oom': 1})
 
     c.callback_report(status='die')
+
+    migrate_container.apply_async(args=(c.container_id, True))
 
     _log.info('Kill container (container_id=%s)', c.container_id)
     return DEFAULT_RETURN_VALUE

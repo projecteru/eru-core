@@ -9,7 +9,7 @@ from werkzeug import secure_filename
 
 from .bp import create_api_blueprint
 from eru.async.task import (
-    create_containers_with_macvlan,
+    create_containers,
     build_docker_image,
     remove_containers,
 )
@@ -17,14 +17,11 @@ from eru.consts import TASK_BUILD, TASK_REMOVE, TASK_CREATE
 from eru.helpers.scheduler import average_schedule, centralized_schedule
 from eru.ipam import ipam
 from eru.models import App, Pod, Task, Container, Host
-from eru.connection import rds
 from eru.utils import is_strict_url
 from eru.utils.decorator import check_request_json
 
-
 bp = create_api_blueprint('deploy', __name__, url_prefix='/api/deploy')
 _log = logging.getLogger(__name__)
-_deploy_lock = 'eru:deploy:%s:lock'
 
 
 def _get_strategy(name):
@@ -85,33 +82,32 @@ def create_private():
     host = hostname and Host.get_by_name(hostname) or None
 
     task_ids, watch_keys = [], []
-    with rds.lock(_deploy_lock % data['podname']):
-        host_cores = _get_strategy(strategy)(pod, ncontainer, ncore, nshare, host)
-        if not host_cores:
-            abort(400, 'Not enough core resources')
+    host_cores = _get_strategy(strategy)(pod, ncontainer, ncore, nshare, host)
+    if not host_cores:
+        abort(400, 'Not enough core resources')
 
-        for (host, container_count), cores in host_cores.iteritems():
-            t = _create_task(
-                version,
-                host,
-                container_count,
-                cores,
-                nshare,
-                networks,
-                ports,
-                args,
-                spec_ips,
-                entrypoint,
-                data['env'],
-                image=data.get('image', ''),
-                callback_url=callback_url,
-            )
-            if not t:
-                continue
+    for (host, container_count), cores in host_cores.iteritems():
+        t = _create_task(
+            version,
+            host,
+            container_count,
+            cores,
+            nshare,
+            networks,
+            ports,
+            args,
+            spec_ips,
+            entrypoint,
+            data['env'],
+            image=data.get('image', ''),
+            callback_url=callback_url,
+        )
+        if not t:
+            continue
 
-            host.occupy_cores(cores, nshare)
-            task_ids.append(t.id)
-            watch_keys.append(t.result_key)
+        host.occupy_cores(cores, nshare)
+        task_ids.append(t.id)
+        watch_keys.append(t.result_key)
 
     return {'tasks': task_ids, 'watch_keys': watch_keys}
 
@@ -142,28 +138,27 @@ def create_public():
         abort(400, 'Entrypoint %s not in app.yaml' % entrypoint)
 
     task_ids, watch_keys = [], []
-    with rds.lock(_deploy_lock % data['podname']):
-        hosts = pod.get_free_public_hosts(ncontainer)
-        for host in itertools.islice(itertools.cycle(hosts), ncontainer):
-            t = _create_task(
-                version,
-                host,
-                1,
-                {},
-                0,
-                networks,
-                ports,
-                args,
-                spec_ips,
-                data['entrypoint'],
-                data['env'],
-                image=data.get('image', ''),
-                callback_url=callback_url,
-            )
-            if not t:
-                continue
-            task_ids.append(t.id)
-            watch_keys.append(t.result_key)
+    hosts = pod.get_free_public_hosts(ncontainer)
+    for host in itertools.islice(itertools.cycle(hosts), ncontainer):
+        t = _create_task(
+            version,
+            host,
+            1,
+            {},
+            0,
+            networks,
+            ports,
+            args,
+            spec_ips,
+            data['entrypoint'],
+            data['env'],
+            image=data.get('image', ''),
+            callback_url=callback_url,
+        )
+        if not t:
+            continue
+        task_ids.append(t.id)
+        watch_keys.append(t.result_key)
 
     return {'tasks': task_ids, 'watch_keys': watch_keys}
 
@@ -307,7 +302,7 @@ def _create_task(version, host, ncontainer, cores, nshare, networks,
         return None
 
     try:
-        create_containers_with_macvlan.apply_async(
+        create_containers.apply_async(
             args=(task.id, ncontainer, nshare, cores, cidrs, spec_ips),
             task_id='task:%d' % task.id
         )

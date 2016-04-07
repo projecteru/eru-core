@@ -1,6 +1,0 @@
-Dockfiles
-==========
-
-* binary
-* python
-* tengine

@@ -10,6 +10,7 @@ from eru.connection import get_docker_client
 from eru.helpers.docker import save_docker_certs
 from eru.models import Pod, Host, VLanGateway
 from eru.models.container import check_eip_bound
+from eru.async.task import migrate_container
 
 
 bp = create_api_blueprint('host', __name__, url_prefix='/api/host')
@@ -122,6 +123,10 @@ def set_status(id_or_name, method):
     method = _methods.get(method, method)
     host = _get_host(id_or_name)
     getattr(host, method)()
+
+    if method in ('down', 'kill'):
+        for c in host.list_containers(limit=None):
+            migrate_container.apply_async(args=(c.container_id, False))
 
     _log.info('Host (hostname=%s) %s', id_or_name, method)
     return DEFAULT_RETURN_VALUE

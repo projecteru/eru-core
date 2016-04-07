@@ -15,6 +15,7 @@ OK = 'ok'
 TASK_CREATE = 1
 TASK_BUILD = 2
 TASK_REMOVE = 3
+TASK_MIGRATE = 4
 
 TASK_SUCCESS = 1
 TASK_FAILED = 2
@@ -23,6 +24,7 @@ TASK_ACTIONS = {
     TASK_CREATE: 'create',
     TASK_BUILD: 'build',
     TASK_REMOVE: 'remove',
+    TASK_MIGRATE: 'migrate',
 }
 TASK_RESULTS = {
     TASK_SUCCESS: 'succeeded',

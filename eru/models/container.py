@@ -31,7 +31,6 @@ class Container(Base, PropsMixin):
     container_id = db.Column(db.CHAR(64), nullable=False, index=True)
     name = db.Column(db.CHAR(255), nullable=False)
     entrypoint = db.Column(db.CHAR(255), nullable=False)
-    # 默认 40m, 最小单位为 k
     memory = db.Column(db.Integer, nullable=False, default=40960)
     env = db.Column(db.CHAR(255), nullable=False)
     created = db.Column(db.DateTime, default=datetime.now)
@@ -72,8 +71,7 @@ class Container(Base, PropsMixin):
             container.cores = cores
             container.callback_url = callback_url
 
-            rds.publish(_CONTAINER_PUB_KEY % name.split('_')[0],
-                json.dumps({'container': container_id, 'status': 'create'}))
+            container.publish_status('create')
             return container
         except sqlalchemy.exc.IntegrityError:
             db.session.rollback()
@@ -106,8 +104,8 @@ class Container(Base, PropsMixin):
 
     @property
     def network_mode(self):
-        appconfig = self.version.appconfig
-        return appconfig.entrypoints.get(self.entrypoint, {}).get('network_mode', 'bridge')
+        entry = self.get_entry()
+        return entry.get('network_mode', 'bridge')
 
     @property
     def meta(self):
@@ -145,16 +143,20 @@ class Container(Base, PropsMixin):
     def part_cores(self):
         return self.cores.get('part', [])
 
+    @property
+    def ncore(self):
+        return D(len(self.cores.get('full', []))) + D(format(D(self.nshare) / D(self.host.core_share), '.3f'))
+
+    @property
+    def nshare(self):
+        return self.cores.get('nshare', 0)
+
     def get_entry(self):
         appconfig = self.version.appconfig
         return appconfig.entrypoints.get(self.entrypoint, {})
 
     def get_ports(self):
-        appconfig = self.version.appconfig
-        if self.entrypoint not in appconfig.entrypoints:
-            return []
-
-        entry = appconfig.entrypoints[self.entrypoint]
+        entry = self.get_entry()
         ports = entry.get('ports', [])
         return [int(p.split('/')[0]) for p in ports]
 
@@ -180,28 +182,24 @@ class Container(Base, PropsMixin):
         # release core and increase core count
         host = self.host
         cores = self.cores
-        host.release_cores(cores, cores.get('nshare', 0))
-        del self.cores
-        host.count = host.__class__.count + \
-                D(len(cores.get('full', []))) + \
-                D(format(D(cores.get('nshare', 0)) / D(host.core_share), '.3f'))
+        host.release_cores(cores, self.nshare)
+        host.count = host.__class__.count + self.ncore
         db.session.add(host)
 
         # remove property
+        del self.cores
         self.destroy_props()
 
         # remove container
         db.session.delete(self)
         db.session.commit()
-        rds.publish(_CONTAINER_PUB_KEY % self.appname,
-            json.dumps({'container': self.container_id, 'status': 'delete'}))
+        self.publish_status('delete')
 
     def kill(self):
         self.is_alive = 0
         db.session.add(self)
         db.session.commit()
-        rds.publish(_CONTAINER_PUB_KEY % self.appname,
-            json.dumps({'container': self.container_id, 'status': 'down'}))
+        self.publish_status('down')
 
         remove_container_backends(self)
         publish_to_service_discovery(self.appname)
@@ -210,8 +208,7 @@ class Container(Base, PropsMixin):
         self.is_alive = 1
         db.session.add(self)
         db.session.commit()
-        rds.publish(_CONTAINER_PUB_KEY % self.appname,
-            json.dumps({'container': self.container_id, 'status': 'up'}))
+        self.publish_status('up')
 
         add_container_backends(self)
         publish_to_service_discovery(self.appname)
@@ -231,6 +228,10 @@ class Container(Base, PropsMixin):
         except:
             pass
 
+    def publish_status(self, status):
+        d = {'container': self.container_id, 'status': status}
+        rds.publish(_CONTAINER_PUB_KEY % self.appname, json.dumps(d))
+
     def to_dict(self):
         d = super(Container, self).to_dict()
         ips = ipam.get_ip_by_container(self.container_id)
@@ -240,7 +241,7 @@ class Container(Base, PropsMixin):
             cores={
                 'full': [c.label for c in self.full_cores],
                 'part': [c.label for c in self.part_cores],
-                'nshare': self.cores.get('nshare', 0),
+                'nshare': self.nshare,
             },
             version=self.short_sha,
             networks=ips,
