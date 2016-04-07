@@ -88,11 +88,12 @@ def remove_containers(task_id, cids, rmi=False):
         _log.error('Task (id=%s) no container found, quit')
         return
 
+    host = containers[0].host
+
     for c in containers:
         c.in_removal = 1
 
     container_ids = [c.container_id for c in containers if c]
-    host = task.host
     try:
         set_flag_for_agent(container_ids)
         for c in containers:
