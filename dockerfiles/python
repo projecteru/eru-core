@@ -1,5 +1,0 @@
-FROM ubuntu:binary-2015.05.13
-
-MAINTAINER CMGS <ilskdw@gmail.com>
-
-RUN apt-get install -y python-pip python-dev libmysqld-dev liblzma-dev libevent1-dev libjpeg-dev libfreetype6-dev zlib1g-dev libpng12-dev libopenjpeg-dev libtiff-dev git libffi-dev libssl-dev

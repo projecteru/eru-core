@@ -10,6 +10,8 @@ from eru import consts
 from eru.async import dockerjob
 from eru.config import DOCKER_REGISTRY
 from eru.helpers.check import wait_health_check
+from eru.helpers.scheduler import average_schedule
+
 from eru.ipam import ipam
 from eru.models import Container, Task, Image
 from eru.utils.notify import TaskNotifier
@@ -151,7 +153,7 @@ def _clean_failed_containers(cid):
 
 
 @current_app.task()
-def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_ids, spec_ips=None):
+def create_containers(task_id, ncontainer, nshare, cores, network_ids, spec_ips=None):
     """
     执行task_id的任务. 部署ncontainer个容器, 占用*_core_ids这些核, 绑定到networks这些子网
     """
@@ -231,3 +233,47 @@ def create_containers_with_macvlan(task_id, ncontainer, nshare, cores, network_i
     notifier.pub_success()
 
     _log.info('Task<id=%s>: Done', task_id)
+
+
+@current_app.task()
+def migrate_container(container_id, need_to_remove=True):
+    container = Container.get_by_container_id(container_id)
+    if not container:
+        _log.error('container %s is not found, ignore migration', container_id)
+        return
+
+    host_cores = average_schedule(container.host.pod, 1, container.ncore, container.nshare, None)
+    if not host_cores:
+        _log.error('not enough cores to migrate')
+        return
+
+    nshare = container.nshare
+    cids = [container.id]
+    spec_ips = cidrs = container.get_ips()
+    (host, container_count), cores = next(host_cores.iteritems())
+
+    props = {
+        'ncontainer': 1,
+        'entrypoint': container.entrypoint,
+        'env': container.env,
+        'full_cores': [c.label for c in cores.get('full', [])],
+        'part_cores': [c.label for c in cores.get('part', [])],
+        'ports': None,
+        'args': None,
+        'nshare': container.nshare,
+        'networks': cidrs,
+        'image': None,
+        'route': '',
+        'callback_url': container.callback_url,
+        'container_ids': cids,
+    }
+    task = Task.create(consts.TASK_MIGRATE, container.version, host, props)
+    if not task:
+        _log.error('create migrate task error')
+        return
+
+    _log.info('start migration...')
+    if need_to_remove:
+        remove_containers.apply(args=(task.id, cids, False), task_id='task:%s' % task.id)
+    create_containers.apply(args=(task.id, 1, nshare, cores, cidrs, spec_ips), task_id='task:%s' % task.id)
+    _log.info('migration done')
