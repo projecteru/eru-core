@@ -242,7 +242,7 @@ def migrate_container(container_id, need_to_remove=True):
         _log.error('container %s is not found, ignore migration', container_id)
         return
 
-    ncore, nshare= container.pod.get_core_allocation(container.ncore)
+    ncore, nshare= container.host.pod.get_core_allocation(container.ncore)
     host_cores = average_schedule(container.host.pod, 1, ncore, nshare, None)
     if not host_cores:
         _log.error('not enough cores to migrate')
