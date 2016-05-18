@@ -1,22 +1,22 @@
 # coding:utf-8
-
-import os
-import docker
-import logging
-import zipfile
-import tempfile
 import contextlib
+import logging
+import os
+import tempfile
+import zipfile
 
+import docker
+from docker.utils import LogConfig, Ulimit
 from retrying import retry
 from werkzeug.security import gen_salt
-from docker.utils import LogConfig, Ulimit
 
 from eru import config
-from eru.connection import get_docker_client
-from eru.templates import template
 from eru.async.utils import replace_ports
-from eru.utils.ensure import ensure_dir_absent, ensure_file
+from eru.connection import get_docker_client
 from eru.helpers.cloner import clone_code
+from eru.templates import template
+from eru.utils.ensure import ensure_dir_absent, ensure_file
+
 
 _log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def build_image_environment(version, base, archive_file=None):
     build_cmds = version.appconfig.build
 
     if not isinstance(build_cmds, list):
-        build_cmds = [build_cmds,]
+        build_cmds = [build_cmds, ]
 
     if archive_file and os.path.isfile(archive_file):
         # if archive_file is passed
@@ -81,7 +81,7 @@ def build_image(host, version, base, file_path=None):
 def push_image(host, version):
     client = get_docker_client(host.addr)
     appname = version.app.name
-    repo = '{0}/{1}'.format(config.DOCKER_REGISTRY, appname)
+    repo = '{0}/eru/{1}'.format(config.DOCKER_REGISTRY, appname)
     rev = version.short_sha
     return client.push(repo, tag=rev, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
@@ -91,8 +91,9 @@ def pull_image(host, repo, tag):
     return client.pull(repo, tag=tag, stream=True, insecure_registry=config.DOCKER_REGISTRY_INSECURE)
 
 
-def create_one_container(host, version, entrypoint, env='prod',
-        cores=None, ports=None, args=None, cpu_shares=1024, image='', need_network=False):
+def create_one_container(host, version, entrypoint, env='prod', cores=None,
+                         ports=None, args=None, cpu_shares=1024, image='',
+                         need_network=False):
     # raw方式有些设定不同
     is_raw = bool(image)
 
@@ -121,7 +122,7 @@ def create_one_container(host, version, entrypoint, env='prod',
 
     network_mode = entry.get('network_mode', config.DOCKER_NETWORK_MODE)
     mem_limit = entry.get('mem_limit', 0)
-    restart_policy = {'MaximumRetryCount': 3, 'Name': entry.get('restart', 'no')} # could be no/always/on-failure
+    restart_policy = {'MaximumRetryCount': 3, 'Name': entry.get('restart', 'no')}  # could be no/always/on-failure
 
     # raw 模式下可以选择暴露端口
     def get_ports(expose):
@@ -161,7 +162,7 @@ def create_one_container(host, version, entrypoint, env='prod',
         permdir = config.ERU_CONTAINER_PERMDIR % appname
         env_dict['ERU_PERMDIR'] = permdir
         volumes.append(permdir)
-        binds[config.ERU_HOST_PERMDIR % appname] =  {'bind': permdir, 'ro': False}
+        binds[config.ERU_HOST_PERMDIR % appname] = {'bind': permdir, 'ro': False}
 
     extra_hosts = entry.get('hosts', None)
 
