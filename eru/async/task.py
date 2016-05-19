@@ -11,13 +11,13 @@ from eru.async import dockerjob
 from eru.config import DOCKER_REGISTRY
 from eru.helpers.check import wait_health_check
 from eru.helpers.scheduler import average_schedule
-
 from eru.ipam import ipam
 from eru.models import Container, Task, Image
-from eru.utils.notify import TaskNotifier
 from eru.publish import (add_container_backends, remove_container_backends,
-        add_container_for_agent, remove_container_for_agent,
-        set_flag_for_agent, remove_flag_for_agent, publish_to_service_discovery)
+                         add_container_for_agent, remove_container_for_agent,
+                         set_flag_for_agent, remove_flag_for_agent,
+                         publish_to_service_discovery)
+from eru.utils.notify import TaskNotifier
 
 
 _log = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ def build_docker_image(task_id, base, file_path):
 
     try:
         repo, tag = base.split(':', 1)
+        repo = repo if repo.startswith('eru/') else 'eru/' + repo.strip('/')
         _log.info('Task<id=%s>: Pull base image (base=%s)', task_id, base)
         notifier.store_and_broadcast(dockerjob.pull_image(host, repo, tag))
 
@@ -136,8 +137,8 @@ def _iter_cores(cores, ncontainer):
         return (([], []) for _ in range(ncontainer))
 
     return izip_longest(
-        chunked(full_cores, len(full_cores)/ncontainer),
-        chunked(part_cores, len(part_cores)/ncontainer),
+        chunked(full_cores, len(full_cores) / ncontainer),
+        chunked(part_cores, len(part_cores) / ncontainer),
         fillvalue=[]
     )
 
@@ -190,9 +191,15 @@ def create_containers(task_id, ncontainer, nshare, cores, network_ids, spec_ips=
         cores_for_one_container = {'full': fcores, 'part': pcores}
         # 在宿主机上创建容器
         try:
-            cid, cname = dockerjob.create_one_container(host, version,
-                entrypoint, env, fcores+pcores, ports=ports, args=args,
-                cpu_shares=cpu_shares, image=image, need_network=need_network)
+            cid, cname = dockerjob.create_one_container(host,
+                                                        version,
+                                                        entrypoint,
+                                                        env,
+                                                        fcores + pcores,
+                                                        ports=ports, args=args,
+                                                        cpu_shares=cpu_shares,
+                                                        image=image,
+                                                        need_network=need_network)
         except Exception as e:
             # 写给celery日志看
             _log.exception(e)
