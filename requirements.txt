@@ -31,7 +31,7 @@ requests==2.4.3
 SQLAlchemy==0.9.8
 urllib3==1.10
 websocket-client==0.23.0
-Werkzeug==0.10
+Werkzeug==0.15.3
 pygit2==0.23.2
 gevent-websocket==0.9.3
 netaddr==0.7.15
