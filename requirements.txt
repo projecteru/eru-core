@@ -2,7 +2,7 @@ amqp==1.4.6
 anyjson==0.3.3
 backports.ssl-match-hostname==3.4.0.2
 billiard==3.3.0.19
-celery==3.1.17
+celery==5.2.2
 cffi==0.8.6
 click==3.3
 cryptography==0.7.2
